@@ -94,3 +94,15 @@ The following upstream paths are changed or added in this derivative:
 - `windows/vcpkg-configuration.json`
 
 Additional prototype resources, build/launch scripts, attribution and verification notes are in `prototype/`. Root README introduces this derivative; `README.upstream.md` preserves the original upstream README. No upstream CI workflow is modified.
+
+## 2026-10-23 Apple and Android prototype
+
+- Added `apple/` with an InputMethodKit host, iOS App and keyboard extension, shared Objective-C++ bridge, Swift session, visual editor and structured IPA Plus picker.
+- Added `android/` with InputMethodService, native JNI bridge, keyboard/editor/help and real-host instrumentation.
+- Added digit-row swipe tones, manual polyphone selection, punctuation-code access, separate Hanzi/IPA actions and Doulos SIL display.
+- Extended `engine/ipa/ipa_readings.h` to accept word readings supplied by a platform SQLite index; existing Windows conversion remains compatible. Updated its regression tests.
+- Added an original generated bird icon under `assets/icons/`, including source prompt, date and checksum. Platform icon assets are size derivatives.
+- Included reproducible data preparation, local unsigned iOS packaging, native Android build entry points and platform-specific verification notes. Large generated databases, personal settings, signing identities and build caches are excluded.
+- macOS builds, but real host commit remains unverified because selecting the registered input source returns -50. iOS and Android passed actual keyboard input on their dedicated simulators; physical device testing remains outstanding.
+
+Original upstream history, GPLv3 license, font/data licenses and `THIRD_PARTY_NOTICES.txt` are retained. No upstream CI workflow was changed.

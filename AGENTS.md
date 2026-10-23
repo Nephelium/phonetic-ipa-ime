@@ -148,3 +148,7 @@ release workflow 里的每一段 shell 都抽在 `scripts/ci/` 下，workflow �
 ## 提交
 
 提交信息用 `type(scope): 摘要`，scope 用目录名（`windows`、`server`、`engine`、`ui`、`installer`）。不要添加 `Co-Authored-By`、`Generated with` 或其他 AI 生成标记。
+
+## 本衍生原型的跨平台目录
+
+`apple/` 与 `android/` 是新增平台宿主，各自遵循目录内 AGENTS.md，复用 `engine/ipa/` 的规则。它们不改变 Windows 的 TSF / Server / UI 运行边界。具体构建与验证见各平台 README 和 `docs/testing/2026-10-23-Apple与Android原型验证.md`。固定资料来自 `prototype/resources/ipa`，禁止使用个人学习库。

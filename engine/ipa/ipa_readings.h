@@ -54,7 +54,7 @@ struct Transcription
 class HanziTable
 {
   public:
-    void Load(const std::filesystem::path &path)
+    void Load(const std::filesystem::path &path, bool include_word_table = true)
     {
         std::ifstream in(path, std::ios::binary);
         if (!in)
@@ -75,7 +75,7 @@ class HanziTable
         // Old three-column tables remain readable. Without tones/word data,
         // ambiguous characters are still explicit choices, never first-row defaults.
         const auto words = path.parent_path() / "word-readings.tsv";
-        if (std::filesystem::exists(words))
+        if (include_word_table && std::filesystem::exists(words))
             LoadWords(words);
     }
     void LoadWords(const std::filesystem::path &path)
@@ -97,6 +97,15 @@ class HanziTable
     }
     Transcription Convert(const std::string &word, const std::string &canonical = {}) const
     {
+        const auto entry = words_.find(word);
+        static const std::vector<std::vector<std::string>> empty;
+        return ConvertWithWordReadings(word, canonical, entry == words_.end() ? empty : entry->second);
+    }
+    // Mobile hosts can query only this word from an indexed store instead of
+    // retaining the complete phrase dictionary in a keyboard extension's memory.
+    Transcription ConvertWithWordReadings(const std::string &word, const std::string &canonical,
+                                          const std::vector<std::vector<std::string>> &word_readings) const
+    {
         const auto chars = Characters(word);
         auto syllables = Split(canonical, '\'');
         if (chars.empty() || (!syllables.empty() && syllables.size() != chars.size()))
@@ -104,12 +113,11 @@ class HanziTable
         for (auto &s : syllables)
             s = Normalize(s);
         Transcription result;
-        const auto entry = words_.find(word);
-        if (entry != words_.end())
+        if (!word_readings.empty())
         {
             ReadingPart phrase{word};
             bool incomplete = false;
-            for (const auto &reading : entry->second)
+            for (const auto &reading : word_readings)
             {
                 if (reading.size() != chars.size())
                     continue;

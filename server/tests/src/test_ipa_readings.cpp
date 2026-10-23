@@ -27,6 +27,16 @@ int main(int argc, char **argv)
             std::cout << test.first << " -> " << result.parts[0].options[0].pinyin << " -> " << result.text << '\n';
         }
         const auto disgust = table.Convert(u8"厌恶", "yan'wu");
+        phonetic_ipa::HanziTable indexedTable;
+        indexedTable.Load(std::filesystem::u8path(argv[1]) / "beijing-toned.tsv", false);
+        const auto indexedDisgust = indexedTable.ConvertWithWordReadings(u8"厌恶", "yan'wu", {{"yan4", "wu4"}});
+        Require(indexedDisgust.word_matched && indexedDisgust.text == disgust.text,
+                "Indexed word readings differ from the full table");
+        const auto indexedAmbiguous =
+            indexedTable.ConvertWithWordReadings(u8"好学", "hao'xue", {{"hao3", "xue2"}, {"hao4", "xue2"}});
+        Require(indexedAmbiguous.ambiguous && indexedAmbiguous.text.empty() &&
+                    indexedAmbiguous.parts[0].options.size() == 2,
+                "Indexed alternatives silently selected a reading");
         Require(disgust.parts[0].options[0].pinyin == "yan4 wu4" && disgust.text.find(u8"wu˥˩") != std::string::npos,
                 "Word must select wu4");
         for (const auto spelling : {"wu", "e"})

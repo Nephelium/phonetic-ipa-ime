@@ -1,0 +1,5 @@
+Generated/
+build/
+*.xcuserstate
+xcuserdata/
+__pycache__/
