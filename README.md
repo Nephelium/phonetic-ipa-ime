@@ -13,9 +13,9 @@
 | Windows | TSF / Server / 设置程序已构建，后台控件、IPC、读音检查通过。真实 TSF 宿主仍待验收。 | [Windows 说明](prototype/README.md) |
 | iOS / iPadOS | App 与系统键盘扩展。模拟器真实上屏通过，已生成真机待签名 IPA。实体 iPhone 签名、安装与设置共享待验收。 | [Apple 构建](apple/README.md) · [签名与安装](apple/INSTALL-unsigned.md) |
 | Android | 系统输入法和设置 App。打包 JNI 与无窗口模拟器真实上屏通过，提供本地测试 APK。实体手机待验收。 | [Android 说明](android/README.md) |
-| macOS | InputMethodKit 应用与共享会话测试通过。输入源选择返回 -50，真实宿主输入尚未通过。 | [Apple 构建](apple/README.md) |
+| macOS | 输入源选择已修复。专用 NSTextView 真实宿主通过汉字、IPA、CIN、Shift 声调、标点和手动读音上屏。 | [Apple 构建](apple/README.md) |
 
-[本次跨平台验证](docs/testing/2026-10-23-Apple与Android原型验证.md) · [来源、引用与许可](prototype/THIRD_PARTY.md) · [修改清单](MODIFICATIONS.md) · [水杉原始 README](README.upstream.md)
+[Mac 输入源与真实宿主验证](docs/testing/2026-10-23-Mac输入源修复与真实输入验证.md) · [本次跨平台验证](docs/testing/2026-10-23-Apple与Android原型验证.md) · [来源、引用与许可](prototype/THIRD_PARTY.md) · [修改清单](MODIFICATIONS.md) · [水杉原始 README](README.upstream.md)
 
 ## 输入与编辑
 

@@ -39,7 +39,17 @@ Apple 原型当前只使用固定北京音规则，自定义汉字转换字表�
 
 ## 构建、安装与验证
 
-`build.sh` 先运行 Apple 桥接核心测试，再构建 Mac 应用和 iOS Simulator App/扩展。它不注册、激活或替换任何系统输入源。Mac 安装需将构建应用放入用户 `~/Library/Input Methods/` 并在系统设置添加。iOS 实机还需要配置开发者签名和 App Group。两端标识独立于水杉。
+`build.sh` 先运行 Apple 桥接核心测试，再构建 Mac 应用和 iOS Simulator App/扩展。它不注册、激活或替换任何系统输入源。Mac 使用下述安装脚本放入用户 `~/Library/Input Methods/`，保留独立输入法标识。iOS 实机还需要配置开发者签名和 App Group。两端标识独立于水杉。
+
+Mac 输入源选择问题已修复，专用 NSTextView 宿主验证了汉字、IPA、CIN、Shift 声调、标点和手动读音选择。详见 [Mac 验证记录](../docs/testing/2026-10-23-Mac输入源修复与真实输入验证.md)。安装需要 Xcode 命令行工具；首次安装执行：
+
+```sh
+bash scripts/install-macos.sh --repair-enabled-list
+```
+
+已有安装时增加 `--update`，旧应用保存在 `build/install-backups/`。`--repair-enabled-list` 会在需要时备份启用列表，仅补齐本输入法的父项与模式项。安装不选择当前输入源，也不注销。随后从系统输入法菜单选择国际音标输入法。
+
+真实宿主测试使用 `bash scripts/test-macos-host.sh --foreground`，会短暂激活专用测试窗口，结束后恢复原应用与输入源。没有前台操作许可时不要使用该参数。
 
 目前交付状态以 `../docs/testing/` 的最新验证记录为准。编译通过、核心测试、模拟器键盘和真实 Mac 宿主上屏分别记录。
 

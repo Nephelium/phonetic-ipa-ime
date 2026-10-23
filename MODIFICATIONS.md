@@ -106,3 +106,13 @@ Additional prototype resources, build/launch scripts, attribution and verificati
 - macOS builds, but real host commit remains unverified because selecting the registered input source returns -50. iOS and Android passed actual keyboard input on their dedicated simulators; physical device testing remains outstanding.
 
 Original upstream history, GPLv3 license, font/data licenses and `THIRD_PARTY_NOTICES.txt` are retained. No upstream CI workflow was changed.
+
+## 2026-10-23 macOS input source repair
+
+- Added parent-before-mode registration, explicit enabled-list repair with a private backup, idempotent preservation checks and independent-process verification.
+- Updated installation without discarding the installed outer bundle directory; retained previous contents and limited process management to this product.
+- Prevented candidate windows belonging to background clients from covering the active application.
+- Replaced the host probe with a full AppKit event-loop test using Quartz-backed events directed only to its own NSTextView. Verified marked text, separate Hanzi/IPA commits, word readings, manual ambiguity selection, CIN, Shift tones, punctuation and restoration of the prior application/input source.
+- The earlier -50 limitation above is superseded by the dedicated macOS repair record. Other desktop hosts and physical mobile devices retain their previous verification boundaries.
+
+References and investigation sources are listed in `docs/testing/2026-10-23-Mac输入源修复与真实输入验证.md`; no third-party implementation was copied for this repair.

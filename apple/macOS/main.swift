@@ -99,6 +99,12 @@ import SwiftUI
             panel?.orderOut(nil); return
         }
         inputClient?.setMarkedText(model.raw, selectionRange: NSRange(location: model.raw.utf16.count, length: 0), replacementRange: NSRange(location: NSNotFound, length: 0))
+        // A background client's composition must not put a floating panel over another app.
+        if let bundleID = inputClient?.bundleIdentifier(),
+           !NSRunningApplication.runningApplications(withBundleIdentifier: bundleID).contains(where: { $0.isActive }) {
+            panel?.orderOut(nil)
+            return
+        }
         if panel == nil {
             let next = NSPanel(contentRect: NSRect(x: 0, y: 0, width: 680, height: 150), styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
             next.level = .popUpMenu; next.isFloatingPanel = true; next.hidesOnDeactivate = false
