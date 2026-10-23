@@ -101,7 +101,7 @@ public final class PhoneticIME extends InputMethodService {
                 b.setOnLongClickListener(v -> { preview(key); return true; });
                 if (!output.equals(key)) {
                     FrameLayout cap = new FrameLayout(this); cap.addView(b, new FrameLayout.LayoutParams(-1, -1));
-                    TextView label = UI.text(this, key, 9); label.setTextColor(UI.MUTED); label.setPadding(UI.dp(this, 3), UI.dp(this, 2), 0, 0); label.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO); cap.addView(label, new FrameLayout.LayoutParams(-2, -2, Gravity.TOP | Gravity.START)); UI.weighted(keys, cap, 1, 44);
+                    TextView label = UI.text(this, key, 9); label.setTextColor(UI.MUTED); label.setPadding(UI.dp(this, 3), UI.dp(this, 2), 0, 0); label.setElevation(b.getElevation() + UI.dp(this, 1)); label.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO); cap.addView(label, new FrameLayout.LayoutParams(-2, -2, Gravity.TOP | Gravity.START)); UI.weighted(keys, cap, 1, 44);
                 } else UI.weighted(keys, b, 1, 44);
             }
             if (row.equals("zxcvbnm")) UI.weighted(keys, backspaceButton(), 1.35f, 44);

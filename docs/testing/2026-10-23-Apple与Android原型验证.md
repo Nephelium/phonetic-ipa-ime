@@ -56,3 +56,7 @@ Xcode 27.1 SDK 日志中的 `invalidDigitCount` 警告仍存在，实际构建�
 代码沿用水杉 Windows v0.11.1 / `dd018f79858314ed542a47c528608752b13bd261`，CIN、多音字与调值规则复用同一 C++ 核心。出厂词库固定在 `MSIME-Engine` 的 `d0dc0c2b594b5540b5de99ad12085c786410626e`，SHA-256 在 `product-lock.json`。不包含个人学习库。
 
 原始字体、CC-CEDICT、IPA/extIPA/VoQS、PhoneticToolbox 的来源和各自许可继续保留在 `prototype/THIRD_PARTY.md`、资源来源清单和应用资源中。平台接口参考 [Apple 自定义键盘](https://developer.apple.com/documentation/uikit/creating-a-custom-keyboard)、[UIInputView 自适应尺寸](https://developer.apple.com/documentation/uikit/uiinputview/allowsselfsizing) 与 [Android InputMethodService 指南](https://developer.android.com/develop/ui/views/touch-and-input/creating-input-method)。
+
+## Android 编码标签补验
+
+最终截图发现按键按钮的 elevation 遮住了小编码标签。现将标签置于按钮上方，复查截图可见反斜杠、感叹号、井号等键的编码。重新构建后，项目专用无窗口模拟器上的 JNI/core 与实际系统键盘 UI 测试全部通过，最终宿主文本为 厌恶wu˥˩a˨˩˦6˥/。新 APK 的 v2 签名验证通过。
