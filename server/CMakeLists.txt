@@ -509,12 +509,14 @@ add_executable(${SETTINGS_EXECUTABLE_NAME} WIN32
     "./src/settings/native/native_settings_model.cpp"
     "./src/settings/native/native_settings_model.h"
     "./src/settings/native/native_settings_pages.h"
+    "./src/settings/native/native_settings_pages.cpp"
     "./src/settings/native/native_settings_theme.cpp"
     "./src/settings/native/native_settings_theme.h"
     "./src/settings/native/native_settings_window.cpp"
     "./src/settings/native/native_settings_window.h"
     "./src/settings/native/native_page_appearance.cpp"
     "./src/settings/native/native_page_input.cpp"
+    "./src/settings/native/native_page_ipa.cpp"
     "./src/settings/native/native_page_helpcode.cpp"
     "./src/settings/native/native_page_shortcut.cpp"
     "./src/settings/native/native_page_dictionary.cpp"
@@ -665,3 +667,46 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
 if(BUILD_TESTING)
     add_subdirectory(tests)
 endif()
+
+# Private IPA prototype image names.
+set_target_properties(${MY_EXECUTABLE_NAME} PROPERTIES OUTPUT_NAME "PhoneticIpaServer")
+set_target_properties(${WATCHDOG_EXECUTABLE_NAME} PROPERTIES OUTPUT_NAME "PhoneticIpaWatchdog")
+
+if(BUILD_TESTING)
+    add_executable(IpaReadingTests tests/src/test_ipa_readings.cpp)
+    target_compile_features(IpaReadingTests PRIVATE cxx_std_17)
+    target_include_directories(IpaReadingTests PRIVATE "${CMAKE_SOURCE_DIR}/src")
+    add_test(NAME ipa_readings COMMAND IpaReadingTests "$ENV{METASEQUOIA_IME_DATA_DIR}/ipa")
+    add_executable(IpaPrototypeTests tests/src/test_ipa_prototype.cpp)
+    target_compile_features(IpaPrototypeTests PRIVATE cxx_std_17)
+    add_test(NAME ipa_prototype_resources COMMAND IpaPrototypeTests "$ENV{METASEQUOIA_IME_DATA_DIR}/ipa")
+    add_executable(IpaSessionTests tests/src/test_ipa_session.cpp)
+    target_link_libraries(IpaSessionTests PRIVATE MetasequoiaIme::Engine)
+    add_test(NAME ipa_session COMMAND IpaSessionTests)
+    add_executable(IpaProfileTests tests/src/test_ipa_profile.cpp)
+    target_link_libraries(IpaProfileTests PRIVATE nlohmann_json::nlohmann_json)
+    target_include_directories(IpaProfileTests PRIVATE "${CMAKE_SOURCE_DIR}/src")
+    add_test(NAME ipa_profile COMMAND IpaProfileTests "$ENV{METASEQUOIA_IME_DATA_DIR}/ipa" "${CMAKE_BINARY_DIR}/profile-test-evidence")
+    # Console-only tests invoke the actual native controls in-process. They never
+    # show/activate a window, inject input, or change the active user profile.
+    add_executable(IpaNativeTests tests/src/test_ipa_native.cpp
+        src/skin/candidate_skin_catalog.cpp
+        src/window/candidate_skin_layers.cpp
+        src/window/candidate_skin_overlay.cpp
+        src/window/candidate_skin_palette.cpp
+        src/window/candidate_skin_scene.cpp
+        src/window/candidate_skin_tokens.cpp
+        src/settings/native/native_settings_bindings.cpp
+        src/settings/native/native_settings_controls.cpp
+        src/settings/native/native_settings_model.cpp
+        src/settings/native/native_settings_theme.cpp
+        src/utils/common_utils.cpp src/utils/ime_paths.cpp)
+    target_include_directories(IpaNativeTests PRIVATE "${CMAKE_SOURCE_DIR}/src")
+    target_link_libraries(IpaNativeTests PRIVATE msimeui nlohmann_json::nlohmann_json Boost::locale shell32 advapi32)
+    target_compile_options(IpaNativeTests PRIVATE /Gy)
+    target_compile_definitions(IpaNativeTests PRIVATE NOMINMAX=1)
+    target_link_options(IpaNativeTests PRIVATE /OPT:REF)
+    add_test(NAME ipa_native_headless COMMAND IpaNativeTests "$ENV{METASEQUOIA_IME_DATA_DIR}/ipa")
+endif()
+
+set_target_properties(${SETTINGS_EXECUTABLE_NAME} PROPERTIES OUTPUT_NAME "PhoneticIpaSettings")

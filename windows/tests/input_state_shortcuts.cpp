@@ -1,4 +1,5 @@
 #include "../../engine/contracts/input_state_shortcuts.h"
+#include "../../engine/contracts/ipa_input.h"
 #include "../../engine/contracts/ipc_negotiation.h"
 #include <iostream>
 #include <fstream>
@@ -81,13 +82,30 @@ std::string Fixture()
 }
 int main()
 {
+    for (unsigned modifiers = 0; modifiers < 8; ++modifiers)
+        CHECK(PhoneticIpaKey::IsReadingChoiceKey(0x0d, modifiers) == (modifiers == 3));
+    for (const auto input : {L"tone:214", L"code:a10"})
+    {
+        std::wstring raw;
+        for (wchar_t ch : std::wstring(input))
+        {
+            CHECK(PhoneticIpaKey::IsInput(true, ch, raw.size(), PhoneticIpaKey::IsNumericEntry(raw)));
+            raw += ch;
+        }
+        CHECK(PhoneticIpaKey::IsNumericEntry(raw));
+    }
+    CHECK(!PhoneticIpaKey::IsNumericEntry(L"tone") && !PhoneticIpaKey::IsNumericEntry(L"Tone:214"));
+    for (unsigned digit = '1'; digit <= '9'; ++digit)
+        CHECK(!PhoneticIpaKey::IsInput(true, digit, 1));
+    CHECK(PhoneticIpaKey::IsInput(true, '0', 0) && !PhoneticIpaKey::IsInput(true, '0', 1));
+
     using namespace FanyImeInputStateShortcuts;
     using namespace FanyImeKeyChord;
     std::ifstream fixture(MSIME_SHORTCUT_FIXTURE_PATH);
     CHECK(std::string((std::istreambuf_iterator<char>(fixture)), {}) == Fixture());
     auto values = Defaults();
     auto resolved = Resolve(values);
-    CHECK(resolved.Match('E', 3) == Action::EnglishCandidates);
+    CHECK(resolved.Match('I', 3) == Action::EnglishCandidates);
     CHECK(resolved.Match(0x20, 3) == Action::FullWidth);
     CHECK(resolved.Match(0xbe, 2) == Action::Punctuation);
     for (const auto &key : NamedKeys)
@@ -98,11 +116,11 @@ int main()
         CHECK(!Parse(value, binding) && binding.key == 0);
     for (const auto &rule : Reserved)
         CHECK(!Validate(2, rule.binding, values).empty());
-    CHECK(!Validate(2, "Ctrl+Shift+KeyE", values).empty());
+    CHECK(!Validate(2, "Ctrl+Shift+KeyI", values).empty());
     CHECK(!Validate(2, "Ctrl+Shift+Space", values).empty());
     values[0] = "";
     values[1] = "Ctrl+Shift+KeyG";
-    CHECK(Validate(2, "Ctrl+Shift+KeyE", values).empty());
+    CHECK(Validate(2, "Ctrl+Shift+KeyI", values).empty());
     CHECK(Validate(2, "Ctrl+Shift+Space", values).empty());
     values[2] = "Ctrl+Shift+KeyG";
     resolved = Resolve(values);

@@ -9,6 +9,11 @@ namespace msimeui
 const wchar_t *UiFontFamily();
 const wchar_t *UiFontFallbackFamily();
 void ApplyUiFontFallback(IDWriteFactory *factory, IDWriteTextFormat *format);
+// Process-private font collection. Call once before creating text layouts; no OS font installation.
+bool LoadPrivateIpaFont(const std::wstring &path);
+IDWriteFontCollection *PrivateIpaFontCollection(const std::wstring &family);
+// Use other bundled families for missing glyphs, then normal system fallback.
+void ApplyPrivateFontFallback(IDWriteFactory *factory, IDWriteTextFormat *format);
 
 // Resolved icon font/codepoint pair. `family` is null when no installed icon
 // font can actually render the requested glyph, in which case the caller must

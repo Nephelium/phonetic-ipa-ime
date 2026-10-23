@@ -1,3 +1,4 @@
+#include "../../../engine/contracts/ipa_input.h"
 // Deferred key FIFO: barrier checks, the projected composition state that classifies keys queued
 // behind it, and the queue/drain/complete/fail path. A failed key is dropped, never replayed.
 
@@ -464,6 +465,16 @@ bool CMetasequoiaIME::_ClassifyDeferredKeyDown(_In_ ITfContext *pContext, WPARAM
         return true;
     }
 
+    const auto ipaPolicy =
+        _deferredKeyProjectionValid ? _deferredProjectedTemporaryJapanesePolicy : GetTemporaryJapanesePolicy();
+    if (projectedImeOpen && !projectedInputActive && !_IsKeyboardDisabled() &&
+        (ipaPolicy & FanyImeTemporaryJapanese::EnglishCandidates) != 0 && (GetAsyncKeyState(VK_LWIN) & 0x8000) == 0 &&
+        (GetAsyncKeyState(VK_RWIN) & 0x8000) == 0 && FanyUtils::HasIpaHotkey(capturedModifiers, *classifiedCode))
+    {
+        keyState->Category = CATEGORY_CANDIDATE;
+        keyState->Function = FUNCTION_SERVER_CANDIDATE_KEY;
+        return true;
+    }
     // Other Ctrl/Alt/Windows combinations belong to the application. In particular,
     // never turn a recovery FIFO into a shortcut sink. The segment edit chords
     // (Ctrl+Backspace, Ctrl+Left, Ctrl+Right) are the exception; their unit
@@ -554,6 +565,11 @@ bool CMetasequoiaIME::_ClassifyDeferredKeyDown(_In_ ITfContext *pContext, WPARAM
         return setKeyState(CATEGORY_COMPOSING, FUNCTION_BACKSPACE);
     }
 
+    if (shadow.imeOpen && (capturedModifiers & 0x0eu) == 0 &&
+        PhoneticIpaKey::IsInput((shadow.temporaryJapanesePolicy & FanyImeTemporaryJapanese::EnglishCandidates) != 0,
+                                *classifiedWch, shadow.rawInput.size(),
+                                PhoneticIpaKey::IsNumericEntry(shadow.rawInput)))
+        return setKeyState(CATEGORY_COMPOSING, FUNCTION_INPUT);
     _KEYSTROKE_STATE inputState = {};
     WCHAR inputWch = *classifiedWch;
     bool isInputKey = false;

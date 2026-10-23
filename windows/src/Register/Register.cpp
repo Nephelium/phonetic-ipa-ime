@@ -17,7 +17,7 @@ static const WCHAR RegInfo_Key_InProSvr32[] = L"InProcServer32";
 static const WCHAR RegInfo_Key_ThreadModel[] = L"ThreadingModel";
 
 // IME text service description, will be displayed in the language menu when switching IME
-static const WCHAR TEXTSERVICE_DESC[] = L"Metasequoia \u6c34\u6749\u8f93\u5165\u6cd5";
+static const WCHAR TEXTSERVICE_DESC[] = L"国际音标输入法原型";
 
 // Valve game compatibility: CS2 / Dota 2 only handle IME messages for input methods whose registered profile name is
 // on a whitelist inside the game, and otherwise let Windows pop its default composition window, which throws an

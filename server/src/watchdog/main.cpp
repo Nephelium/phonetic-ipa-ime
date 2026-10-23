@@ -13,8 +13,8 @@
 
 namespace
 {
-constexpr wchar_t kServerFileName[] = L"MetasequoiaImeServer.exe";
-constexpr wchar_t kWatchdogMutex[] = L"Local\\MetasequoiaImeWatchdog.SingleInstance";
+constexpr wchar_t kServerFileName[] = L"PhoneticIpaServer.exe";
+constexpr wchar_t kWatchdogMutex[] = L"Local\\PhoneticIpaWatchdog.SingleInstance";
 constexpr DWORD kHealthyRunMilliseconds = 30'000;
 constexpr DWORD kMaximumRestartDelayMilliseconds = 30'000;
 constexpr DWORD kProfileReadyTimeoutMilliseconds = 30'000;

@@ -1,4 +1,5 @@
 #include "TextLayout.h"
+#include "msimeui/Fonts.h"
 
 #include <algorithm>
 #include <cmath>
@@ -83,8 +84,8 @@ BOOL CTextLayout::EnsureTextFormat(const LOGFONT *plf, FLOAT dpiY)
     const DWRITE_FONT_STRETCH fontStretch = DWRITE_FONT_STRETCH_NORMAL;
     const FLOAT fontSize = DipsFromLogFontHeight(plf, dpiY);
 
-    if (FAILED(_pDWriteFactory->CreateTextFormat(plf->lfFaceName, NULL, fontWeight, fontStyle, fontStretch, fontSize,
-                                                 L"", &_pTextFormat)))
+    if (FAILED(_pDWriteFactory->CreateTextFormat(plf->lfFaceName, msimeui::PrivateIpaFontCollection(plf->lfFaceName),
+                                                 fontWeight, fontStyle, fontStretch, fontSize, L"", &_pTextFormat)))
     {
         return FALSE;
     }
@@ -92,6 +93,8 @@ BOOL CTextLayout::EnsureTextFormat(const LOGFONT *plf, FLOAT dpiY)
     _pTextFormat->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_LEADING);
     _pTextFormat->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_NEAR);
     _pTextFormat->SetWordWrapping(DWRITE_WORD_WRAPPING_NO_WRAP);
+    if (msimeui::PrivateIpaFontCollection(plf->lfFaceName))
+        msimeui::ApplyPrivateFontFallback(_pDWriteFactory, _pTextFormat);
     return TRUE;
 }
 

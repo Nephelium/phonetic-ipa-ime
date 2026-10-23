@@ -382,7 +382,7 @@ TEST_CASE(shipped_fresh_install_defaults_do_not_flip_upgraded_users)
 
     // 新装用户拿到的是模板本身。
     const auto fresh = toml::parse(installed);
-    REQUIRE_EQ(fresh["appearance"]["candidate_window_layout"].value_or(std::string()), std::string("horizontal"));
+    REQUIRE_EQ(fresh["appearance"]["candidate_window_layout"].value_or(std::string()), std::string("vertical"));
     REQUIRE(!fresh["helpcode"]["shuangpin_helpcode"].value_or(true));
 }
 
@@ -554,4 +554,18 @@ TEST_CASE(shipped_credentials_survive_template_upgrade)
         REQUIRE_EQ(merged["ai_assistant"]["token"].value_or(std::string()), std::string("real-ai"));
         REQUIRE_EQ(merged["ai_assistant"]["token_openai"].value_or(std::string()), std::string("real-ai-openai"));
     }
+}
+
+TEST_CASE(ipa_candidate_page_size_saves_every_value_three_through_nine)
+{
+    const int original = GetConfiguredCandidatePageSize();
+    for (int count = 3; count <= 9; ++count)
+    {
+        REQUIRE(SetConfiguredCandidatePageSize(count));
+        REQUIRE(GetConfiguredCandidatePageSize() == count);
+    }
+    REQUIRE(!SetConfiguredCandidatePageSize(2));
+    REQUIRE(!SetConfiguredCandidatePageSize(10));
+    REQUIRE(GetConfiguredCandidatePageSize() == 9);
+    REQUIRE(SetConfiguredCandidatePageSize(original));
 }

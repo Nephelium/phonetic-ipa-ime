@@ -19,6 +19,7 @@
 #include "ipc/event_listener.h"
 #include "engine/contracts/v_mode_input.h"
 #include "window/caret_state_indicator_policy.h"
+#include "ipa/ipa_reading_session.h"
 
 // IPC logging is compiled out. The macros still have to *mention* their arguments, otherwise every
 // parameter of the log helpers below is unreferenced (C4100). sizeof keeps the arguments in an
@@ -68,6 +69,11 @@ struct CandidateTranslationGloss
 extern std::unordered_map<std::string, CandidateTranslationGloss> g_candidate_translation_glosses;
 extern std::string g_candidate_translation_signature;
 extern bool g_translation_candidates_active;
+extern PhoneticIpa::ReadingSession g_ipa_readings;
+extern bool g_ipa_reading_page_active;
+bool EnterIpaReadingPage(int index_in_page);
+bool SelectIpaReading(int index_in_page);
+void PopulateIpaReadingPage();
 // 日期页：选中混输里的「📅日期」入口后，候选框换成整组日期时间格式。和译文页一样不动输入串，
 // 两者互斥，共用下面这份保存的候选与页码，退出时原样放回。
 extern bool g_date_time_page_active;
@@ -173,6 +179,8 @@ enum class TaskType
     ClientSuspended,
     StatusSnapshot,
     UiCommitCandidate,
+    UiCommitIpa,
+    UiChooseIpaReading,
     UiPinCandidate,
     UiDeleteCandidate,
     UiFixCandidatePosition,

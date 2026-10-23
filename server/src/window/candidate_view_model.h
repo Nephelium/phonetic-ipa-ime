@@ -16,6 +16,12 @@ struct CandidateViewItem
     std::string badge;
     std::string translation;
     bool fixed_position = false;
+    std::string ipa;
+    bool ipa_committable = false;
+    bool ipa_needs_choice = false;
+    bool ipa_can_choose = false;
+    bool ipa_reading_option = false;
+    bool ipa_primary = false;
 };
 
 inline std::string EscapeCandidateViewHtml(const std::string &text)
@@ -114,6 +120,11 @@ inline std::string CandidateViewHtml(const CandidateViewItem &item)
         html = "<span style=\"color:#379AD3\">" + html + "</span>";
     if (!item.translation.empty())
         html += CandidateTranslationHtml(item.translation);
+    if (item.ipa_needs_choice)
+        html += u8"<span class=\"cand-ipa\">选择读音</span>";
+    else if (!item.ipa.empty())
+        html += "<span class=\"cand-ipa\">" + EscapeCandidateViewHtml(item.ipa) +
+                (item.ipa_committable ? "</span>" : " (preview)</span>");
     return html;
 }
 
@@ -128,6 +139,9 @@ inline std::string CandidatePageSignature(const std::vector<CandidateViewItem> &
         signature += std::to_string(html.size());
         signature += ':';
         signature += html;
+        signature += view.ipa_can_choose ? '1' : '0';
+        signature += view.ipa_reading_option ? '1' : '0';
+        signature += view.ipa_primary ? '1' : '0';
     }
     return signature;
 }

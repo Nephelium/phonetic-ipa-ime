@@ -169,8 +169,10 @@ void CandidateList::SetAppearance(Appearance appearance)
     InvalidateMeasure();
 }
 
-const std::wstring &CandidateList::ResolvedFontFamily() const
+const std::wstring &CandidateList::ResolvedFontFamily(const std::wstring &overrideFamily) const
 {
+    if (!overrideFamily.empty())
+        return overrideFamily;
     const Theme &theme = ThemeManager::GetCurrent();
     return appearance_.fontFamily.empty() ? theme.textInputFontFamily : appearance_.fontFamily;
 }
@@ -179,11 +181,14 @@ namespace
 {
 // The exact bits of every number go into the key, so only an identical
 // measurement shares an entry.
-std::wstring TextCacheKey(wchar_t kind, const std::wstring &text, std::initializer_list<float> numbers)
+std::wstring TextCacheKey(wchar_t kind, const std::wstring &text, std::initializer_list<float> numbers,
+                          const std::wstring &family)
 {
     static_assert(sizeof(float) == sizeof(uint32_t));
     std::wstring key;
     key.reserve(text.size() + 1 + numbers.size() * 2);
+    key.append(family);
+    key.push_back(L'\0');
     key.push_back(kind);
     for (const float number : numbers)
     {
@@ -203,17 +208,10 @@ constexpr size_t kMaxTextMetricEntries = 2048;
 constexpr size_t kMaxTextLayoutEntries = 256;
 } // namespace
 
-bool CandidateList::LookupTextMetric(wchar_t kind, const std::wstring &text, float fontSize, float width,
-                                     float &value) const
+bool CandidateList::LookupTextMetric(wchar_t kind, const std::wstring &text, float fontSize, float width, float &value,
+                                     const std::wstring &family) const
 {
-    const std::wstring &family = ResolvedFontFamily();
-    if (textMetricFamily_ != family)
-    {
-        textMetricCache_.clear();
-        textMetricFamily_ = family;
-        return false;
-    }
-    const auto found = textMetricCache_.find(TextCacheKey(kind, text, {fontSize, width}));
+    const auto found = textMetricCache_.find(TextCacheKey(kind, text, {fontSize, width}, ResolvedFontFamily(family)));
     if (found == textMetricCache_.end())
     {
         return false;
@@ -222,14 +220,14 @@ bool CandidateList::LookupTextMetric(wchar_t kind, const std::wstring &text, flo
     return true;
 }
 
-void CandidateList::StoreTextMetric(wchar_t kind, const std::wstring &text, float fontSize, float width,
-                                    float value) const
+void CandidateList::StoreTextMetric(wchar_t kind, const std::wstring &text, float fontSize, float width, float value,
+                                    const std::wstring &family) const
 {
     if (textMetricCache_.size() >= kMaxTextMetricEntries)
     {
         textMetricCache_.clear();
     }
-    textMetricCache_[TextCacheKey(kind, text, {fontSize, width})] = value;
+    textMetricCache_[TextCacheKey(kind, text, {fontSize, width}, ResolvedFontFamily(family))] = value;
 }
 
 ComPtr<IDWriteTextLayout> CandidateList::TextLayoutFor(IDWriteFactory *factory, const std::wstring &fontFamily,
@@ -239,14 +237,9 @@ ComPtr<IDWriteTextLayout> CandidateList::TextLayoutFor(IDWriteFactory *factory, 
     {
         return {};
     }
-    if (textLayoutFamily_ != fontFamily)
-    {
-        textLayoutCache_.clear();
-        textLayoutFamily_ = fontFamily;
-    }
     const float width = std::max(box.width, 1.0f);
     const float height = std::max(box.height, 1.0f);
-    std::wstring key = TextCacheKey(L'l', text, {fontSize, width, height});
+    std::wstring key = TextCacheKey(L'l', text, {fontSize, width, height}, fontFamily);
     if (const auto found = textLayoutCache_.find(key); found != textLayoutCache_.end())
     {
         return found->second;
@@ -282,7 +275,7 @@ void CandidateList::SetHoverEnabled(bool enabled)
     InvalidateVisual();
 }
 
-float CandidateList::EstimateTextWidth(const std::wstring &text, float fontSize) const
+float CandidateList::EstimateTextWidth(const std::wstring &text, float fontSize, const std::wstring &family) const
 {
     if (text.empty())
     {
@@ -290,13 +283,13 @@ float CandidateList::EstimateTextWidth(const std::wstring &text, float fontSize)
     }
 
     float cached = 0.0f;
-    if (LookupTextMetric(L'w', text, fontSize, 0.0f, cached))
+    if (LookupTextMetric(L'w', text, fontSize, 0.0f, cached, family))
     {
         return cached;
     }
 
     IDWriteFactory *factory = GetSharedDWriteFactory();
-    const std::wstring &fontFamily = ResolvedFontFamily();
+    const std::wstring &fontFamily = ResolvedFontFamily(family);
     ComPtr<IDWriteTextLayout> layout = CreateCachedTextLayout(
         factory, fontFamily, text, fontSize, DWRITE_FONT_WEIGHT_NORMAL, 4096.0f, std::max(fontSize * 2.0f, 1.0f),
         DWRITE_TEXT_ALIGNMENT_LEADING, DWRITE_PARAGRAPH_ALIGNMENT_CENTER, DWRITE_WORD_WRAPPING_NO_WRAP,
@@ -316,18 +309,19 @@ float CandidateList::EstimateTextWidth(const std::wstring &text, float fontSize)
     DWRITE_OVERHANG_METRICS overhang = {};
     layout->GetOverhangMetrics(&overhang);
     const float width = std::ceil(metrics.widthIncludingTrailingWhitespace + std::max(overhang.right, 0.0f) + 1.0f);
-    StoreTextMetric(L'w', text, fontSize, 0.0f, width);
+    StoreTextMetric(L'w', text, fontSize, 0.0f, width, family);
     return width;
 }
 
-float CandidateList::MeasureTextHeight(const std::wstring &text, float fontSize, float width) const
+float CandidateList::MeasureTextHeight(const std::wstring &text, float fontSize, float width,
+                                       const std::wstring &family) const
 {
     if (text.empty())
         return 0.0f;
     float cached = 0.0f;
-    if (LookupTextMetric(L'h', text, fontSize, width, cached))
+    if (LookupTextMetric(L'h', text, fontSize, width, cached, family))
         return cached;
-    const auto layout = CreateCachedTextLayout(GetSharedDWriteFactory(), ResolvedFontFamily(), text, fontSize,
+    const auto layout = CreateCachedTextLayout(GetSharedDWriteFactory(), ResolvedFontFamily(family), text, fontSize,
                                                DWRITE_FONT_WEIGHT_NORMAL, width, 65536.0f,
                                                DWRITE_TEXT_ALIGNMENT_LEADING, DWRITE_PARAGRAPH_ALIGNMENT_NEAR,
                                                DWRITE_WORD_WRAPPING_WRAP, appearance_.fallbackFontFamilies);
@@ -335,10 +329,10 @@ float CandidateList::MeasureTextHeight(const std::wstring &text, float fontSize,
     if (layout && SUCCEEDED(layout->GetMetrics(&metrics)))
     {
         const float height = std::ceil(metrics.height);
-        StoreTextMetric(L'h', text, fontSize, width, height);
+        StoreTextMetric(L'h', text, fontSize, width, height, family);
         return height;
     }
-    return std::ceil(EstimateTextWidth(text, fontSize) / width) * fontSize * 1.25f;
+    return std::ceil(EstimateTextWidth(text, fontSize, family) / width) * fontSize * 1.25f;
 }
 
 CandidateList::ItemGeometry CandidateList::MeasureItem(size_t index, float width) const
@@ -349,8 +343,10 @@ CandidateList::ItemGeometry CandidateList::MeasureItem(size_t index, float width
     const float labelW = std::max(EstimateTextWidth(item.label, appearance_.labelFontSize), 9.0f);
     const float textX = labelX + labelW + appearance_.labelGap;
     const float contentWidth = std::max(width - textX - appearance_.contentPadRight, 1.0f);
-    const float textW = std::min(std::max(EstimateTextWidth(item.text, appearance_.fontSize), 8.0f), contentWidth);
-    const float textH = std::max(appearance_.itemHeight, MeasureTextHeight(item.text, appearance_.fontSize, textW));
+    const float textW =
+        std::min(std::max(EstimateTextWidth(item.text, appearance_.fontSize, item.textFontFamily), 8.0f), contentWidth);
+    const float textH = std::max(appearance_.itemHeight,
+                                 MeasureTextHeight(item.text, appearance_.fontSize, textW, item.textFontFamily));
     geometry.label = {labelX, 0.0f, labelW, appearance_.itemHeight};
     geometry.text = {textX, 0.0f, textW, textH};
     float height = textH;
@@ -379,18 +375,17 @@ CandidateList::ItemGeometry CandidateList::MeasureItem(size_t index, float width
     }
     if (!item.translation.empty())
     {
-        const float fontSize = appearance_.fontSize * 0.78f;
+        const float fontSize = appearance_.fontSize * (item.secondaryIsIpa ? 1.0f : 0.78f);
         const float gap = appearance_.fontSize * 0.65f;
-        const float naturalTranslationWidth = EstimateTextWidth(item.translation, fontSize);
+        const float naturalTranslationWidth = EstimateTextWidth(item.translation, fontSize, item.secondaryFontFamily);
         const float translationW = std::min(naturalTranslationWidth, contentWidth);
-        const bool inlineTranslation = orientation_ == Orientation::Vertical && geometry.annotation.y == 0.0f &&
-                                       lineEnd + gap + translationW <= contentWidth;
+        const bool inlineTranslation = !item.secondaryIsIpa && orientation_ == Orientation::Vertical &&
+                                       geometry.annotation.y == 0.0f && lineEnd + gap + translationW <= contentWidth;
         const float translationH =
             inlineTranslation
                 ? textH
-                : (naturalTranslationWidth <= contentWidth
-                       ? fontSize * 1.25f
-                       : std::max(fontSize * 1.25f, MeasureTextHeight(item.translation, fontSize, translationW)));
+                : std::max(fontSize * (item.secondaryIsIpa ? 1.6f : 1.25f),
+                           MeasureTextHeight(item.translation, fontSize, translationW, item.secondaryFontFamily));
         geometry.translation = {textX + (inlineTranslation ? lineEnd + gap : 0.0f),
                                 inlineTranslation ? 0.0f : height - padBelow, translationW, translationH};
         height = std::max(height, geometry.translation.y + translationH + (inlineTranslation ? 0.0f : padBelow));
@@ -467,11 +462,12 @@ SizeF CandidateList::Measure(const SizeF &availableSize)
     {
         // fitContent keeps only the gap MeasureItem puts before an inline annotation.
         const float textSlack = !appearance_.fitContent ? 6.0f : (item.annotation.empty() ? 0.0f : 4.0f);
-        const float textWidth = EstimateTextWidth(item.text, appearance_.fontSize) + textSlack +
+        const float textWidth = EstimateTextWidth(item.text, appearance_.fontSize, item.textFontFamily) + textSlack +
                                 EstimateTextWidth(item.annotation, appearance_.annotationFontSize);
-        const float translationWidth = EstimateTextWidth(item.translation, appearance_.fontSize * 0.78f);
+        const float translationWidth = EstimateTextWidth(
+            item.translation, appearance_.fontSize * (item.secondaryIsIpa ? 1.0f : 0.78f), item.secondaryFontFamily);
         const float contentWidth =
-            horizontal
+            (horizontal || item.secondaryIsIpa)
                 ? std::max(textWidth, translationWidth)
                 : textWidth + (item.translation.empty() ? 0.0f : appearance_.fontSize * 0.65f + translationWidth);
         float width = appearance_.contentPadLeft + appearance_.textPadLeft +
@@ -597,7 +593,7 @@ void CandidateList::Render(DeviceResources &deviceResources)
             }
         }
 
-        const float translationFontSize = appearance_.fontSize * 0.78f;
+        const float translationFontSize = appearance_.fontSize * (items_[index].secondaryIsIpa ? 1.0f : 0.78f);
         const auto &geometry = itemGeometry_[index];
         const auto absolute = [&](RectF rect) {
             rect.x += itemRect.x;
@@ -613,11 +609,12 @@ void CandidateList::Render(DeviceResources &deviceResources)
         const ComPtr<IDWriteTextLayout> labelLayout =
             TextLayoutFor(factory, fontFamily, item.label, appearance_.labelFontSize, labelRect);
         const ComPtr<IDWriteTextLayout> textLayout =
-            TextLayoutFor(factory, fontFamily, item.text, appearance_.fontSize, textRect);
+            TextLayoutFor(factory, ResolvedFontFamily(item.textFontFamily), item.text, appearance_.fontSize, textRect);
         const ComPtr<IDWriteTextLayout> annotationLayout =
             TextLayoutFor(factory, fontFamily, item.annotation, appearance_.annotationFontSize, annotationRect);
         const ComPtr<IDWriteTextLayout> translationLayout =
-            TextLayoutFor(factory, fontFamily, item.translation, translationFontSize, translationRect);
+            TextLayoutFor(factory, ResolvedFontFamily(item.secondaryFontFamily), item.translation, translationFontSize,
+                          translationRect);
 
         const bool highlighted = selected || pressed;
         const D2D1_COLOR_F &labelColor = highlighted && appearance_.rowLabelSelected.a > 0.001f
@@ -723,6 +720,7 @@ bool CandidateList::OnMouseDown(const POINT &point, WPARAM keyState)
 
     pressed_ = true;
     pressedIndex_ = hit;
+    pressedSecondary_ = items_[hit].secondaryIsIpa && dipPoint.y >= ItemRect(hit).y + itemGeometry_[hit].translation.y;
     InvalidateVisual();
     return true;
 }
@@ -744,10 +742,14 @@ bool CandidateList::OnMouseUp(const POINT &point, WPARAM keyState)
     if (hit != static_cast<size_t>(-1) && hit == pressedIndex)
     {
         SetSelectedIndex(hit);
-        if (onItemActivated_)
-        {
+        const bool secondary =
+            items_[hit].secondaryIsIpa && dipPoint.y >= ItemRect(hit).y + itemGeometry_[hit].translation.y;
+        if (secondary != pressedSecondary_)
+            return true;
+        if (secondary && onSecondaryActivated_)
+            onSecondaryActivated_(hit);
+        else if (!secondary && onItemActivated_)
             onItemActivated_(hit);
-        }
     }
 
     InvalidateVisual();

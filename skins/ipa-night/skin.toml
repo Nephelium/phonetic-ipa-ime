@@ -1,0 +1,89 @@
+schema_version = 1
+id = "ipa-night"
+name = "夜航 · IPA"
+version = "1.0.0"
+author = "国际音标输入法"
+description = "深蓝底色、冰蓝音标，适合夜间记录。"
+base = "fluent"
+
+[supports]
+layouts = ["horizontal", "vertical"]
+themes = ["dark", "light"]
+
+[candidate_window]
+corner_radius_dip = 10
+border_width_dip = 1
+item_corner_radius_dip = 5
+padding = 12
+item_gap = 7
+item_extra_height = 14
+number_inset = 12
+number_scale = 0.62
+number_gap = 10
+item_padding_right = 16
+selected_bar_width = 3
+selected_bar_inside = true
+page_arrows = false
+fit_content = true
+shadow = "soft"
+preedit_margin_dip = [11, 2, 10, 10]
+
+[candidate.light]
+surface = "#EEF3FB"
+border = "#BECEE1"
+text = "#253B57"
+number = "#687E9B"
+accent = "#416EA6"
+selected = "#DCE7F6"
+hover = "#E4EDF9"
+selected_text = "#253B57"
+selected_number = "#416EA6"
+translation = "#3F6C94"
+selected_translation = "#3F6C94"
+preedit_text = "#687E9B"
+preedit_caret = "#416EA6"
+preedit_divider = "#BECEE1"
+show_selected_bar = true
+
+[candidate.light.menu]
+background = "#EEF3FB"
+border = "#BECEE1"
+text = "#253B57"
+hover = "#E4EDF9"
+
+[toolbar.light]
+background = "#EEF3FB"
+border = "#BECEE1"
+icon = "#253B57"
+hover = "#E4EDF9"
+handle = "#416EA6"
+
+[candidate.dark]
+surface = "#17263B"
+border = "#344D6C"
+text = "#ECF3FF"
+number = "#95B0D1"
+accent = "#9BD7F1"
+selected = "#2B4564"
+hover = "#223A56"
+selected_text = "#ECF3FF"
+selected_number = "#9BD7F1"
+translation = "#A8DDF1"
+selected_translation = "#A8DDF1"
+preedit_text = "#95B0D1"
+preedit_caret = "#9BD7F1"
+preedit_divider = "#344D6C"
+show_selected_bar = true
+
+[candidate.dark.menu]
+background = "#17263B"
+border = "#344D6C"
+text = "#ECF3FF"
+hover = "#223A56"
+
+[toolbar.dark]
+background = "#17263B"
+border = "#344D6C"
+icon = "#ECF3FF"
+hover = "#223A56"
+handle = "#9BD7F1"

@@ -1,4 +1,4 @@
-LIBRARY MetasequoiaImeTsf.dll
+LIBRARY PhoneticIpaTsf.dll
 
 EXPORTS
         DllGetClassObject    PRIVATE

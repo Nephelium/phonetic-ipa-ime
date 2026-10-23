@@ -153,6 +153,7 @@ class CandidateSkinScene
     struct Callbacks
     {
         std::function<void(size_t)> itemActivated;
+        std::function<void(size_t)> secondaryActivated;
         std::function<void(size_t, const POINT &)> itemContextMenu;
         std::function<void(bool next)> pageArrow;
         std::function<void()> expandToggle;

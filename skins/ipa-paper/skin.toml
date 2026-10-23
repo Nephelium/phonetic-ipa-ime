@@ -1,0 +1,89 @@
+schema_version = 1
+id = "ipa-paper"
+name = "暖纸 · IPA"
+version = "1.0.0"
+author = "国际音标输入法"
+description = "暖白纸面、墨色汉字与铜色音标。"
+base = "fluent"
+
+[supports]
+layouts = ["horizontal", "vertical"]
+themes = ["dark", "light"]
+
+[candidate_window]
+corner_radius_dip = 12
+border_width_dip = 1
+item_corner_radius_dip = 7
+padding = 12
+item_gap = 7
+item_extra_height = 14
+number_inset = 12
+number_scale = 0.62
+number_gap = 10
+item_padding_right = 16
+selected_bar_width = 3
+selected_bar_inside = true
+page_arrows = false
+fit_content = true
+shadow = "soft"
+preedit_margin_dip = [11, 2, 10, 10]
+
+[candidate.light]
+surface = "#FBF8F1"
+border = "#D7CFC0"
+text = "#342F28"
+number = "#827466"
+accent = "#9A6937"
+selected = "#EEE4D3"
+hover = "#F3EBDD"
+selected_text = "#342F28"
+selected_number = "#9A6937"
+translation = "#715027"
+selected_translation = "#715027"
+preedit_text = "#827466"
+preedit_caret = "#9A6937"
+preedit_divider = "#D7CFC0"
+show_selected_bar = false
+
+[candidate.light.menu]
+background = "#FBF8F1"
+border = "#D7CFC0"
+text = "#342F28"
+hover = "#F3EBDD"
+
+[toolbar.light]
+background = "#FBF8F1"
+border = "#D7CFC0"
+icon = "#342F28"
+hover = "#F3EBDD"
+handle = "#9A6937"
+
+[candidate.dark]
+surface = "#2B2824"
+border = "#554B3F"
+text = "#F1E8D7"
+number = "#B7A88F"
+accent = "#DEB47C"
+selected = "#474035"
+hover = "#38322B"
+selected_text = "#F1E8D7"
+selected_number = "#DEB47C"
+translation = "#E4C69B"
+selected_translation = "#E4C69B"
+preedit_text = "#B7A88F"
+preedit_caret = "#DEB47C"
+preedit_divider = "#554B3F"
+show_selected_bar = false
+
+[candidate.dark.menu]
+background = "#2B2824"
+border = "#554B3F"
+text = "#F1E8D7"
+hover = "#38322B"
+
+[toolbar.dark]
+background = "#2B2824"
+border = "#554B3F"
+icon = "#F1E8D7"
+hover = "#38322B"
+handle = "#DEB47C"

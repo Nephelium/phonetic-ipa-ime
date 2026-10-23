@@ -481,7 +481,7 @@ void FloatingToolbarPresenter::RebuildScene()
     }
     else if (impl_->englishInputMode == 1)
     {
-        addText(L"En", true, []() { FanyNamedPipe::EnqueueExitEnglishInputModeTask(); });
+        addText(L"IPA", true, []() { FanyNamedPipe::EnqueueExitEnglishInputModeTask(); });
     }
     else if (impl_->japaneseInputMode == 1)
     {

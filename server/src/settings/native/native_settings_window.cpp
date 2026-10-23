@@ -450,7 +450,7 @@ class SidebarHeader : public msimeui::Visual
         TextStyle style;
         style.size = 19.0f;
         style.weight = DWRITE_FONT_WEIGHT_MEDIUM;
-        title_.Set(L"水杉 IME", style);
+        title_.Set(L"国际音标输入法", style);
         // padding 0 12px 12px 12px; margin-bottom 8px
         SetMargin({0.0f, 0.0f, 0.0f, 8.0f});
     }
@@ -1277,7 +1277,7 @@ class SettingsWindowImpl : public HostServices
         SetWindowPos(hwnd_, nullptr, 0, 0, 0, 0,
                      SWP_FRAMECHANGED | SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
         model_.Post("configRequest");
-        ShowPage(initialPage.empty() ? std::string("input") : initialPage);
+        ShowPage(initialPage.empty() ? std::string("ipa-keyboard") : initialPage);
         if (model_.HasConfig())
             splash_->Dismiss();
         else

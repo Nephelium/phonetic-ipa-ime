@@ -210,8 +210,8 @@ TEST_CASE(stats_pipe_name_carries_the_decimal_session_suffix)
     // Named pipes are machine-global; a missing or non-decimal suffix would let
     // concurrent sessions fight over one listener, so the DLL and Server must
     // build the exact same name.
-    REQUIRE_EQ(MsimeStats::BuildStatsPipeName(0), std::wstring(L"\\\\.\\pipe\\FanyImeStatsNamedPipe-0"));
-    REQUIRE_EQ(MsimeStats::BuildStatsPipeName(7), std::wstring(L"\\\\.\\pipe\\FanyImeStatsNamedPipe-7"));
-    REQUIRE_EQ(MsimeStats::BuildStatsPipeName(42), std::wstring(L"\\\\.\\pipe\\FanyImeStatsNamedPipe-42"));
+    REQUIRE_EQ(MsimeStats::BuildStatsPipeName(0), std::wstring(L"\\\\.\\pipe\\PhoneticIpaStatsNamedPipe-0"));
+    REQUIRE_EQ(MsimeStats::BuildStatsPipeName(7), std::wstring(L"\\\\.\\pipe\\PhoneticIpaStatsNamedPipe-7"));
+    REQUIRE_EQ(MsimeStats::BuildStatsPipeName(42), std::wstring(L"\\\\.\\pipe\\PhoneticIpaStatsNamedPipe-42"));
     REQUIRE_EQ(std::wstring(FANY_IME_STATS_PIPE_NAME_PREFIX) + L"12", MsimeStats::BuildStatsPipeName(12));
 }

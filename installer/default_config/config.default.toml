@@ -41,8 +41,8 @@ floating_toolbar_auto_hide_delay = 5
 # 悬浮工具栏阴影（与候选窗一致的柔和阴影）
 floating_toolbar_shadow = true
 # 翻页方式
-paging_minus_equal = true
-paging_comma_period = true
+paging_minus_equal = false
+paging_comma_period = false
 paging_brackets = false
 paging_tab = true
 paging_page_up_down = true
@@ -53,7 +53,7 @@ candidate_arrow_navigation = true
 # 横排候选时左右方向键移动高亮：光标在拼音串尾时右键移高亮，左键回到第一个候选后再按才移动光标（默认关闭）
 candidate_horizontal_arrow_navigation = false
 # 中文输入状态下显示英文前缀候选
-cn_en_mixed_input = true
+cn_en_mixed_input = false
 # 中英混输触发所需的最少字母数，范围 1–8
 cn_en_mixed_input_min_chars = 5
 # 首页最多展示的英文候选数，范围 1–3；保留中文首选，小候选页会减少英文项
@@ -71,7 +71,7 @@ kaomoji_mixed_input = false
 # 中文输入状态下输入恰好等于符号编码（alpha、infinity、szq、xl，数字读音 yi → ① ⑴ ⒈，标点读音 dian → · 、、shuminghao → 《》 〈〉）时显示符号候选，首个紧跟首选，其余排在颜文字之后
 symbol_mixed_input = false
 # 云候选
-cloud_candidates = true
+cloud_candidates = false
 # TODO: 极简模式。极简模式下，候选窗口使用 d2d 绘制，界面只作展示候选项，无其他功能。
 clean_mode = false
 
@@ -144,7 +144,7 @@ api_key = ""
 # enabled 布尔仅为旧版兼容保留，实际生效方由 [translation].provider 决定。
 #
 [niutrans]
-enabled = true
+enabled = false
 app_id = ""
 apikey = ""
 
@@ -155,7 +155,7 @@ apikey = ""
 # 在设置页选择过一次后会写入具体值。
 #
 [translation]
-provider = ""
+provider = "none"
 
 #
 # 网络代理：云输入、模型下载、AI 联想、翻译、语音识别等需要联网的功能共用。
@@ -197,7 +197,7 @@ theme_voice = "follow"
 # 字体（中文）
 font = "Noto Sans SC"
 # 英文字体（拉丁字母优先使用；汉字仍回落到 font）
-english_font = "Segoe UI"
+english_font = "Doulos SIL"
 # 缺省字体，如果系统中没有找到指定字体，则使用缺省字体
 default_font = "Microsoft YaHei"
 # 主字体缺字时依次使用这些补充字体，最后回落到系统字体；[] 表示仅使用系统回落。
@@ -209,13 +209,13 @@ candidate_window_preedit_font_size = 15
 # 候选文字颜色，"auto" 跟随主题，或 #RRGGBB
 cand_text_color = "auto"
 # 每页候选词数量，可选：3, 4, 5, 6, 7, 8, 9
-page_size = 6
+page_size = 9
 # 候选窗口严格按文字所需的宽度收紧，不垫出厂最小宽度；皮肤 skin.toml 的 fit_content 打开时始终收紧
 candidate_window_fit_content = false
 # 候选窗口跟随光标
 candidate_window_follow_cursor = true
 # 候选窗口排列方式，可选："vertical", "horizontal"
-candidate_window_layout = "horizontal"
+candidate_window_layout = "vertical"
 # 横向排列时强制单行：候选窗口最宽可到当前屏幕宽度，放不下才换行；关闭时最宽为屏幕一半
 candidate_window_single_line = false
 # 候选窗口与悬浮工具栏皮肤，可选："fluent", "wechat", "wechat_scroll", "graphite", "willow_green", "autumn_osmanthus", "microsoft"，或外部皮肤的 id
@@ -267,7 +267,7 @@ default_ime_mode = "chinese"
 # 中英文状态范围，可选："app"（按应用分别记忆）, "global"（所有应用保持统一）
 ime_mode_scope = "app"
 # 以词定字：开启后，[ 上屏高亮候选的首个汉字，] 上屏末个汉字
-word_to_character = true
+word_to_character = false
 word_to_character_keys = "brackets"
 # 智能标点：中文标点模式下的标点自动转换（总开关，默认关闭）
 smart_punctuation = false
@@ -424,7 +424,7 @@ switch_language_shift = true
 switch_language_ctrl = false
 switch_language_ctrl_alt_space = true
 # 输入状态切换；空字符串表示未绑定；支持 Ctrl 或 Ctrl+Shift 组合键
-toggle_english_candidates = "Ctrl+Shift+KeyE"
+toggle_english_candidates = "Ctrl+Shift+KeyI"
 toggle_full_width = "Ctrl+Shift+Space"
 toggle_punctuation = "Ctrl+Period"
 toggle_character_set_ctrl_shift_f = true

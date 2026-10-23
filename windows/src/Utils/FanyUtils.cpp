@@ -8,6 +8,8 @@
 #include "Define.h"
 #include "Globals.h"
 #include "FanyUtils.h"
+#include "../../../engine/ipa/ipa_tables.h"
+#include "../../../engine/contracts/ipa_input.h"
 #include "Ipc.h"
 #include "VimMode.h"
 #include <utf8cpp/utf8.h>
@@ -87,8 +89,8 @@ std::wstring EnvironmentValue(const wchar_t *name)
 std::wstring InstalledDataDir()
 {
     HKEY key = nullptr;
-    if (RegOpenKeyExW(HKEY_LOCAL_MACHINE, L"Software\\Metasequoia\\MetasequoiaIME", 0,
-                      KEY_QUERY_VALUE | KEY_WOW64_64KEY, &key) != ERROR_SUCCESS)
+    if (RegOpenKeyExW(HKEY_LOCAL_MACHINE, L"Software\\PhoneticIpa\\Prototype", 0, KEY_QUERY_VALUE | KEY_WOW64_64KEY,
+                      &key) != ERROR_SUCCESS)
     {
         return {};
     }
@@ -138,7 +140,7 @@ std::filesystem::path SharedDataDirectory()
     {
         return {};
     }
-    return std::filesystem::path(localAppData) / L"metasequoiaime";
+    return std::filesystem::path(localAppData) / L"phonetic-ipa-prototype";
 }
 
 std::filesystem::path SharedConfigPath()
@@ -151,6 +153,21 @@ std::filesystem::path SharedConfigPath()
     return directory / L"config.toml";
 }
 } // namespace
+
+bool HasIpaHotkey(unsigned modifiers, unsigned key)
+{
+    if (!PhoneticIpaKey::EditableChord(modifiers, key))
+        return false;
+    try
+    {
+        static thread_local phonetic_ipa::LiveCinTable cache;
+        return !cache.Get(SharedDataDirectory() / L"ipa").Hotkey(modifiers, key).empty();
+    }
+    catch (...)
+    {
+        return false;
+    }
+}
 
 BOOL ReadConfiguredDefaultImeModeChinese()
 {

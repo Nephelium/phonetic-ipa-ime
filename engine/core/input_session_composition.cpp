@@ -579,11 +579,15 @@ const QueryRequest &InputSession::request() const
 
 const std::string &InputSession::get_pinyin_sequence() const
 {
+    if (dedicated_english_mode_)
+        return dedicated_english_preedit_;
     return request().raw_input;
 }
 
 const std::string &InputSession::get_pinyin_sequence_with_cases() const
 {
+    if (dedicated_english_mode_)
+        return dedicated_english_preedit_;
     // 句中辅助码的反引号段只在原串里，宿主回读的必须是用户敲的原样。
     if (!request().raw_input_with_syllable_helpcodes.empty())
     {
@@ -594,16 +598,22 @@ const std::string &InputSession::get_pinyin_sequence_with_cases() const
 
 const std::string &InputSession::get_pure_pinyin_sequence() const
 {
+    if (dedicated_english_mode_)
+        return dedicated_english_preedit_;
     return request().normalized_input;
 }
 
 const std::string &InputSession::get_pinyin_segmentation() const
 {
+    if (dedicated_english_mode_)
+        return dedicated_english_preedit_;
     return request().normalized_segmentation.empty() ? request().segmentation : request().normalized_segmentation;
 }
 
 std::string InputSession::get_pinyin_segmentation_with_cases() const
 {
+    if (dedicated_english_mode_)
+        return dedicated_english_preedit_;
     return build_pinyin_segmentation_with_cases(shuangpin_preedit_uses_raw_);
 }
 
@@ -1211,6 +1221,14 @@ void InputSession::apply_pending_sequence()
     const std::string raw_input = has_pending_pinyin_sequence_ ? pending_pinyin_sequence_ : request().raw_input;
     const std::string raw_input_with_cases =
         has_pending_pinyin_sequence_with_cases_ ? pending_pinyin_sequence_with_cases_ : raw_input;
+
+    if (dedicated_english_mode_)
+    {
+        dedicated_english_preedit_ = raw_input_with_cases;
+        clear_pending_sequence();
+        update_dedicated_english_candidates();
+        return;
+    }
 
     switch (current_scheme_type())
     {

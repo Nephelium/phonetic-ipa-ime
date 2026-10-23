@@ -614,6 +614,10 @@ class CandidateList : public Visual
         std::wstring translation;
         // Runs not listed here use the translation color.
         std::vector<TextRun> translationRuns;
+        bool secondaryIsIpa = false;
+        // Optional per-field fonts; labels/annotations keep the list's UI font.
+        std::wstring textFontFamily;
+        std::wstring secondaryFontFamily;
     };
 
     enum class Orientation
@@ -718,6 +722,10 @@ class CandidateList : public Visual
     RectF GetItemBounds(size_t index) const;
     void SetOnSelectionChanged(SelectionChangedHandler handler);
     void SetOnItemActivated(ItemActivatedHandler handler);
+    void SetOnSecondaryActivated(ItemActivatedHandler handler)
+    {
+        onSecondaryActivated_ = std::move(handler);
+    }
     void SetOnContextMenu(ContextMenuHandler handler);
     void SetAppearance(Appearance appearance);
     void SetOrientation(Orientation orientation);
@@ -748,7 +756,8 @@ class CandidateList : public Visual
         RectF translation;
     };
 
-    float MeasureTextHeight(const std::wstring &text, float fontSize, float width) const;
+    float MeasureTextHeight(const std::wstring &text, float fontSize, float width,
+                            const std::wstring &family = {}) const;
     ItemGeometry MeasureItem(size_t index, float width) const;
     // The layout Render draws `text` with in `box`. Layouts are kept across
     // frames by text, size and box rather than by item: a selection move or a
@@ -757,23 +766,23 @@ class CandidateList : public Visual
     Microsoft::WRL::ComPtr<IDWriteTextLayout> TextLayoutFor(IDWriteFactory *factory, const std::wstring &fontFamily,
                                                             const std::wstring &text, float fontSize, const RectF &box);
     size_t HitTestItem(const PointF &point) const;
-    float EstimateTextWidth(const std::wstring &text, float fontSize) const;
+    float EstimateTextWidth(const std::wstring &text, float fontSize, const std::wstring &family = {}) const;
     RectF ItemRect(size_t index) const;
-    const std::wstring &ResolvedFontFamily() const;
+    const std::wstring &ResolvedFontFamily(const std::wstring &overrideFamily = {}) const;
     // Results of EstimateTextWidth / MeasureTextHeight. A frame measures the
     // list several times (natural size, sticky size, arrange at the final
     // width) and each measurement used to build a fresh DirectWrite layout per
     // string; the metrics depend only on the text, size, width and font, so
     // they are memoized until the font changes.
-    bool LookupTextMetric(wchar_t kind, const std::wstring &text, float fontSize, float width, float &value) const;
-    void StoreTextMetric(wchar_t kind, const std::wstring &text, float fontSize, float width, float value) const;
+    bool LookupTextMetric(wchar_t kind, const std::wstring &text, float fontSize, float width, float &value,
+                          const std::wstring &family) const;
+    void StoreTextMetric(wchar_t kind, const std::wstring &text, float fontSize, float width, float value,
+                         const std::wstring &family) const;
 
     std::vector<Item> items_;
     std::vector<ItemGeometry> itemGeometry_;
     mutable std::unordered_map<std::wstring, float> textMetricCache_;
-    mutable std::wstring textMetricFamily_;
     std::unordered_map<std::wstring, Microsoft::WRL::ComPtr<IDWriteTextLayout>> textLayoutCache_;
-    std::wstring textLayoutFamily_;
     float layoutWidth_ = 0.0f;
     Appearance appearance_{};
     Orientation orientation_ = Orientation::Vertical;
@@ -785,6 +794,8 @@ class CandidateList : public Visual
     size_t selectedIndex_ = 0;
     SelectionChangedHandler onSelectionChanged_;
     ItemActivatedHandler onItemActivated_;
+    ItemActivatedHandler onSecondaryActivated_;
+    bool pressedSecondary_ = false;
     ContextMenuHandler onContextMenu_;
 };
 

@@ -197,9 +197,14 @@ bool CandidatePresenter::Bind(HWND hwnd)
         return false;
     }
     impl_ = std::make_unique<Impl>();
-    // 场景里的点击都投递回候选窗的窗口过程，由宿主转给工作线程，不在鼠标分发途中改动状态。
+    // 点击动作入工作队列，不在鼠标分发途中改动候选状态。
     CandidateSkinScene::Callbacks callbacks;
     callbacks.itemActivated = [this](size_t index) { CommitItem(index); };
+    callbacks.secondaryActivated = [](size_t index) {
+        FanyNamedPipe::EnqueueCandidateUiAction(
+            FanyNamedPipe::CandidateUiAction::CommitIpa, static_cast<int>(index + 1), 0,
+            Global::rendered_candidate_page_generation.load(std::memory_order_acquire));
+    };
     callbacks.itemContextMenu = [this](size_t index, const POINT &clientPoint) {
         ShowItemContextMenu(index, clientPoint);
     };
@@ -294,10 +299,13 @@ void CandidatePresenter::ApplySkin()
     settings.horizontal = GetConfiguredCandidateWindowLayout() == "horizontal";
     settings.fontSize = static_cast<float>((std::max)(12, GetConfiguredCandidateFontSize()));
     settings.preeditFontSize = static_cast<float>((std::max)(12, GetConfiguredCandidateWindowPreeditFontSize()));
-    settings.fontFamily = string_to_wstring(ResolveSystemFontFamilyForCss(GetConfiguredCandidateEnglishFont()));
+    settings.fontFamily = L"PTB IPA Plus";
     settings.resolveFontFamily = [](const std::string &family) {
+        if (family == "Doulos SIL" || family == "PTB IPA Plus")
+            return std::wstring(L"PTB IPA Plus");
         return string_to_wstring(ResolveSystemFontFamilyForCss(family));
     };
+    settings.fallbackFontFamilies.push_back(L"PTB IPA Plus");
     for (const auto &font : GetConfiguredCandidateFallbackFontFamilies())
         settings.fallbackFontFamilies.push_back(string_to_wstring(font));
     settings.textColor = GetConfiguredCandidateTextColor();
@@ -358,10 +366,25 @@ std::uint64_t CandidatePresenter::FillItemsFromUi()
     {
         const auto &view = page->page_views[i];
         msimeui::CandidateList::Item item;
-        item.label = std::to_wstring(i + 1);
+        item.label = (page->input_hint.empty() || view.ipa_reading_option) ? std::to_wstring(i + 1) : L"";
         item.text = string_to_wstring(view.text + view.badge);
+        if (view.ipa_primary)
+            item.textFontFamily = L"Doulos SIL";
         item.annotation = string_to_wstring(view.annotation);
-        if (translationsEnabled)
+        if (view.ipa_needs_choice)
+        {
+            item.translation = view.ipa_can_choose ? L"选择读音 · 点击或 Ctrl+Enter" : L"读音待选（完整词语后可选）";
+            item.secondaryIsIpa = true;
+        }
+        else if (!view.ipa.empty())
+        {
+            item.translation = string_to_wstring(view.ipa);
+            item.secondaryFontFamily = L"Doulos SIL";
+            if (!view.ipa_committable)
+                item.translation += L"（预览）";
+            item.secondaryIsIpa = true;
+        }
+        else if (translationsEnabled)
         {
             // 逐段转成 UTF-16 再拼起来，区间按拼出来的串计。
             for (const auto &segment : FanyImeIpc::SegmentTranslationGloss(view.translation))
@@ -410,6 +433,8 @@ std::uint64_t CandidatePresenter::FillItemsFromUi()
             {
                 msimeui::CandidateList::Item item;
                 item.text = word;
+                if (!page->page_views.empty() && page->page_views.front().ipa_primary)
+                    item.textFontFamily = L"Doulos SIL";
                 gridItems.push_back(std::move(item));
             }
         }
@@ -427,7 +452,9 @@ void CandidatePresenter::CommitItem(size_t pageIndex)
     {
         return;
     }
-    PostMessageW(hwnd_, WM_COMMIT_CANDIDATE, static_cast<WPARAM>(pageIndex + 1), 0);
+    FanyNamedPipe::EnqueueCandidateUiAction(FanyNamedPipe::CandidateUiAction::Commit, static_cast<int>(pageIndex + 1),
+                                            0,
+                                            Global::rendered_candidate_page_generation.load(std::memory_order_acquire));
 }
 
 void CandidatePresenter::CommitExpandedItem(size_t gridIndex)
@@ -552,6 +579,8 @@ void CandidatePresenter::ShowItemContextMenu(size_t pageIndex, POINT clientPoint
     // A mouse callback has no posted-message handoff at all, so it must not walk the worker's live page either.
     const Global::CandidatePageSnapshotPtr page = Global::LoadCandidatePageSnapshot();
     // 冻结的是用户右键时看见的那一页：已发布但还没画出来的一页不算。
+    if (pageIndex < page->page_views.size() && page->page_views[pageIndex].ipa_reading_option)
+        return;
     FanyNamedPipe::NoteCandidateUiInteraction(
         Global::rendered_candidate_page_generation.load(std::memory_order_acquire));
     std::wstring word;
@@ -582,6 +611,15 @@ void CandidatePresenter::ShowItemContextMenu(size_t pageIndex, POINT clientPoint
     };
 
     auto stack = std::make_shared<msimeui::StackPanel>(0.0f);
+    if (pageIndex < page->page_views.size() && page->page_views[pageIndex].ipa_can_choose)
+    {
+        const auto generation = page->generation;
+        stack->AddChild(makeItem(L"切换读音", false, [this, oneBased, generation] {
+            CloseContextMenu(true);
+            FanyNamedPipe::EnqueueCandidateUiAction(FanyNamedPipe::CandidateUiAction::ChooseIpaReading,
+                                                    static_cast<int>(oneBased), 0, generation);
+        }));
+    }
     auto pin = makeItem(L"置顶", false, [this, oneBased]() {
         CloseContextMenu(true);
         PostMessageW(hwnd_, WM_PIN_TO_TOP_CANDIDATE, oneBased, 0);
@@ -970,6 +1008,9 @@ void CandidatePresenter::ShowFromGlobalState(POINT caret)
             caretIndex = preedit.size();
         }
     }
+    const auto inputHint = Global::LoadCandidatePageSnapshot()->input_hint;
+    if (!inputHint.empty())
+        preedit += (preedit.empty() ? L"" : L"\n") + inputHint;
     impl_->preedit->SetText(preedit);
     if (preedit.empty() && GetConfiguredCandidateWindowPreeditStyle() == "empty")
     {

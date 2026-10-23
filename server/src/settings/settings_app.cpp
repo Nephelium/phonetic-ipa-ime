@@ -13,6 +13,8 @@
 #include "settings/native/native_settings_window.h"
 
 #include "msimeui/DeviceResources.h"
+#include "msimeui/Fonts.h"
+#include "ipa/ipa_runtime.h"
 #include "settings/serial_task_queue.h"
 #include "statistics/stats_overview.h"
 #include "statistics/stats_store.h"
@@ -50,9 +52,9 @@ namespace json = boost::json;
 
 namespace
 {
-constexpr wchar_t kWindowClass[] = L"MetasequoiaImeSettingsWindow";
-constexpr wchar_t kWindowTitle[] = L"Metasequoia IME Settings";
-constexpr wchar_t kSingleInstanceMutex[] = L"Local\\MetasequoiaImeSettings.SingleInstance";
+constexpr wchar_t kWindowClass[] = L"PhoneticIpaSettingsWindow";
+constexpr wchar_t kWindowTitle[] = L"国际音标输入法 · 设置";
+constexpr wchar_t kSingleInstanceMutex[] = L"Local\\PhoneticIpaSettings.SingleInstance";
 constexpr UINT kActivateExistingWindow = WM_APP + 1;
 constexpr UINT kOpenAboutSection = WM_APP + 2;
 constexpr UINT kScanSkinCatalog = WM_APP + 3;
@@ -1842,6 +1844,8 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM w_param, LPARAM l_pa
 int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR command_line, int show_command)
 {
     TraceStartup("wWinMain");
+    msimeui::LoadPrivateIpaFont((PhoneticIpa::ResourceRoot() / "DoulosSIL-Regular.ttf").wstring());
+    msimeui::LoadPrivateIpaFont((PhoneticIpa::ResourceRoot() / "PTBIPAPlus-Regular.ttf").wstring());
     // The elevated half of the game-compat switch: write HKLM and exit, no window, no single-instance check.
     if (const int elevated_result = game_compat_name::RunElevatedApplyIfRequested(command_line); elevated_result >= 0)
         return elevated_result;
@@ -1890,10 +1894,16 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR command_line, int show_
         return 1;
 
     const UINT dpi = GetDpiForSystem();
-    const int width = MulDiv(900, dpi, 96);
-    const int height = MulDiv(710, dpi, 96);
-    const int x = (GetSystemMetrics(SM_CXSCREEN) - width) / 2;
-    const int y = (GetSystemMetrics(SM_CYSCREEN) - height) / 2;
+    // Give the keyboard and symbol picker room, clamped to the primary work area.
+    MONITORINFO monitor{sizeof(monitor)};
+    GetMonitorInfoW(MonitorFromPoint({0, 0}, MONITOR_DEFAULTTOPRIMARY), &monitor);
+    const int margin = MulDiv(24, dpi, 96);
+    const int width =
+        std::min(MulDiv(1220, dpi, 96), static_cast<int>(monitor.rcWork.right - monitor.rcWork.left) - margin);
+    const int height =
+        std::min(MulDiv(880, dpi, 96), static_cast<int>(monitor.rcWork.bottom - monitor.rcWork.top) - margin);
+    const int x = monitor.rcWork.left + (monitor.rcWork.right - monitor.rcWork.left - width) / 2;
+    const int y = monitor.rcWork.top + (monitor.rcWork.bottom - monitor.rcWork.top - height) / 2;
     HWND hwnd = CreateWindowExW(0, kWindowClass, kWindowTitle, WS_OVERLAPPEDWINDOW, x, y, width, height, nullptr,
                                 nullptr, instance, nullptr);
     if (!hwnd)

@@ -1,0 +1,18 @@
+{
+  "MetasequoiaIMECLSID": "d95efabf-8aec-5396-aea4-a4e47d5f21bf",
+  "MetasequoiaIMEGuidProfile": "881bb948-8042-590e-aac7-77d38bafb1e6",
+  "MetasequoiaIMEGuidImeModePreserveKey": "507ddfb8-7a70-5b31-bf0a-1962078e70d1",
+  "MetasequoiaIMEGuidImeModePreserveKey02": "8d62849f-84db-5fba-9787-07db5771e43f",
+  "MetasequoiaIMEGuidImeModePreserveKey03": "be6195f6-93db-5aa8-8ba9-1dda805742db",
+  "MetasequoiaIMEGuidEnglishInputModePreserveKey": "ea48764d-cd08-5c03-9472-59620e282a7c",
+  "MetasequoiaIMEGuidDoubleSingleBytePreserveKey": "b9789247-a3cc-5135-8bb2-4c85ffea45e1",
+  "MetasequoiaIMEGuidPunctuationPreserveKey": "e8ed9ac0-5f15-5b3a-b0fc-42a24b240fb3",
+  "MetasequoiaIMEGuidCompartmentDoubleSingleByte": "3a409733-c447-58f7-8668-cdc91140f84b",
+  "MetasequoiaIMEGuidCompartmentPunctuation": "97b9b005-994b-513e-bcf1-03c1d802f14d",
+  "MetasequoiaIMEGuidLangBarIMEMode": "4a3eda51-e01e-55d3-af3e-4abdf28c4eed",
+  "MetasequoiaIMEGuidLangBarDoubleSingleByte": "17302d9b-f950-5cb1-b860-4f42fa2239eb",
+  "MetasequoiaIMEGuidLangBarPunctuation": "65e50525-2b29-503e-9cde-4d2c7863bbaa",
+  "MetasequoiaIMEGuidDisplayAttributeInput": "fa89c450-d3d4-5ada-9655-f86e8e282804",
+  "MetasequoiaIMEGuidDisplayAttributeConverted": "387ca902-8591-5463-bf26-f2e5f57a9160",
+  "MetasequoiaIMEGuidCandUIElement": "58011c5d-7ea4-5332-8ee1-d14b5ef11301"
+}

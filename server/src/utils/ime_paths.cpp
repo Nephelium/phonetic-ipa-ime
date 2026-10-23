@@ -10,7 +10,7 @@
 
 namespace
 {
-constexpr wchar_t kAppName[] = L"metasequoiaime";
+constexpr wchar_t kAppName[] = L"phonetic-ipa-prototype";
 
 bool PathHasEmptyComponent(const std::wstring &path)
 {
@@ -73,8 +73,8 @@ std::wstring QueryEnvironmentW(const wchar_t *name)
 std::wstring QueryInstalledDataDir()
 {
     HKEY key = nullptr;
-    if (RegOpenKeyExW(HKEY_LOCAL_MACHINE, L"Software\\Metasequoia\\MetasequoiaIME", 0,
-                      KEY_QUERY_VALUE | KEY_WOW64_64KEY, &key) != ERROR_SUCCESS)
+    if (RegOpenKeyExW(HKEY_LOCAL_MACHINE, L"Software\\PhoneticIpa\\Prototype", 0, KEY_QUERY_VALUE | KEY_WOW64_64KEY,
+                      &key) != ERROR_SUCCESS)
     {
         return {};
     }

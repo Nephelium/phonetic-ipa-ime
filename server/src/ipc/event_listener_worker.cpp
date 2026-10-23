@@ -153,6 +153,7 @@ struct Task
     bool session_pinyin_is_canonical = false;
     std::shared_ptr<IInputSession> phrase_session;
     int candidate_one_based_index = 0;
+    uint64_t candidate_page_generation = 0;
     // UiCommitCandidateAt：卷轴展开面板里点中的候选的绝对下标与显示文字。
     int candidate_absolute_index = 0;
     std::wstring candidate_expected_text;
@@ -250,6 +251,7 @@ void WorkerThread()
         }
 
         const bool candidateUiAction =
+            task.type == TaskType::UiCommitIpa || task.type == TaskType::UiChooseIpaReading ||
             task.type == TaskType::UiCommitCandidate || task.type == TaskType::UiPinCandidate ||
             task.type == TaskType::UiDeleteCandidate || task.type == TaskType::UiFixCandidatePosition ||
             task.type == TaskType::UiClearCandidatePosition || task.type == TaskType::UiPageUp ||
@@ -604,8 +606,36 @@ void WorkerThread()
             break;
         }
 
+        case TaskType::UiChooseIpaReading:
+        case TaskType::UiCommitIpa: {
+            auto &ui = Global::candidate_ui;
+            const int index = task.candidate_one_based_index - 1;
+            if (task.candidate_page_generation != Global::candidate_page_generation.load(std::memory_order_acquire) ||
+                index < 0 || static_cast<size_t>(index) >= ui.page_views.size())
+                break;
+            if (g_ipa_reading_page_active)
+            {
+                SelectIpaReading(index);
+                break;
+            }
+            if (task.type == TaskType::UiChooseIpaReading || ui.page_views[index].ipa_needs_choice)
+            {
+                EnterIpaReadingPage(index);
+                break;
+            }
+            if (ui.page_views[index].ipa.empty() || !ui.page_views[index].ipa_committable)
+                break;
+            if (SendToTsfWorkerThreadClientViaNamedpipe(task.client_id, task.activation_epoch,
+                                                        Global::DataFromServerMsgTypeToTsfWorkerThread::CommitCandidate,
+                                                        string_to_wstring(ui.page_views[index].ipa)))
+                ClearState();
+            break;
+        }
         case TaskType::UiCommitCandidate:
         case TaskType::UiCommitCandidateAt: {
+            if ((g_ipa_reading_page_active || task.candidate_page_generation != 0) &&
+                task.candidate_page_generation != Global::candidate_page_generation.load(std::memory_order_acquire))
+                break;
             int index_in_page = task.candidate_one_based_index - 1;
             if (task.type == TaskType::UiCommitCandidateAt)
             {
@@ -786,6 +816,7 @@ void WorkerThread()
             Global::candidate_ui.page_size = GetConfiguredCandidatePageSize();
             g_language_cycle_parked_session.reset();
             g_inputSession = CreateInputSessionFromConfig();
+            g_inputSession->set_ipa_mode(g_english_input_mode);
             Global::candidate_ui.set_items({});
             PostMessage(::global_hwnd, WM_HIDE_MAIN_WINDOW, 0, 0);
             break;
@@ -806,6 +837,7 @@ void WorkerThread()
             Global::candidate_ui.page_size = GetConfiguredCandidatePageSize();
             g_language_cycle_parked_session.reset();
             g_inputSession = CreateInputSessionFromConfig();
+            g_inputSession->set_ipa_mode(g_english_input_mode);
             Global::candidate_ui.set_items({});
             PostMessage(::global_hwnd, WM_HIDE_MAIN_WINDOW, 0, 0);
             break;
@@ -1156,7 +1188,8 @@ void EnqueuePipeSessionInvalidatedTask(uint64_t client_id, uint64_t invalidation
     EnqueueTask(TaskType::ClientSuspended, disconnectData, invalidation_epoch);
 }
 
-void EnqueueCandidateUiAction(CandidateUiAction action, int one_based_index, int fixed_position)
+void EnqueueCandidateUiAction(CandidateUiAction action, int one_based_index, int fixed_position,
+                              uint64_t page_generation)
 {
     if (!pipe_running || one_based_index <= 0 || one_based_index > 10)
     {
@@ -1170,7 +1203,15 @@ void EnqueueCandidateUiAction(CandidateUiAction action, int one_based_index, int
     }
 
     TaskType type = TaskType::UiCommitCandidate;
-    if (action == CandidateUiAction::Pin)
+    if (action == CandidateUiAction::CommitIpa)
+    {
+        type = TaskType::UiCommitIpa;
+    }
+    else if (action == CandidateUiAction::ChooseIpaReading)
+    {
+        type = TaskType::UiChooseIpaReading;
+    }
+    else if (action == CandidateUiAction::Pin)
     {
         type = TaskType::UiPinCandidate;
     }
@@ -1201,6 +1242,7 @@ void EnqueueCandidateUiAction(CandidateUiAction action, int one_based_index, int
         task.client_id = owner.client_id;
         task.activation_epoch = owner.activation_epoch;
         task.candidate_one_based_index = one_based_index;
+        task.candidate_page_generation = page_generation;
         task.fixed_position = fixed_position;
         taskQueue.push(std::move(task));
     }

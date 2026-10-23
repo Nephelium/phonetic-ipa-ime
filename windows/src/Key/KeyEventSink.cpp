@@ -1,3 +1,4 @@
+#include "../../../engine/contracts/ipa_input.h"
 #include "Private.h"
 #include "Globals.h"
 #include "MetasequoiaIME.h"
@@ -273,16 +274,12 @@ static bool CanQueueHotkeyBehindBarrier(REFGUID hotkeyGuid)
            IsEqualGUID(hotkeyGuid, Global::MetasequoiaIMEGuidDoubleSingleBytePreserveKey);
 }
 
-// Ctrl+Enter, without Shift/Alt/Windows: commit the translation shown to the right of the
-// highlighted candidate. The Server decides what that is (one translation commits directly,
-// several open a second candidate list), so this only has to reach it as a candidate key.
-// Both translation chords are always on; only the glosses' own switch can turn them off. With
-// the glosses off there is nothing to commit, and eating the chord would take Ctrl+Enter away
-// from a chat box's "send" -- or Ctrl+1 from a tab switch -- for nothing in exchange.
+// Prototype secondary action: commit the displayed IPA while a candidate list is active.
 bool IsTranslationCommitShortcut(UINT code, UINT modifiers)
 {
-    return code == VK_RETURN && (modifiers & 0b00000111u) == 0b00000010u && (GetAsyncKeyState(VK_LWIN) & 0x8000) == 0 &&
-           (GetAsyncKeyState(VK_RWIN) & 0x8000) == 0 && FanyUtils::ReadConfiguredCandidateTranslationsEnabled();
+    return ((code == VK_RETURN && (modifiers & 0b00000111u) == 0b00000010u) ||
+            PhoneticIpaKey::IsReadingChoiceKey(code, modifiers)) &&
+           (GetAsyncKeyState(VK_LWIN) & 0x8000) == 0 && (GetAsyncKeyState(VK_RWIN) & 0x8000) == 0;
 }
 
 // Ctrl+1..9 commits the translation of the candidate at that page position; Ctrl+Enter is the
@@ -292,7 +289,7 @@ bool IsTranslationDigitShortcut(UINT code, UINT modifiers)
 {
     const bool digit = (code >= L'1' && code <= L'9') || (code >= VK_NUMPAD1 && code <= VK_NUMPAD9);
     return digit && (modifiers & 0b00000111u) == 0b00000010u && (GetAsyncKeyState(VK_LWIN) & 0x8000) == 0 &&
-           (GetAsyncKeyState(VK_RWIN) & 0x8000) == 0 && FanyUtils::ReadConfiguredCandidateTranslationsEnabled();
+           (GetAsyncKeyState(VK_RWIN) & 0x8000) == 0;
 }
 
 bool IsPinyinCommitShortcut(UINT code, UINT modifiers)
@@ -538,6 +535,18 @@ BOOL CMetasequoiaIME::_IsKeyEaten(         //
             return TRUE;
         }
 
+        if ((GetTemporaryJapanesePolicy() & FanyImeTemporaryJapanese::EnglishCandidates) != 0 &&
+            (freshCompositionState || pCompositionProcessorEngine->GetVirtualKeyLength() == 0) &&
+            (GetAsyncKeyState(VK_LWIN) & 0x8000) == 0 && (GetAsyncKeyState(VK_RWIN) & 0x8000) == 0 &&
+            FanyUtils::HasIpaHotkey(shortcutModifiers, *pCodeOut))
+        {
+            if (pKeyState)
+            {
+                pKeyState->Category = CATEGORY_CANDIDATE;
+                pKeyState->Function = FUNCTION_SERVER_CANDIDATE_KEY;
+            }
+            return TRUE;
+        }
         // Other Ctrl/Alt/Windows combinations belong to the application.
         // IME-owned shortcuts are handled before this normal key classifier.
         if ((shortcutModifiers & 0b00000110u) != 0 || (GetAsyncKeyState(VK_LWIN) & 0x8000) != 0 ||
@@ -567,6 +576,21 @@ BOOL CMetasequoiaIME::_IsKeyEaten(         //
             (isComposing || (candidateMode != CANDIDATE_NONE) ||
              (pCompositionProcessorEngine && pCompositionProcessorEngine->GetVirtualKeyLength() > 0));
 
+        const auto &ipaBuffer = pCompositionProcessorEngine->GetKeystrokeBuffer();
+        const std::wstring_view ipaRaw = !freshCompositionState && ipaBuffer.Get()
+                                             ? std::wstring_view(ipaBuffer.Get(), ipaBuffer.GetLength())
+                                             : std::wstring_view{};
+        if (PhoneticIpaKey::IsInput((GetTemporaryJapanesePolicy() & FanyImeTemporaryJapanese::EnglishCandidates) != 0,
+                                    wch, freshCompositionState ? 0 : pCompositionProcessorEngine->GetVirtualKeyLength(),
+                                    PhoneticIpaKey::IsNumericEntry(ipaRaw)))
+        {
+            if (pKeyState)
+            {
+                pKeyState->Category = CATEGORY_COMPOSING;
+                pKeyState->Function = FUNCTION_INPUT;
+            }
+            return TRUE;
+        }
         // CapsLock alphabet keys belong to the application unless input is already in progress
         if (ShouldPassCapsLockAlphabet(isCapsLockOn, isInputInProgress, *pCodeOut, wch))
         {

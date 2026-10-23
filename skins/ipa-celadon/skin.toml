@@ -1,0 +1,89 @@
+schema_version = 1
+id = "ipa-celadon"
+name = "青瓷 · IPA"
+version = "1.0.0"
+author = "国际音标输入法"
+description = "清浅青绿、柔和圆角与清晰的双行候选。"
+base = "fluent"
+
+[supports]
+layouts = ["horizontal", "vertical"]
+themes = ["dark", "light"]
+
+[candidate_window]
+corner_radius_dip = 16
+border_width_dip = 1
+item_corner_radius_dip = 11
+padding = 12
+item_gap = 7
+item_extra_height = 14
+number_inset = 12
+number_scale = 0.62
+number_gap = 10
+item_padding_right = 16
+selected_bar_width = 3
+selected_bar_inside = true
+page_arrows = false
+fit_content = true
+shadow = "soft"
+preedit_margin_dip = [11, 2, 10, 10]
+
+[candidate.light]
+surface = "#F4FAF6"
+border = "#BAD2C7"
+text = "#183C32"
+number = "#66867A"
+accent = "#2B7865"
+selected = "#DDEFE6"
+hover = "#E8F5EF"
+selected_text = "#183C32"
+selected_number = "#2B7865"
+translation = "#256550"
+selected_translation = "#256550"
+preedit_text = "#66867A"
+preedit_caret = "#2B7865"
+preedit_divider = "#BAD2C7"
+show_selected_bar = true
+
+[candidate.light.menu]
+background = "#F4FAF6"
+border = "#BAD2C7"
+text = "#183C32"
+hover = "#E8F5EF"
+
+[toolbar.light]
+background = "#F4FAF6"
+border = "#BAD2C7"
+icon = "#183C32"
+hover = "#E8F5EF"
+handle = "#2B7865"
+
+[candidate.dark]
+surface = "#172D29"
+border = "#375A50"
+text = "#DFEFE8"
+number = "#96BCAF"
+accent = "#8BD1B3"
+selected = "#28473D"
+hover = "#203A32"
+selected_text = "#DFEFE8"
+selected_number = "#8BD1B3"
+translation = "#A6DEC6"
+selected_translation = "#A6DEC6"
+preedit_text = "#96BCAF"
+preedit_caret = "#8BD1B3"
+preedit_divider = "#375A50"
+show_selected_bar = true
+
+[candidate.dark.menu]
+background = "#172D29"
+border = "#375A50"
+text = "#DFEFE8"
+hover = "#203A32"
+
+[toolbar.dark]
+background = "#172D29"
+border = "#375A50"
+icon = "#DFEFE8"
+hover = "#203A32"
+handle = "#8BD1B3"

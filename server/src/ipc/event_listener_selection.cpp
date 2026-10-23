@@ -178,7 +178,21 @@ void ProcessSelectionKey(UINT keycode, uint64_t client_id, uint64_t activation_e
     static bool isNeedUpdateWeight = false;
     isNeedUpdateWeight = false;
 
-    if (g_translation_candidates_active)
+    if (g_ipa_reading_page_active)
+    {
+        if (forced_index_in_page < 0)
+            WaitForCandidateRenderSync(keycode);
+        const int index = forced_index_in_page >= 0 ? forced_index_in_page
+                          : keycode == VK_SPACE     ? Global::candidate_ui.selected_index_in_page
+                                                    : static_cast<int>(keycode - '1');
+        SelectIpaReading(index);
+        // SELECT_BY_NUMBER accepts only Normal/OutofRange. Keep the composition
+        // alive while returning to Hanzi or advancing to another ambiguous character.
+        Global::MsgTypeToTsf = Global::DataFromServerMsgType::OutofRange;
+        return;
+    }
+
+    if (g_translation_candidates_active || g_english_input_mode)
     {
         // 译文页：选中的就是要上屏的完整文本，既不调频也不造词，更不能把译文当候选词学进库。
         if (forced_index_in_page < 0 && (keycode == VK_SPACE || (keycode >= '1' && keycode <= '9')))

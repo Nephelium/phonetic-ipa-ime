@@ -1,3 +1,4 @@
+#include "ipa/ipa_runtime.h"
 // 候选页的构建与发布：按输入模式查候选（PrepareCandidateList）、组页并发布给候选窗，
 // 以及调频用的排序键和翻页时的候选扩展。
 #include "ipc/event_listener_internal.h"
@@ -263,11 +264,13 @@ std::string BuildCurrentCandidatePage()
 {
     auto &ui = Global::candidate_ui;
     ui.clear_page();
+    if (!g_ipa_reading_page_active)
+        g_ipa_readings.SetContext(g_inputSession->get_pinyin_sequence_with_cases());
     const SchemeType current_scheme = g_inputSession->current_scheme_type();
     const bool uppercase_all_helpcodes = current_scheme == SchemeType::Quanpin;
     // 副候选框里装的是译文，不是这次输入的候选：助记码、云/AI 角标和「右侧译文」都不适用，
     // 而且 g_candidate_translation_glosses 还留着原候选的译文，照常查会把译文再标注一遍。
-    const bool translation_page = g_translation_candidates_active;
+    const bool translation_page = g_translation_candidates_active || g_ipa_reading_page_active;
     const bool show_helpcodes =
         !translation_page && ((current_scheme == SchemeType::Shuangpin && GetConfiguredShuangpinHelpcodeEnabled() &&
                                GetConfiguredShowShuangpinHelpcodeInCandidateWindow()) ||
@@ -303,10 +306,45 @@ std::string BuildCurrentCandidatePage()
     for (int i = 0; i < loop; i++)
     {
         const auto &item = ui.items[start + i];
-        const std::string word = CandidateTextForOutput(item.word);
+        const std::string word = g_english_input_mode ? item.word : CandidateTextForOutput(item.word);
 
         CandidateViewItem view;
         view.text = word;
+        view.ipa_primary = g_english_input_mode;
+        if (g_english_input_mode && !word.empty())
+        {
+            const auto wide = string_to_wstring(word);
+            WORD kind = 0;
+            if (!wide.empty() && GetStringTypeW(CT_CTYPE3, wide.data(), 1, &kind) && (kind & C3_NONSPACING))
+                view.text = "◌" + word;
+        }
+        if (g_ipa_reading_page_active)
+        {
+            view.ipa_reading_option = true;
+            const auto *part = g_ipa_readings.Pending();
+            if (part && static_cast<size_t>(start + i) < part->options.size())
+            {
+                const auto &option = part->options[start + i];
+                view.text = part->word + " · " + option.pinyin;
+                view.ipa = option.ipa;
+                view.ipa_committable = true; // The action selects a reading; it does not commit.
+            }
+        }
+        else if (!g_english_input_mode && !translation_page)
+        {
+            const auto transcription = g_ipa_readings.Resolve(PhoneticIpa::Hanzi(), word, item.canonical_pinyin);
+            view.ipa = transcription.text;
+            const auto plain = [](std::string code) {
+                code.erase(std::remove(code.begin(), code.end(), '\''), code.end());
+                return code;
+            };
+            const bool complete_candidate = !GlobalIme::composition.creating_word.active &&
+                                            plain(item.pinyin) == plain(g_inputSession->get_pinyin_sequence()) &&
+                                            g_inputSession->pending_suffix().empty();
+            view.ipa_committable = complete_candidate && !transcription.text.empty();
+            view.ipa_can_choose = complete_candidate && transcription.CanChoose();
+            view.ipa_needs_choice = transcription.ambiguous;
+        }
         if (show_autocorrect_marker && !item.corrected_from.empty())
         {
             // Correction-sourced candidates carry a light visible marker (PRD R5/AC7),
@@ -476,6 +514,11 @@ void PublishBuiltCandidatePage(const std::wstring &candidate_string)
     snapshot->page_views = ui.page_views;
     snapshot->page_words = ui.page_words;
     snapshot->candidate_string = candidate_string;
+    if (g_ipa_reading_page_active)
+        snapshot->input_hint = L"选择读音 · 数字/空格选定 · Ctrl+Shift+Enter 返回";
+    if (g_english_input_mode && g_inputSession)
+        snapshot->input_hint =
+            string_to_wstring(phonetic_ipa::EntryHint(g_inputSession->get_pinyin_sequence_with_cases()));
     snapshot->page_index = ui.page_index;
     snapshot->selected_index_in_page = ui.selected_index_in_page;
     snapshot->page_count = ui.current_page_count();
@@ -500,6 +543,58 @@ void PublishBuiltCandidatePage(const std::wstring &candidate_string)
 
 namespace event_listener_detail
 {
+void PopulateIpaReadingPage()
+{
+    const auto *part = g_ipa_readings.Pending();
+    if (!part)
+        return;
+    std::vector<WordItem> items;
+    for (const auto &option : part->options)
+        items.emplace_back(option.pinyin, option.ipa, 0, CandidateSource::Generated);
+    items.emplace_back("", u8"返回汉字候选", 0, CandidateSource::Generated);
+    Global::candidate_ui.set_items(std::move(items));
+    RefreshCandidatePageUi(true);
+}
+
+bool EnterIpaReadingPage(int index_in_page)
+{
+    auto &ui = Global::candidate_ui;
+    if (IsCandidateSubPageActive() || g_english_input_mode || index_in_page < 0 ||
+        static_cast<size_t>(index_in_page) >= ui.page_views.size() || !ui.page_views[index_in_page].ipa_can_choose)
+        return false;
+    const auto &item = ui.items[ui.current_page_start() + index_in_page];
+    if (!g_ipa_readings.Begin(PhoneticIpa::Hanzi(), CandidateTextForOutput(item.word), item.canonical_pinyin))
+        return false;
+    g_translation_saved_items = ui.items;
+    g_translation_saved_page_index = ui.page_index;
+    g_translation_saved_selected_index = index_in_page;
+    g_translation_saved_selection_started = true;
+    g_ipa_reading_page_active = true;
+    PopulateIpaReadingPage();
+    return true;
+}
+
+bool SelectIpaReading(int index_in_page)
+{
+    auto &ui = Global::candidate_ui;
+    const auto *part = g_ipa_readings.Pending();
+    if (!g_ipa_reading_page_active || !part || index_in_page < 0 || index_in_page >= ui.current_page_count())
+        return false;
+    const auto index = static_cast<size_t>(ui.current_page_start() + index_in_page);
+    if (index == part->options.size())
+    {
+        FanyNamedPipe::ExitCandidateSubPage();
+        return true;
+    }
+    if (!g_ipa_readings.Choose(index))
+        return false;
+    if (g_ipa_readings.Active())
+        PopulateIpaReadingPage();
+    else
+        FanyNamedPipe::ExitCandidateSubPage();
+    return true;
+}
+
 void RefreshCandidatePageUi(bool show_window)
 {
     RefreshJevSelection();
@@ -595,7 +690,7 @@ namespace
 bool CandidateListAcceptsExpansion()
 {
     // 译文页、日期页是一份固定的列表，session 里再多的候选也不属于它。
-    return !IsCandidateSubPageActive() &&
+    return !g_english_input_mode && !IsCandidateSubPageActive() &&
            !IsSpecialModeCompositionActive(GlobalIme::composition.raw_input_with_cases) && g_inputSession;
 }
 } // namespace
@@ -742,6 +837,11 @@ class CandidateBuildTimer
 
 void PrepareCandidateList(uint64_t client_id, uint64_t activation_epoch)
 {
+    if (g_ipa_reading_page_active)
+    {
+        RefreshCandidatePageUi(false);
+        return;
+    }
     CandidateBuildTimer segment;
     // Zero means the branch taken this keystroke has no such segment, not that
     // the segment was instant.
@@ -761,8 +861,8 @@ void PrepareCandidateList(uint64_t client_id, uint64_t activation_epoch)
     std::vector<WordItem> items;
     if (g_english_input_mode)
     {
-        // Do not expose transient Chinese/raw fallback candidates while the
-        // dedicated English query is in flight.
+        for (const auto &symbol : phonetic_ipa::InputCandidates(PhoneticIpa::Cin(), current_input))
+            items.emplace_back(current_input, symbol, 0, CandidateSource::Symbol);
     }
     else if (IsRadicalInput(current_input))
     {
@@ -862,8 +962,7 @@ void PrepareCandidateList(uint64_t client_id, uint64_t activation_epoch)
     g_dedicated_english_answer_pending = false;
     if (g_english_input_mode)
     {
-        UpdateEnglishInput(current_input, client_id, activation_epoch, true);
-        g_dedicated_english_answer_pending = !current_input.empty() && EnglishIme::IsRunning();
+        UpdateEnglishInput("");
     }
     else if (IsYModeInput(current_input))
     {

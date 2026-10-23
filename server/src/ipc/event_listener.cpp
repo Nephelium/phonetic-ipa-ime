@@ -81,6 +81,8 @@ std::string g_candidate_translation_signature;
 // 数字键像选普通候选一样选一条上屏。输入串一个字都没动，所以退出这个子模式时把原来的
 // items / 页码 / 高亮位原样放回去就行，不需要重新查词。
 bool g_translation_candidates_active = false;
+PhoneticIpa::ReadingSession g_ipa_readings;
+bool g_ipa_reading_page_active = false;
 bool g_date_time_page_active = false;
 std::string g_date_time_page_keyword;
 std::vector<WordItem> g_translation_saved_items;
@@ -96,7 +98,7 @@ std::string TranslationIdentity(const EnglishIme::TranslationQuery &query)
 
 bool IsCandidateSubPageActive()
 {
-    return g_translation_candidates_active || g_date_time_page_active;
+    return g_translation_candidates_active || g_date_time_page_active || g_ipa_reading_page_active;
 }
 
 void LatchCandidateUiInteraction()
@@ -453,6 +455,8 @@ void SetEnglishInputMode(bool enabled)
         return;
     }
     g_english_input_mode = enabled;
+    if (g_inputSession)
+        g_inputSession->set_ipa_mode(enabled);
     PublishEnglishInputModeValue(enabled);
     BroadcastToTsfWorkerThreadViaNamedpipe(FanyImeWorkerReplyType::TemporaryJapanesePolicyChanged,
                                            FanyNamedPipe::TemporaryJapanesePolicyPayload());
@@ -814,6 +818,8 @@ void ClearState()
     // same common words, and its first frame should already carry them.
     g_candidate_translation_signature.clear();
     g_translation_candidates_active = false;
+    g_ipa_reading_page_active = false;
+    g_ipa_readings.Clear();
     g_date_time_page_active = false;
     g_date_time_page_keyword.clear();
     g_translation_saved_items.clear();

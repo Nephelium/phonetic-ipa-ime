@@ -275,8 +275,9 @@ BOOL CCompositionProcessorEngine::AddVirtualKey(WCHAR wch)
     _caretPosition = FanyImeTemporaryJapanese::ClampCaret(
         Global::JapaneseInputModeEnabled.load(std::memory_order_relaxed), GetTemporaryJapanesePolicy(),
         _keystrokeBuffer.Get(), static_cast<std::size_t>(srgKeystrokeBufLen), static_cast<std::size_t>(_caretPosition));
-    if (wch == L'\'' && ((_caretPosition > 0 && _keystrokeBuffer.Get()[_caretPosition - 1] == L'\'') ||
-                         (_caretPosition < srgKeystrokeBufLen && _keystrokeBuffer.Get()[_caretPosition] == L'\'')))
+    if ((GetTemporaryJapanesePolicy() & FanyImeTemporaryJapanese::EnglishCandidates) == 0 && wch == L'\'' &&
+        ((_caretPosition > 0 && _keystrokeBuffer.Get()[_caretPosition - 1] == L'\'') ||
+         (_caretPosition < srgKeystrokeBufLen && _keystrokeBuffer.Get()[_caretPosition] == L'\'')))
     {
         return TRUE;
     }

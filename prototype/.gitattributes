@@ -1,0 +1,6 @@
+# Frozen resources are byte-verified and must survive clone unchanged.
+*.json text eol=lf
+*.md text eol=lf
+*.py text eol=lf
+*.png -text
+resources/ipa/* -text

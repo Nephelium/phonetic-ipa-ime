@@ -18,7 +18,7 @@ struct Definition
     std::string_view key, label, defaultBinding, editor;
 };
 inline constexpr std::array<Definition, 3> Definitions = {
-    {{Action::EnglishCandidates, "toggle_english_candidates", "英文候选", "Ctrl+Shift+KeyE", "englishCandidatesHotkey"},
+    {{Action::EnglishCandidates, "toggle_english_candidates", "IPA 音标", "Ctrl+Shift+KeyI", "englishCandidatesHotkey"},
      {Action::FullWidth, "toggle_full_width", "全角 / 半角", "Ctrl+Shift+Space", "fullWidthHotkey"},
      {Action::Punctuation, "toggle_punctuation", "中英文标点", "Ctrl+Period", "punctuationHotkey"}}};
 using Values = std::array<std::string_view, Definitions.size()>;

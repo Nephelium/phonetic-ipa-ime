@@ -5,6 +5,7 @@
 
 namespace FanyUtils
 {
+bool HasIpaHotkey(unsigned modifiers, unsigned key);
 void SendKeys(std::wstring pinyin);
 std::wstring string_to_wstring(const std::string &str);
 std::string wstring_to_string(const std::wstring &wstr);

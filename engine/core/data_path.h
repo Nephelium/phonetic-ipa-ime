@@ -36,8 +36,8 @@ inline std::optional<std::wstring> wide_environment_variable(const wchar_t *name
 inline std::optional<std::wstring> read_installed_data_directory()
 {
     HKEY key = nullptr;
-    if (RegOpenKeyExW(HKEY_LOCAL_MACHINE, L"Software\\Metasequoia\\MetasequoiaIME", 0,
-                      KEY_QUERY_VALUE | KEY_WOW64_64KEY, &key) != ERROR_SUCCESS)
+    if (RegOpenKeyExW(HKEY_LOCAL_MACHINE, L"Software\\PhoneticIpa\\Prototype", 0, KEY_QUERY_VALUE | KEY_WOW64_64KEY,
+                      &key) != ERROR_SUCCESS)
     {
         return std::nullopt;
     }
@@ -127,14 +127,14 @@ inline std::filesystem::path data_directory()
         const std::filesystem::path root(*local_app_data);
         if (root.is_absolute())
         {
-            return root / L"metasequoiaime";
+            return root / L"phonetic-ipa-prototype";
         }
     }
 
     PWSTR known_path = nullptr;
     if (SUCCEEDED(SHGetKnownFolderPath(FOLDERID_LocalAppData, KF_FLAG_DEFAULT, nullptr, &known_path)) && known_path)
     {
-        const std::filesystem::path result = std::filesystem::path(known_path) / L"metasequoiaime";
+        const std::filesystem::path result = std::filesystem::path(known_path) / L"phonetic-ipa-prototype";
         CoTaskMemFree(known_path);
         return result;
     }

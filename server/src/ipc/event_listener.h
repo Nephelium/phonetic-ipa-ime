@@ -29,6 +29,8 @@ std::wstring TemporaryJapanesePolicyPayload();
 enum class CandidateUiAction
 {
     Commit,
+    CommitIpa,
+    ChooseIpaReading,
     Pin,
     Delete,
     FixPosition,
@@ -60,7 +62,8 @@ void EnqueueEnglishCandidates(std::vector<WordItem> candidates, const std::strin
 void EnqueueCandidateTranslations(std::vector<EnglishIme::TranslationResult> results, uint64_t generation,
                                   bool merge = false);
 void EnqueueMixedCandidates(MixedCandidates::Result result, const std::string &input, uint64_t generation);
-void EnqueueCandidateUiAction(CandidateUiAction action, int one_based_index, int fixed_position = 0);
+void EnqueueCandidateUiAction(CandidateUiAction action, int one_based_index, int fixed_position = 0,
+                              uint64_t page_generation = 0);
 // 鼠标开始操作当前显示的候选页时，通知工作线程保持这批候选的顺序。界面线程调用，只记下页面
 // 代次，由工作线程在处理下一个任务前认领（见 LatchCandidateUiInteraction）。
 void NoteCandidateUiInteraction(uint64_t page_generation);

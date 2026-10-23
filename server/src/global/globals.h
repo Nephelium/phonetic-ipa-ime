@@ -17,8 +17,8 @@
 
 namespace GlobalIme
 {
-inline std::wstring AppName = L"metasequoiaime";
-inline std::wstring ServerName = L"metasequoiaime";
+inline std::wstring AppName = L"phonetic-ipa-prototype";
+inline std::wstring ServerName = L"phonetic-ipa-prototype";
 inline std::unordered_set<WCHAR> PUNC_SET = {
     L'`', //
     L'!', //
@@ -299,7 +299,7 @@ struct CandidateUiState
     std::vector<std::wstring> page_words;
     std::vector<std::wstring> page_glosses;
     std::wstring selected_text = L"";
-    int page_size = 8;
+    int page_size = 9;
     int page_index = 0;
     int selected_index_in_page = 0;
     int item_total_count = 0;
@@ -432,6 +432,7 @@ struct CandidatePageSnapshot
     std::vector<CandidateViewItem> page_views;
     std::vector<std::wstring> page_words;
     std::wstring candidate_string;
+    std::wstring input_hint;
     int page_index = 0;
     int selected_index_in_page = 0;
     // page_count mirrors current_page_count() and page_item_count mirrors cur_page_item_cnt. Both are carried because

@@ -721,6 +721,7 @@ class TextField : public msimeui::Container
         float radius = 8.0f;
         std::wstring placeholder;
         bool monospace = false;
+        std::wstring fontFamily;
     };
 
     explicit TextField(Options options);

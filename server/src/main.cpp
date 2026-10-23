@@ -1,3 +1,5 @@
+#include "ipa/ipa_runtime.h"
+#include "msimeui/Fonts.h"
 #include "ipc/event_listener.h"
 #include "log/fanylog.h"
 #include "window/ime_windows.h"
@@ -46,7 +48,7 @@ void StartWatchdogIfNeeded(const char *command_line)
     const size_t separator = watchdog_path.find_last_of(L"\\/");
     if (separator == std::wstring::npos)
         return;
-    watchdog_path.replace(separator + 1, std::wstring::npos, L"MetasequoiaImeWatchdog.exe");
+    watchdog_path.replace(separator + 1, std::wstring::npos, L"PhoneticIpaWatchdog.exe");
     if (GetFileAttributesW(watchdog_path.c_str()) == INVALID_FILE_ATTRIBUTES)
         return;
 
@@ -89,7 +91,7 @@ int CALLBACK WinMain(_In_ HINSTANCE hInstance, _In_ HINSTANCE /*hPrevInstance*/,
                      _In_ int /*nCmdShow*/)
 {
     const bool pipe_probe = IsPipeProbe(lpCmdLine);
-    CommonUtils::SingleInstanceGuard single_instance(L"Local\\MetasequoiaImeServer_SingleInstance");
+    CommonUtils::SingleInstanceGuard single_instance(L"Local\\PhoneticIpaServer_SingleInstance");
     if (!single_instance.is_valid())
     {
         (void)0;
@@ -120,6 +122,21 @@ int CALLBACK WinMain(_In_ HINSTANCE hInstance, _In_ HINSTANCE /*hPrevInstance*/,
 
     // Initialize config
     InitImeConfig();
+    try
+    {
+        (void)PhoneticIpa::Cin();
+        (void)PhoneticIpa::Hanzi();
+        if (!msimeui::LoadPrivateIpaFont((PhoneticIpa::ResourceRoot() / "DoulosSIL-Regular.ttf").wstring()))
+            throw std::runtime_error("Cannot load IPA font");
+        if (!msimeui::LoadPrivateIpaFont((PhoneticIpa::ResourceRoot() / "PTBIPAPlus-Regular.ttf").wstring()))
+            throw std::runtime_error("Cannot load IPA Plus font");
+    }
+    catch (const std::exception &)
+    {
+        MessageBoxW(nullptr, L"请先运行 prepare-resources.py 准备音标字表。", L"国际音标输入法原型",
+                    MB_OK | MB_ICONERROR);
+        return 2;
+    }
     VoiceInput::Initialize();
     Global::candidate_ui.page_size = GetConfiguredCandidatePageSize();
 

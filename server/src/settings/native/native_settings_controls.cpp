@@ -47,10 +47,14 @@ IDWriteTextFormat *GetFormat(const std::wstring &family, float size, DWRITE_FONT
     if (!factory)
         return nullptr;
     FormatEntry entry{family, size, weight, nullptr};
-    if (FAILED(factory->CreateTextFormat(family.c_str(), nullptr, weight, DWRITE_FONT_STYLE_NORMAL,
-                                         DWRITE_FONT_STRETCH_NORMAL, size, L"zh-cn", entry.format.GetAddressOf())))
+    if (FAILED(factory->CreateTextFormat(family.c_str(), msimeui::PrivateIpaFontCollection(family), weight,
+                                         DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, size, L"zh-cn",
+                                         entry.format.GetAddressOf())))
         return nullptr;
-    msimeui::ApplyUiFontFallback(factory, entry.format.Get());
+    if (msimeui::PrivateIpaFontCollection(family))
+        msimeui::ApplyPrivateFontFallback(factory, entry.format.Get());
+    else
+        msimeui::ApplyUiFontFallback(factory, entry.format.Get());
     cache.push_back(entry);
     return cache.back().format.Get();
 }
@@ -2849,7 +2853,9 @@ void TextField::ApplyAppearance()
     appearance.text = p.text;
     appearance.selection = WithAlpha(p.accent, 0.45f);
     appearance.placeholder = p.textSubtle;
-    appearance.fontFamily = options_.monospace ? std::wstring(L"Consolas") : UiFontFamily();
+    appearance.fontFamily = !options_.fontFamily.empty() ? options_.fontFamily
+                            : options_.monospace         ? std::wstring(L"Consolas")
+                                                         : UiFontFamily();
     box_->SetAppearance(appearance);
 }
 

@@ -13,7 +13,7 @@ constexpr wchar_t kApplySwitch[] = L"--apply-game-compat-name";
 constexpr wchar_t kClearSwitch[] = L"--clear-game-compat-name";
 
 // Read by windows/src/Register/Register.cpp at registration time; keep the two in step.
-constexpr wchar_t kRecordKey[] = L"Software\\Metasequoia\\MetasequoiaIME";
+constexpr wchar_t kRecordKey[] = L"Software\\PhoneticIpa\\Prototype";
 constexpr wchar_t kRecordValue[] = L"GameCompatProfileName";
 // Same profile as default_input_method.cpp and windows/src/Global/Globals.cpp.
 constexpr wchar_t kTipProfileKey[] = L"SOFTWARE\\Microsoft\\CTF\\TIP\\{E3062E9A-D834-4637-8958-ED8CFA427D01}"

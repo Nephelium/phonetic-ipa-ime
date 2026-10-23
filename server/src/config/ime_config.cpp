@@ -62,7 +62,7 @@ InputStateShortcutValues g_input_state_shortcuts = [] {
         values[i] = defaults[i];
     return values;
 }();
-int g_candidate_page_size = 8;
+int g_candidate_page_size = 9;
 std::string g_candidate_font = "Noto Sans SC";
 std::string g_candidate_english_font = "Segoe UI";
 std::string g_candidate_default_font = "Microsoft YaHei";
@@ -409,8 +409,8 @@ bool LoadImeConfig()
         auto tbl = toml::parse(text);
         RevealStoredCredentials(tbl);
 
-        const int page_size = tbl["appearance"]["page_size"].value_or(6);
-        g_candidate_page_size = page_size >= 3 && page_size <= 9 ? page_size : 6;
+        const int page_size = tbl["appearance"]["page_size"].value_or(9);
+        g_candidate_page_size = page_size >= 3 && page_size <= 9 ? page_size : 9;
         g_candidate_font = tbl["appearance"]["font"].value_or(std::string("Noto Sans SC"));
         if (g_candidate_font.empty())
             g_candidate_font = "Noto Sans SC";

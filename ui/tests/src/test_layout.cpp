@@ -228,6 +228,9 @@ TEST_CASE(horizontal_stack_panel_advances_along_x)
 TEST_CASE(horizontal_candidate_translation_uses_a_second_line)
 {
     CandidateList list(28.0f);
+    CandidateList::Appearance appearance;
+    appearance.fontFamily = L"Segoe UI";
+    list.SetAppearance(appearance);
     list.SetOrientation(CandidateList::Orientation::Horizontal);
     list.SetItems({{L"1", L"candidate", L"", L""}});
     const SizeF plain = list.MeasureInLayout({1000.0f, 1000.0f});
@@ -235,7 +238,14 @@ TEST_CASE(horizontal_candidate_translation_uses_a_second_line)
     list.SetItems({{L"1", L"candidate", L"", L"word"}});
     const SizeF translated = list.MeasureInLayout({1000.0f, 1000.0f});
     REQUIRE_NEAR(translated.width, plain.width);
-    REQUIRE_NEAR(translated.height, plain.height + 16.0f * 0.78f * 1.25f);
+    // A real font can be taller than the nominal 1.25-em minimum. Verify the
+    // second line against an independently measured text control, not a fixed
+    // approximation that would require clipping tall glyphs.
+    TextBlock translationProbe(L"word", 16.0f * 0.78f, D2D1::ColorF(0));
+    translationProbe.SetFontFamily(appearance.fontFamily);
+    translationProbe.SetTextLayoutPadding({0, 0, 0, 0});
+    const float translationH = std::max(16.0f * 0.78f * 1.25f, translationProbe.Measure({1000, 1000}).height);
+    REQUIRE_NEAR(translated.height, plain.height + translationH);
 
     list.SetItems({{L"1", L"candidate", L"", L"a translation wider than the candidate"}});
     REQUIRE(list.MeasureInLayout({1000.0f, 1000.0f}).width > translated.width);
@@ -251,10 +261,15 @@ TEST_CASE(horizontal_candidate_translation_keeps_the_row_bottom_padding_below_it
     CandidateList::Appearance appearance;
     appearance.itemHeight = 38.0f;
     appearance.contentPadBottom = 5.0f;
+    appearance.fontFamily = L"Segoe UI";
     list.SetAppearance(appearance);
     list.SetOrientation(CandidateList::Orientation::Horizontal);
     list.SetItems({{L"1", L"candidate", L"", L"word"}});
-    const float translationH = appearance.fontSize * 0.78f * 1.25f;
+    TextBlock translationProbe(L"word", appearance.fontSize * 0.78f, D2D1::ColorF(0));
+    translationProbe.SetFontFamily(appearance.fontFamily);
+    translationProbe.SetTextLayoutPadding({0, 0, 0, 0});
+    const float translationH =
+        std::max(appearance.fontSize * 0.78f * 1.25f, translationProbe.Measure({1000, 1000}).height);
     REQUIRE_NEAR(list.MeasureInLayout({1000.0f, 1000.0f}).height, 38.0f + translationH);
     list.ArrangeInLayout({0.0f, 0.0f, 1000.0f, 38.0f + translationH});
     const RectF item = list.GetItemBounds(0);

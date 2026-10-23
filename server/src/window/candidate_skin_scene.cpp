@@ -422,6 +422,10 @@ void CandidateSkinScene::Build(bool horizontal, bool pageArrows, bool expandPane
         if (callbacks_.itemActivated)
             callbacks_.itemActivated(index);
     });
+    list_->SetOnSecondaryActivated([this](size_t index) {
+        if (callbacks_.secondaryActivated)
+            callbacks_.secondaryActivated(index);
+    });
     list_->SetOnContextMenu([this](size_t index, const POINT &clientPoint) {
         if (callbacks_.itemContextMenu)
             callbacks_.itemContextMenu(index, clientPoint);

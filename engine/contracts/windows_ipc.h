@@ -15,17 +15,17 @@ using FanyImeWireChar = wchar_t;
 using FanyImeWireChar = char16_t;
 #endif
 
-inline const wchar_t *FANY_IME_SHARED_MEMORY = L"Local\\FanyImeSharedMemory";
+inline const wchar_t *FANY_IME_SHARED_MEMORY = L"Local\\PhoneticIpaSharedMemory";
 inline const int BUFFER_SIZE = 4096;
 
-inline const wchar_t *FANY_IME_NAMED_PIPE = L"\\\\.\\pipe\\FanyImeNamedPipe";
-inline const wchar_t *FANY_IME_TO_TSF_NAMED_PIPE = L"\\\\.\\pipe\\FanyImeToTsfNamedPipe";
-inline const wchar_t *FANY_IME_TO_TSF_WORKER_THREAD_NAMED_PIPE = L"\\\\.\\pipe\\FanyImeToTsfWorkerThreadNamedPipe";
-inline const wchar_t *FANY_IME_AUX_NAMED_PIPE = L"\\\\.\\pipe\\FanyImeAuxNamedPipe";
-inline const wchar_t *FANY_IME_TSF_DIAGNOSTIC_NAMED_PIPE = L"\\\\.\\pipe\\FanyImeTsfDiagnosticNamedPipe";
+inline const wchar_t *FANY_IME_NAMED_PIPE = L"\\\\.\\pipe\\PhoneticIpaNamedPipe";
+inline const wchar_t *FANY_IME_TO_TSF_NAMED_PIPE = L"\\\\.\\pipe\\PhoneticIpaToTsfNamedPipe";
+inline const wchar_t *FANY_IME_TO_TSF_WORKER_THREAD_NAMED_PIPE = L"\\\\.\\pipe\\PhoneticIpaToTsfWorkerThreadNamedPipe";
+inline const wchar_t *FANY_IME_AUX_NAMED_PIPE = L"\\\\.\\pipe\\PhoneticIpaAuxNamedPipe";
+inline const wchar_t *FANY_IME_TSF_DIAGNOSTIC_NAMED_PIPE = L"\\\\.\\pipe\\PhoneticIpaTsfDiagnosticNamedPipe";
 // Dedicated Tauri-to-Server voice lifecycle channel. It never carries TSF
 // frames and cannot be confused with the legacy Aux endpoint.
-inline const wchar_t *FANY_IME_VOICE_CONTROL_NAMED_PIPE = L"\\\\.\\pipe\\FanyImeVoiceControlNamedPipe";
+inline const wchar_t *FANY_IME_VOICE_CONTROL_NAMED_PIPE = L"\\\\.\\pipe\\PhoneticIpaVoiceControlNamedPipe";
 inline constexpr uint32_t FANY_IME_TSF_DIAGNOSTIC_MAGIC = 0x474F4C54; // "TLOG"
 inline constexpr uint32_t FANY_IME_TSF_DIAGNOSTIC_VERSION = 1;
 inline constexpr size_t FANY_IME_TSF_DIAGNOSTIC_MAX_FRAME_BYTES = 16 * 1024;
@@ -34,7 +34,7 @@ inline constexpr size_t FANY_IME_TSF_DIAGNOSTIC_MAX_FRAME_BYTES = 16 * 1024;
 // namespace, so the pipe name must carry a session suffix (fast user switching
 // and RDP sessions could otherwise collide); both sides append the decimal
 // ProcessIdToSessionId(GetCurrentProcessId()) result.
-inline const wchar_t *FANY_IME_STATS_PIPE_NAME_PREFIX = L"\\\\.\\pipe\\FanyImeStatsNamedPipe-";
+inline const wchar_t *FANY_IME_STATS_PIPE_NAME_PREFIX = L"\\\\.\\pipe\\PhoneticIpaStatsNamedPipe-";
 inline constexpr uint32_t FANY_IME_STATS_MAGIC = 0x54415453; // "STAT"
 inline constexpr uint32_t FANY_IME_STATS_VERSION = 1;
 inline constexpr size_t FANY_IME_STATS_MAX_FRAME_BYTES = 16 * 1024;
@@ -42,10 +42,10 @@ inline constexpr uint64_t FANY_IME_UNSOLICITED_REQUEST_ID = 0;
 inline constexpr uint64_t FANY_IME_NO_REQUEST_ID = UINT64_MAX;
 
 inline const std::vector<std::wstring> FANY_IME_EVENT_ARRAY = {
-    L"FanyImeKeyEvent",           // Event sent to UI process to notify time to update UI by new pinyin_string
-    L"FanyHideCandidateWndEvent", // Event sent to UI process to notify time to hide candidate window
-    L"FanyShowCandidateWndEvent", // Event sent to UI process to notify time to show candidate window
-    L"FanyMoveCandidateWndEvent", // Event sent to UI process to notify time to move candidate window
+    L"PhoneticIpaKeyEvent",              // Event sent to UI process to notify time to update UI by new pinyin_string
+    L"PhoneticIpaHideCandidateWndEvent", // Event sent to UI process to notify time to hide candidate window
+    L"PhoneticIpaShowCandidateWndEvent", // Event sent to UI process to notify time to show candidate window
+    L"PhoneticIpaMoveCandidateWndEvent", // Event sent to UI process to notify time to move candidate window
 };
 
 //

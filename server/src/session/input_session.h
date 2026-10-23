@@ -19,6 +19,11 @@ class IInputSession
 
     virtual ~IInputSession() = default;
 
+    // Prototype uses the existing literal preedit lifecycle for CIN composition.
+    virtual void set_ipa_mode(bool)
+    {
+    }
+
     virtual void handle_key(UINT vk, UINT modifiers_down, WCHAR wch) = 0;
     virtual void recompute_candidates() = 0;
     virtual SchemeType current_scheme_type() const = 0;

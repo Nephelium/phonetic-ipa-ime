@@ -198,3 +198,5 @@ target_link_libraries(${PROJECT_NAME} PRIVATE fmt::fmt-header-only)
 
 set_property(TARGET ${PROJECT_NAME} PROPERTY
     MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+
+set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME "PhoneticIpaTsf")

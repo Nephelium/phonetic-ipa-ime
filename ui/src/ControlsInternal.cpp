@@ -147,8 +147,9 @@ ComPtr<IDWriteTextLayout> CreateCachedTextLayout(IDWriteFactory *factory, const 
     }
     if (!format)
     {
-        if (FAILED(factory->CreateTextFormat(fontFamily.c_str(), nullptr, fontWeight, DWRITE_FONT_STYLE_NORMAL,
-                                             DWRITE_FONT_STRETCH_NORMAL, fontSize, L"", format.GetAddressOf())))
+        if (FAILED(factory->CreateTextFormat(fontFamily.c_str(), PrivateIpaFontCollection(fontFamily), fontWeight,
+                                             DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, fontSize, L"",
+                                             format.GetAddressOf())))
         {
             if (FAILED(factory->CreateTextFormat(UiFontFallbackFamily(), nullptr, fontWeight, DWRITE_FONT_STYLE_NORMAL,
                                                  DWRITE_FONT_STRETCH_NORMAL, fontSize, L"", format.GetAddressOf())))

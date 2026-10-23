@@ -1,6 +1,6 @@
 #include "msimeui/Fonts.h"
 
-#include <dwrite_2.h>
+#include <dwrite_3.h>
 #include <map>
 #include <mutex>
 #include <utility>
@@ -10,6 +10,39 @@
 namespace msimeui
 {
 using Microsoft::WRL::ComPtr;
+
+static std::vector<ComPtr<IDWriteFontCollection1>> privateIpaFonts;
+
+bool LoadPrivateIpaFont(const std::wstring &path)
+{
+    ComPtr<IDWriteFactory5> factory;
+    if (FAILED(DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED, __uuidof(IDWriteFactory5),
+                                   reinterpret_cast<IUnknown **>(factory.GetAddressOf()))))
+        return false;
+    ComPtr<IDWriteFontFile> file;
+    ComPtr<IDWriteFontSetBuilder1> builder;
+    ComPtr<IDWriteFontSet> set;
+    ComPtr<IDWriteFontCollection1> collection;
+    const bool loaded = SUCCEEDED(factory->CreateFontFileReference(path.c_str(), nullptr, &file)) &&
+                        SUCCEEDED(factory->CreateFontSetBuilder(&builder)) &&
+                        SUCCEEDED(builder->AddFontFile(file.Get())) && SUCCEEDED(builder->CreateFontSet(&set)) &&
+                        SUCCEEDED(factory->CreateFontCollectionFromFontSet(set.Get(), &collection));
+    if (loaded)
+        privateIpaFonts.push_back(std::move(collection));
+    return loaded;
+}
+
+IDWriteFontCollection *PrivateIpaFontCollection(const std::wstring &family)
+{
+    for (const auto &collection : privateIpaFonts)
+    {
+        UINT32 index = 0;
+        BOOL exists = FALSE;
+        if (SUCCEEDED(collection->FindFamilyName(family.c_str(), &index, &exists)) && exists)
+            return collection.Get();
+    }
+    return nullptr;
+}
 
 namespace
 {
@@ -252,18 +285,35 @@ void ApplyFontFallback(IDWriteFactory *factory, IDWriteTextFormat *format, const
     ComPtr<IDWriteFontFallbackBuilder> builder;
     if (FAILED(factory2->CreateFontFallbackBuilder(&builder)))
         return;
-    std::vector<const wchar_t *> names;
+    const DWRITE_UNICODE_RANGE range = {0, 0x10FFFF};
     for (const auto &family : families)
         if (!family.empty())
-            names.push_back(family.c_str());
-    const DWRITE_UNICODE_RANGE range = {0, 0x10FFFF};
-    if (!names.empty() && FAILED(builder->AddMapping(&range, 1, names.data(), static_cast<UINT32>(names.size()))))
-        return;
+        {
+            const wchar_t *name = family.c_str();
+            if (FAILED(builder->AddMapping(&range, 1, &name, 1, PrivateIpaFontCollection(family))))
+                return;
+        }
     ComPtr<IDWriteFontFallback> systemFallback;
     if (SUCCEEDED(factory2->GetSystemFontFallback(&systemFallback)))
         builder->AddMappings(systemFallback.Get());
     ComPtr<IDWriteFontFallback> fallback;
     if (SUCCEEDED(builder->CreateFontFallback(&fallback)))
         format1->SetFontFallback(fallback.Get());
+}
+
+void ApplyPrivateFontFallback(IDWriteFactory *factory, IDWriteTextFormat *format)
+{
+    std::vector<std::wstring> families;
+    for (const auto &collection : privateIpaFonts)
+        for (UINT32 i = 0; i < collection->GetFontFamilyCount(); ++i)
+        {
+            ComPtr<IDWriteFontFamily> family;
+            ComPtr<IDWriteLocalizedStrings> names;
+            wchar_t name[256]{};
+            if (SUCCEEDED(collection->GetFontFamily(i, &family)) && SUCCEEDED(family->GetFamilyNames(&names)) &&
+                SUCCEEDED(names->GetString(0, name, 256)))
+                families.emplace_back(name);
+        }
+    ApplyFontFallback(factory, format, families);
 }
 } // namespace msimeui

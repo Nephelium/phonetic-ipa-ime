@@ -11,7 +11,7 @@ inline std::wstring ReadGameCompatProfileName()
     WCHAR name[128] = {};
     DWORD bytes = sizeof(name) - sizeof(WCHAR);
     // RRF_SUBKEY_WOW6464KEY: the x86 DLL must read the same value as the x64 one.
-    if (RegGetValueW(HKEY_LOCAL_MACHINE, L"Software\\Metasequoia\\MetasequoiaIME", L"GameCompatProfileName",
+    if (RegGetValueW(HKEY_LOCAL_MACHINE, L"Software\\PhoneticIpa\\Prototype", L"GameCompatProfileName",
                      RRF_RT_REG_SZ | RRF_SUBKEY_WOW6464KEY, nullptr, name, &bytes) != ERROR_SUCCESS)
     {
         return {};

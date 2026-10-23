@@ -1,3 +1,5 @@
+#include "engine/contracts/ipa_input.h"
+#include "ipa/ipa_runtime.h"
 // 按键处理：按键分类、组合编辑（光标/退格/插入）、译文副候选页、五笔顶字，以及 HandleImeKey 主流程。
 #include "ipc/event_listener_internal.h"
 #include <Windows.h>
@@ -469,7 +471,11 @@ bool ApplyCompositionEditKey(UINT keycode, WCHAR wch, UINT modifiers_down, bool 
     else
     {
         char input = 0;
-        if (keycode >= 'A' && keycode <= 'Z')
+        if (PhoneticIpaKey::IsInput(g_english_input_mode, wch, raw.size(), PhoneticIpaKey::IsNumericEntry(raw)))
+        {
+            input = static_cast<char>(wch);
+        }
+        else if (keycode >= 'A' && keycode <= 'Z')
         {
             input = CompositionLetter(keycode, wch);
         }
@@ -508,8 +514,9 @@ bool ApplyCompositionEditKey(UINT keycode, WCHAR wch, UINT modifiers_down, bool 
         // U 模式里引号、分号、斜杠、大写字母这些键不能在这里吞掉：TSF 已经把它们当输入键记进了
         // 自己的按键缓冲，吞掉又不发 CompositionRestored 重同步，两侧的串和光标就会错位，之后的
         // 退格删的也不是同一个字符。照常插入，拆字查询对含非 a-z 的码返回空候选即可。
-        if (input == '\'' && ((composition.caret_position > 0 && raw[composition.caret_position - 1] == '\'') ||
-                              (composition.caret_position < raw.size() && raw[composition.caret_position] == '\'')))
+        if (!g_english_input_mode && input == '\'' &&
+            ((composition.caret_position > 0 && raw[composition.caret_position - 1] == '\'') ||
+             (composition.caret_position < raw.size() && raw[composition.caret_position] == '\'')))
         {
             return true;
         }
@@ -630,6 +637,8 @@ void ExitCandidateSubPage()
         return;
     }
     g_translation_candidates_active = false;
+    g_ipa_reading_page_active = false;
+    g_ipa_readings.Cancel();
     g_date_time_page_active = false;
     g_date_time_page_keyword.clear();
     auto &ui = Global::candidate_ui;
@@ -687,66 +696,29 @@ void RebuildDateTimeCandidatePage()
     RefreshCandidatePageUi(true);
 }
 
-// Ctrl+Enter：上屏高亮候选右边的那条译文（副候选）。Ctrl+数字：上屏指定序号候选的那条译文
-// （forced_index_in_page，0 起）。只有一条译义就直接上屏；有多条时把候选框整个换成这几条
-// 译义，空格/数字键照常选一条上屏（见 ProcessSelectionKey 的译文分支）。
-void HandleTranslationCommitKey(uint64_t client_id, uint64_t activation_epoch, uint64_t request_id,
-                                int forced_index_in_page)
+// Ctrl+Enter / Ctrl+数字提交对应候选的原始 Unicode IPA。
+void HandleIpaCommitKey(uint64_t client_id, uint64_t activation_epoch, uint64_t request_id, int forced_index_in_page)
 {
     // 拿不到译文时回 NavigationIgnored：这颗键已经被 TSF 吃掉了，必须给一条回复，
     // 而且这条回复既不上屏也不给 wch 补标点。
     Global::MsgTypeToTsf = Global::DataFromServerMsgType::NavigationIgnored;
-    const bool japanese = g_inputSession && g_inputSession->current_scheme_type() == SchemeType::JapaneseRomaji;
-    if (IsCandidateSubPageActive() || IsUiLessMode() || japanese || !GetConfiguredCandidateTranslationsEnabled() ||
-        Global::candidate_ui.items.empty())
-    {
-        SendCurrentDataToClient(client_id, activation_epoch, request_id);
-        return;
-    }
-
-    // 和数字/空格选词一样，先等画面追上已发布的那一页，否则取到的是用户没看见的那条译文。
     WaitForCandidateRenderSync(Global::Keycode);
     EnsureCandidatePageReady();
-
-    auto &ui = Global::candidate_ui;
-    const int highlighted_position = (std::max)(0, ui.selected_index_in_page);
-    const int page_position = forced_index_in_page >= 0 ? forced_index_in_page : highlighted_position;
-    const size_t index = static_cast<size_t>(page_position);
-    if (index >= ui.page_glosses.size())
-    {
-        SendCurrentDataToClient(client_id, activation_epoch, request_id);
-        return;
-    }
-    const auto senses = FanyImeIpc::SplitTranslationGloss(wstring_to_string(ui.page_glosses[index]));
-    if (senses.empty())
-    {
-        SendCurrentDataToClient(client_id, activation_epoch, request_id);
-        return;
-    }
-
-    if (senses.size() == 1)
+    auto &ipa_ui = Global::candidate_ui;
+    const int ipa_index = forced_index_in_page >= 0 ? forced_index_in_page : ipa_ui.selected_index_in_page;
+    if (g_ipa_reading_page_active)
+        SelectIpaReading(ipa_index);
+    else if (!g_english_input_mode && ipa_index >= 0 && static_cast<size_t>(ipa_index) < ipa_ui.page_views.size() &&
+             ipa_ui.page_views[ipa_index].ipa_needs_choice)
+        EnterIpaReadingPage(ipa_index);
+    else if (!g_english_input_mode && ipa_index >= 0 && static_cast<size_t>(ipa_index) < ipa_ui.page_views.size() &&
+             !ipa_ui.page_views[ipa_index].ipa.empty() && ipa_ui.page_views[ipa_index].ipa_committable)
     {
         Global::MsgTypeToTsf = Global::DataFromServerMsgType::CommitExactText;
-        ui.selected_text = string_to_wstring(CandidateTextForOutput(senses.front()));
-        // Normal/CommitExactText 的回复由 SendCurrentDataToClient 负责收尾（ClearState）。
-        SendCurrentDataToClient(client_id, activation_epoch, request_id);
-        return;
+        ipa_ui.selected_text = string_to_wstring(ipa_ui.page_views[ipa_index].ipa);
     }
-
-    g_translation_saved_items = ui.items;
-    g_translation_saved_page_index = ui.page_index;
-    g_translation_saved_selected_index = ui.selected_index_in_page;
-    g_translation_saved_selection_started = ui.selection_started;
-    std::vector<WordItem> translation_items;
-    translation_items.reserve(senses.size());
-    for (const auto &sense : senses)
-    {
-        translation_items.emplace_back(std::string{}, sense, 0, CandidateSource::Fallback);
-    }
-    ui.set_items(std::move(translation_items));
-    g_translation_candidates_active = true;
-    RefreshCandidatePageUi(true);
     SendCurrentDataToClient(client_id, activation_epoch, request_id);
+    return;
 }
 
 // 真顶字与自动上屏的推送负载："<消费字符数>\t<上屏文本>"。TSF 拿这个数字裁自己的
@@ -1056,9 +1028,39 @@ void HandleImeKey(uint64_t client_id, uint64_t activation_epoch, uint64_t reques
         return;
     }
 
+    if (g_english_input_mode && PhoneticIpaKey::EditableChord(Global::ModifiersDown, Global::Keycode))
+    {
+        const auto output = PhoneticIpa::Cin().Hotkey(Global::ModifiersDown, Global::Keycode);
+        if (!output.empty())
+        {
+            // Resolve an explicit chord as one output. A pending code stays in the
+            // composition until selected/cancelled; never silently discard it.
+            if (!g_inputSession->get_pinyin_sequence().empty())
+                Global::MsgTypeToTsf = Global::DataFromServerMsgType::NavigationIgnored;
+            else
+            {
+                Global::candidate_ui.selected_text = string_to_wstring(output);
+                Global::MsgTypeToTsf = Global::DataFromServerMsgType::CommitExactText;
+            }
+            SendCurrentDataToClient(client_id, activation_epoch, request_id);
+            return;
+        }
+    }
+    if (PhoneticIpaKey::IsReadingChoiceKey(Global::Keycode, Global::ModifiersDown))
+    {
+        WaitForCandidateRenderSync(Global::Keycode);
+        EnsureCandidatePageReady();
+        if (g_ipa_reading_page_active)
+            ExitCandidateSubPage();
+        else
+            EnterIpaReadingPage(Global::candidate_ui.selected_index_in_page);
+        Global::MsgTypeToTsf = Global::DataFromServerMsgType::NavigationIgnored;
+        SendCurrentDataToClient(client_id, activation_epoch, request_id);
+        return;
+    }
     if (FanyImeIpc::IsTranslationCommitKey(Global::Keycode, Global::ModifiersDown))
     {
-        HandleTranslationCommitKey(client_id, activation_epoch, request_id, -1);
+        HandleIpaCommitKey(client_id, activation_epoch, request_id, -1);
         return;
     }
     // Ctrl+数字：上屏指定序号候选的译文（Ctrl+Enter 上屏当前高亮那条），两条 chord 落到同一个
@@ -1068,7 +1070,7 @@ void HandleImeKey(uint64_t client_id, uint64_t activation_epoch, uint64_t reques
     if (FanyImeIpc::IsTranslationDigitKey(Global::Keycode, Global::ModifiersDown))
     {
         const uint32_t digit_position = FanyImeIpc::TranslationDigitPosition(Global::Keycode, Global::ModifiersDown);
-        HandleTranslationCommitKey(client_id, activation_epoch, request_id, static_cast<int>(digit_position) - 1);
+        HandleIpaCommitKey(client_id, activation_epoch, request_id, static_cast<int>(digit_position) - 1);
         return;
     }
     // 横排候选的左右键在这里决定是移高亮还是移光标（规则见 ShouldArrowMoveCandidateSelection）。要在下面 R 模式
@@ -1135,7 +1137,8 @@ void HandleImeKey(uint64_t client_id, uint64_t activation_epoch, uint64_t reques
         // V 模式没有触发标记，按输入串认：回车上屏的 V123 不是要学的英文词。
         const bool shift_letter_special_mode =
             IsShiftLetterSpecialModeTriggered() || IsVModeCompositionActive(input_before_key);
-        if (FanyImeIpc::ShouldLearnEnteredEnglishWord(g_english_input_mode, shift_letter_special_mode, chinese_scheme,
+        if (!g_english_input_mode &&
+            FanyImeIpc::ShouldLearnEnteredEnglishWord(g_english_input_mode, shift_letter_special_mode, chinese_scheme,
                                                       g_inputSession->is_all_complete_pure_pinyin()))
             english_word = g_r_mode_triggered ? "R" + input_before_key : input_before_key;
         EnqueueLearnEnteredEnglishWordTask(english_word);
@@ -1201,7 +1204,9 @@ void HandleImeKey(uint64_t client_id, uint64_t activation_epoch, uint64_t reques
         return;
     }
 
-    const bool is_paging_key = IsPagingKey(Global::Keycode);
+    const bool ipa_input_key = PhoneticIpaKey::IsInput(g_english_input_mode, Global::Wch, input_before_key.size(),
+                                                       PhoneticIpaKey::IsNumericEntry(input_before_key));
+    const bool is_paging_key = !ipa_input_key && IsPagingKey(Global::Keycode);
     const bool is_manual_pinyin_separator = IsManualPinyinSeparatorKey(Global::Keycode, Global::Wch);
     const bool is_microsoft_shuangpin_ing_key =
         IsMicrosoftShuangpinIngKey(Global::Keycode, Global::Wch, input_before_key);
@@ -1224,15 +1229,16 @@ void HandleImeKey(uint64_t client_id, uint64_t activation_epoch, uint64_t reques
         GetConfiguredWordToCharacterEnabled() && !is_v_mode_input_key,
         GetConfiguredWordToCharacterKeys() == "minus_equal", is_japanese_long_vowel);
     const bool is_commit_with_highlighted_candidate_punctuation =
-        word_character_direction != 0 ||
-        (!is_manual_pinyin_separator && !is_microsoft_shuangpin_ing_key && !is_mid_sentence_helpcode_marker &&
-         !is_direct_helpcode_slash && !is_date_time_input_key && !is_v_mode_input_key &&
-         !is_v_mode_shift_digit_selection &&
-         IsCommitWithHighlightedCandidatePunctuationInCandidateMode(Global::Keycode, Global::Wch));
-    const bool is_selection_key = IsSelectionKey(Global::Keycode);
+        !g_english_input_mode &&
+        (word_character_direction != 0 ||
+         (!is_manual_pinyin_separator && !is_microsoft_shuangpin_ing_key && !is_mid_sentence_helpcode_marker &&
+          !is_direct_helpcode_slash && !is_date_time_input_key && !is_v_mode_input_key &&
+          !is_v_mode_shift_digit_selection &&
+          IsCommitWithHighlightedCandidatePunctuationInCandidateMode(Global::Keycode, Global::Wch)));
+    const bool is_selection_key = !ipa_input_key && IsSelectionKey(Global::Keycode);
     // 移高亮的左右键不碰组合，交给下面的候选导航分支。
     const bool is_composition_edit_key =
-        ((Global::Keycode == VK_LEFT || Global::Keycode == VK_RIGHT) && !arrow_moves_selection) ||
+        ipa_input_key || ((Global::Keycode == VK_LEFT || Global::Keycode == VK_RIGHT) && !arrow_moves_selection) ||
         Global::Keycode == VK_BACK || Global::Keycode == VK_DELETE ||
         (Global::Keycode >= 'A' && Global::Keycode <= 'Z') || is_manual_pinyin_separator ||
         is_microsoft_shuangpin_ing_key || is_mid_sentence_helpcode_marker || is_direct_helpcode_slash ||
@@ -1356,6 +1362,23 @@ void HandleImeKey(uint64_t client_id, uint64_t activation_epoch, uint64_t reques
         // English candidates are queried by the raw spelling. Do not expose
         // the Chinese pinyin session's syllable boundaries in the preedit.
         GlobalIme::composition.segmented_pinyin = GlobalIme::composition.raw_input_with_cases;
+        const auto &table = PhoneticIpa::Cin();
+        const auto &code = GlobalIme::composition.raw_input_with_cases;
+        const auto &values = table.Lookup(code);
+        if (ipa_input_key && phonetic_ipa::MayAutoCommit(table, code))
+        {
+            const auto payload = std::to_wstring(code.size()) + L"\t" + string_to_wstring(values.front());
+            if (SendToTsfWorkerThreadClientViaNamedpipe(
+                    client_id, activation_epoch,
+                    Global::DataFromServerMsgTypeToTsfWorkerThread::CommitCandidateAndContinue, payload))
+            {
+                ClearState();
+                NoteTopCommitPushed(client_id, activation_epoch);
+            }
+            if (IsUiLessMode() || GlobalSettings::getTsfPreeditStyle() == GlobalSettings::TsfPreeditStyle::Pinyin)
+                SendCurrentDataToClient(client_id, activation_epoch, request_id);
+            return;
+        }
     }
     if (g_inputSession->get_pinyin_sequence_with_cases().empty() && !g_r_mode_triggered)
     {
@@ -1587,7 +1610,7 @@ void HandleImeKey(uint64_t client_id, uint64_t activation_epoch, uint64_t reques
     //
     // 普通的拼音字符，发送 preedit 到 TSF 端
     //
-    if (FanyImeIpc::ShouldSendCompositionReply(Global::Keycode >= 'A' && Global::Keycode <= 'Z',
+    if (FanyImeIpc::ShouldSendCompositionReply(ipa_input_key || (Global::Keycode >= 'A' && Global::Keycode <= 'Z'),
                                                is_manual_pinyin_separator, is_microsoft_shuangpin_ing_key,
                                                is_japanese_long_vowel, is_date_time_input_key || is_v_mode_input_key))
     {
@@ -1688,8 +1711,8 @@ void HandleImeKey(uint64_t client_id, uint64_t activation_epoch, uint64_t reques
     // 那么，就可能会触发造词事件，那么，就要适时改变候选框的状态
     //
     /* VK_SPACE, Digits (T-mode digits that extend a date/time are input) */
-    if (Global::Keycode == VK_SPACE ||
-        (!is_date_time_input_key && !is_v_mode_input_key && Global::Keycode > '0' && Global::Keycode <= '9'))
+    if (Global::Keycode == VK_SPACE || (!ipa_input_key && !is_date_time_input_key && !is_v_mode_input_key &&
+                                        Global::Keycode > '0' && Global::Keycode <= '9'))
     {
         ScopedKeyStage select_space_digit{client_id, activation_epoch, request_id, L"handle-selection"};
         ProcessSelectionKey(Global::Keycode, client_id, activation_epoch);
@@ -1739,7 +1762,8 @@ void HandleImeKey(uint64_t client_id, uint64_t activation_epoch, uint64_t reques
             }
         }
     }
-    else if ((IsCandidateNavigationKey(Global::Keycode) || arrow_moves_selection) && !is_v_mode_input_key)
+    else if ((IsCandidateNavigationKey(Global::Keycode) || arrow_moves_selection) && !is_v_mode_input_key &&
+             !ipa_input_key)
     {
         auto &ui = Global::candidate_ui;
         UINT result = Global::DataFromServerMsgType::NavigationIgnored;

@@ -20,6 +20,10 @@ class EngineInputSession : public IInputSession
                                 const ShuangpinProfile &shuangpin_profile = GetXiaoheShuangpinProfile());
 
     void handle_key(UINT vk, UINT modifiers_down, WCHAR wch) override;
+    void set_ipa_mode(bool enabled) override
+    {
+        session_.set_dedicated_english_mode(enabled);
+    }
     void recompute_candidates() override;
     SchemeType current_scheme_type() const override;
     void switch_scheme(SchemeType scheme_type) override;
