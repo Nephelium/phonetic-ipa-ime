@@ -1,4 +1,4 @@
-"""Render this repository's illustrated README as a self-contained static guide.
+"""Render the illustrated web guide, falling back to README for older snapshots.
 
 This deliberately supports only the Markdown constructs used in README.md.
 No remote content is fetched and no executable HTML is accepted from users.
@@ -9,7 +9,8 @@ import html, re, shutil, sys
 repo=Path(__file__).resolve().parents[1]
 destination=Path(sys.argv[1]).resolve()
 destination.mkdir(parents=True,exist_ok=True)
-source=(repo/'README.md').read_text(encoding='utf-8')
+guide=repo/'website/guide.md'
+source=(guide if guide.is_file() else repo/'README.md').read_text(encoding='utf-8')
 base='https://github.com/Nephelium/phonetic-ipa-ime/blob/ipa-v0.1.6/'
 def inline(text):
     text=html.escape(text)
