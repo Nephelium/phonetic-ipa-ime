@@ -26,6 +26,7 @@
 #include "skin/candidate_skin_catalog.h"
 #include "window/candidate_skin_layers.h"
 #include "utils/common_utils.h"
+#include "utils/ipa_app_icon.h"
 #include "utils/single_instance.h"
 #include "voice-input/voice_providers.h"
 
@@ -61,6 +62,7 @@ constexpr UINT kScanSkinCatalog = WM_APP + 3;
 constexpr UINT kWorkerCompleted = WM_APP + 4;
 // Sent by settings_launcher.cpp (the Server exiting) and by the installer: close for real.
 constexpr UINT kQuitSettings = WM_APP + 5;
+constexpr UINT kOpenFirstUseGuide = WM_APP + 6;
 // Timer 1 is msimeui's caret blink in the Direct2D window, so ours start elsewhere.
 constexpr UINT_PTR kConfigReloadTimer = 0x5301;
 constexpr UINT_PTR kLingerTimer = 0x5302;
@@ -70,6 +72,7 @@ std::unique_ptr<native_settings::SettingsWindow> g_native;
 
 bool g_window_minimized = false;
 bool g_open_about_on_ready = false;
+bool g_open_first_use_on_ready = false;
 HWND g_settings_hwnd = nullptr;
 std::optional<CandidateSkinCatalog::ScanResult> g_candidate_skin_catalog;
 uint64_t g_candidate_skin_catalog_revision = 0;
@@ -1723,6 +1726,13 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM w_param, LPARAM l_pa
         ActivateWindow(hwnd);
         ShowAboutSection();
         return 0;
+    case kOpenFirstUseGuide:
+        ActivateWindow(hwnd);
+        if (g_native)
+            g_native->ShowFirstUseGuide();
+        else
+            g_open_first_use_on_ready = true;
+        return 0;
     case kScanSkinCatalog:
         PostConfig(true);
         return 0;
@@ -1783,6 +1793,8 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM w_param, LPARAM l_pa
         break;
     }
     case WM_TIMER:
+        if (w_param == kConfigReloadTimer)
+            PhoneticIpa::AppIcon::Refresh(hwnd, IDI_IME_ICON);
         if (w_param == kLingerTimer)
         {
             CloseSettings(hwnd);
@@ -1852,6 +1864,7 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR command_line, int show_
         return elevated_result;
     const std::wstring arguments = command_line ? command_line : L"";
     g_open_about_on_ready = arguments.find(L"--about") != std::wstring::npos;
+    g_open_first_use_on_ready = arguments.find(L"--guide") != std::wstring::npos;
     // Older shortcuts may still pass --d2d / --webview2, which used to pick the renderer
     // for one run. There is only the Direct2D window now; both are ignored.
     // The Direct2D window's first frame spends ~200ms bringing up the GPU driver. Start
@@ -1876,7 +1889,10 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR command_line, int show_
         HWND existing = FindWindowW(kWindowClass, nullptr);
         if (existing)
         {
-            PostMessageW(existing, g_open_about_on_ready ? kOpenAboutSection : kActivateExistingWindow, 0, 0);
+            const UINT request = g_open_first_use_on_ready ? kOpenFirstUseGuide
+                                 : g_open_about_on_ready   ? kOpenAboutSection
+                                                           : kActivateExistingWindow;
+            PostMessageW(existing, request, 0, 0);
             SetForegroundWindow(existing);
         }
         return 0;
@@ -1910,6 +1926,7 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR command_line, int show_
     if (!hwnd)
         return 1;
     g_settings_hwnd = hwnd;
+    PhoneticIpa::AppIcon::Refresh(hwnd, IDI_IME_ICON);
     g_worker = std::make_unique<SerialTaskQueue>(
         [hwnd] { PostMessageW(hwnd, kWorkerCompleted, 0, 0); },
         [] { MessageBoxW(g_settings_hwnd, L"设置操作失败，请重试。", L"国际音标输入法", MB_OK | MB_ICONWARNING); },
@@ -1960,12 +1977,13 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR command_line, int show_
     // The Direct2D window draws its first frame at once, so there is no splash.
     native_settings::SettingsWindow::Callbacks callbacks;
     callbacks.postToHost = [hwnd](const std::string &message) { HandleClientMessage(hwnd, message); };
-    g_native = std::make_unique<native_settings::SettingsWindow>(hwnd, std::move(callbacks),
-                                                                 g_open_about_on_ready ? "about-settings" : "");
+    g_native = std::make_unique<native_settings::SettingsWindow>(
+        hwnd, std::move(callbacks), g_open_about_on_ready ? "about-settings" : "", g_open_first_use_on_ready);
     g_native->SetLightTheme(g_settings_light);
     g_native->SetLaunchAnimation(launch_animation);
     TraceStartup("ui: native window built");
     g_open_about_on_ready = false;
+    g_open_first_use_on_ready = false;
     // Cloaked until the first frame is drawn, so the compositor never shows the
     // surface before it is painted (white, whatever the theme).
     BOOL cloak = TRUE;

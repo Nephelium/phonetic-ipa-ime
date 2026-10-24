@@ -74,3 +74,9 @@ Unt 宽式／严式列保留 Unt/Phesoca 的整理来源：[汉语拼音与国�
 ## 首次教学中的皮肤示意
 
 Windows 首次教学及文档示意沿用固定水杉基线 `skins/bigfish/` 的角色与背景，保留其 `Metasequoia IME contributors` 作者元数据和原始文件。图文示意与本次交互代码由本项目编写。移动端与 Mac 教学使用原生界面。规则显示名称已调整，Rules-SOURCES.json 继续保留来源中的原始列名。
+
+## 0.1.5 大肥鱼图标与皮肤
+
+Windows 默认使用水杉上游普通 `bigfish` 皮肤，同时分发 `bigfish-peek` 和 `bigfish-national-day` 供选择，保留原 TOML 中的作者、来源、说明及图片。应用图标参考普通大肥鱼角色制作，为角色添加带 ə 的键帽。参考角色来自上游 `skins/bigfish/assets/character.png`，不声称该角色由本项目原创。制作方式、文件哈希及历史图标见 [图标说明](../assets/icons/README.md)。
+
+再次感谢 [水杉输入法原项目与贡献者](https://github.com/metasequoiaime/MSIME-Windows)。本次界面精简、图标替换和跨平台扩展不移除原作者声明、GPLv3 或上游历史。

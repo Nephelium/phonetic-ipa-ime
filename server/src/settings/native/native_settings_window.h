@@ -22,7 +22,7 @@ class SettingsWindow
         std::function<void(const std::string &message)> postToHost;
     };
 
-    SettingsWindow(HWND hwnd, Callbacks callbacks, const std::string &initialPage);
+    SettingsWindow(HWND hwnd, Callbacks callbacks, const std::string &initialPage, bool forceFirstUse = false);
     ~SettingsWindow();
     SettingsWindow(const SettingsWindow &) = delete;
     SettingsWindow &operator=(const SettingsWindow &) = delete;
@@ -37,6 +37,7 @@ class SettingsWindow
     // is covered by a brief plain fill instead, without the gear and the fade.
     void SetLaunchAnimation(bool enabled);
     void ShowPage(const std::string &pageId);
+    void ShowFirstUseGuide();
     // Drops hover and pressed states before the window is hidden, so the frame kept
     // for the next show does not flash a highlighted caption button.
     void ResetTransientState();

@@ -1,6 +1,7 @@
 // Include this translation unit to exercise its private controls and Editor,
 // rather than copying UI behavior into a second model just for tests.
 #include "settings/native/native_page_ipa.cpp"
+#include "utils/ipa_app_icon.h"
 #include <iostream>
 #include <cmath>
 #include <set>
@@ -498,6 +499,57 @@ int main(int argc, char **argv)
         const auto last = scene.List()->GetItemBounds(8), viewport = scroll->GetBounds();
         Require(last.y >= viewport.y - 1 && last.y + last.height <= viewport.y + viewport.height + 1,
                 "Last candidate stays outside the visible viewport");
+    });
+    run("Custom application image is local, decodable and reset preserves the imported file", [&] {
+        const HRESULT com = CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
+        Require(SUCCEEDED(com), "Initialize image decoder COM");
+        try
+        {
+            const auto directory =
+                std::filesystem::temp_directory_path() /
+                ("ipa-icon-test-" + std::to_string(GetCurrentProcessId()) + "-" + std::to_string(GetTickCount64()));
+            std::filesystem::create_directories(directory);
+            const auto source = root.parent_path() / "skins/bigfish/assets/character.png";
+            const auto originalSize = std::filesystem::file_size(source);
+            PhoneticIpa::AppIcon::Import(source, directory);
+            const auto icon = PhoneticIpa::AppIcon::Current(directory);
+            Require(!icon.empty() && std::filesystem::is_regular_file(icon), "Imported icon was not selected");
+            Require(std::filesystem::file_size(source) == originalSize, "Original picture was changed");
+            const auto invalid = directory / "invalid.png";
+            {
+                std::ofstream file(invalid);
+                file << "not an image";
+            }
+            bool rejected = false;
+            try
+            {
+                PhoneticIpa::AppIcon::Import(invalid, directory);
+            }
+            catch (const std::exception &)
+            {
+                rejected = true;
+            }
+            Require(rejected && PhoneticIpa::AppIcon::Current(directory) == icon, "Invalid image changed the icon");
+            PhoneticIpa::AppIcon::Reset(directory);
+            Require(PhoneticIpa::AppIcon::Current(directory).empty(), "Default icon was not restored");
+            Require(std::filesystem::is_regular_file(icon), "Reset deleted an imported image");
+            PhoneticIpa::WriteProfileFile(directory / "custom-icon-name.txt", "../outside.ico");
+            Require(PhoneticIpa::AppIcon::Current(directory).empty(), "Icon path escaped the private directory");
+        }
+        catch (...)
+        {
+            CoUninitialize();
+            throw;
+        }
+        CoUninitialize();
+    });
+    run("All three bundled bigfish skins load through the production catalog", [&] {
+        for (const auto *id : {"bigfish", "bigfish-peek", "bigfish-national-day"})
+        {
+            const auto skin = CandidateSkinCatalog::Load(root.parent_path() / "skins", id);
+            Require(skin.has_value(), "Bundled bigfish skin is absent or invalid");
+            Require(CandidateSkinCatalog::Supports(*skin, "vertical", "dark"), "Bigfish IPA layout unsupported");
+        }
     });
     POINT pointerAfter{};
     GetCursorPos(&pointerAfter);

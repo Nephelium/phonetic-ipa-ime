@@ -9,6 +9,7 @@
 #include "settings/native/native_settings_theme.h"
 
 #include "utils/common_utils.h"
+#include "utils/ipa_app_icon.h"
 
 #include "msimeui/Animation.h"
 #include "msimeui/DeviceResources.h"
@@ -472,6 +473,7 @@ class SidebarHeader : public msimeui::Visual
         const float rowHeight = bounds_.height - 12.0f;
         // img 25x25, radius 6px, translateY(1px)
         const float logoY = bounds_.y + (rowHeight - 25.0f) * 0.5f + 1.0f;
+        logo_.SetPath(PhoneticIpa::AppIcon::AssetOr(AssetPath(L"ipa-bigfish.png")));
         logo_.Arrange({bounds_.x + 12.0f, logoY, 25.0f, 25.0f});
         logo_.Render(dr);
         // gap 6px + margin-left 3px
@@ -482,7 +484,7 @@ class SidebarHeader : public msimeui::Visual
 
   private:
     TextLayout title_;
-    BitmapImage logo_{AssetPath(L"ipa-bird.png"), 25.0f, 25.0f, 6.0f};
+    BitmapImage logo_{AssetPath(L"ipa-bigfish.png"), 25.0f, 25.0f, 6.0f};
 };
 
 class Sidebar : public msimeui::Panel
@@ -1232,7 +1234,8 @@ int TopFrameThickness(HWND hwnd)
 class SettingsWindowImpl : public HostServices
 {
   public:
-    SettingsWindowImpl(HWND hwnd, SettingsWindow::Callbacks callbacks, const std::string &initialPage)
+    SettingsWindowImpl(HWND hwnd, SettingsWindow::Callbacks callbacks, const std::string &initialPage,
+                       bool forceFirstUse)
         : hwnd_(hwnd), callbacks_(std::move(callbacks)), model_([this](const std::string &message) {
               if (callbacks_.postToHost)
                   callbacks_.postToHost(message);
@@ -1283,8 +1286,13 @@ class SettingsWindowImpl : public HostServices
             splash_->Dismiss();
         else
             SetTimer(hwnd_, kSplashTimer, 1500, nullptr);
-        if (IpaFirstUsePending())
-            ShowIpaFirstUse(*this);
+        if (forceFirstUse || IpaFirstUsePending())
+            ShowFirstUseGuide();
+    }
+
+    void ShowFirstUseGuide()
+    {
+        ShowIpaFirstUse(*this);
     }
 
     ~SettingsWindowImpl() override
@@ -1724,8 +1732,8 @@ class SettingsWindowImpl : public HostServices
     bool themed_ = false;
 };
 
-SettingsWindow::SettingsWindow(HWND hwnd, Callbacks callbacks, const std::string &initialPage)
-    : impl_(std::make_unique<SettingsWindowImpl>(hwnd, std::move(callbacks), initialPage))
+SettingsWindow::SettingsWindow(HWND hwnd, Callbacks callbacks, const std::string &initialPage, bool forceFirstUse)
+    : impl_(std::make_unique<SettingsWindowImpl>(hwnd, std::move(callbacks), initialPage, forceFirstUse))
 {
 }
 
@@ -1779,6 +1787,11 @@ void SettingsWindow::SetLaunchAnimation(bool enabled)
 void SettingsWindow::ShowPage(const std::string &pageId)
 {
     impl_->ShowPage(pageId);
+}
+
+void SettingsWindow::ShowFirstUseGuide()
+{
+    impl_->ShowFirstUseGuide();
 }
 
 void SettingsWindow::ResetTransientState()

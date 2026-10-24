@@ -1,8 +1,11 @@
 #include "settings/native/native_page_help_widgets.h"
 
 #include "utils/ipa_update.h"
+#include "utils/ipa_app_icon.h"
 #include "msimeui/DeviceResources.h"
 #include "msimeui/Window.h"
+#include <commdlg.h>
+#pragma comment(lib, "comdlg32.lib")
 
 // partials/about-settings.html + modules/about-settings.ts + modules/update-manifest.ts;
 // styles in styles/modules/document-settings.css (.about-*).
@@ -138,12 +141,13 @@ class AboutMark : public msimeui::Visual
         const Palette &p = CurrentPalette();
         FillRounded(dr, bounds_, 11.0f, p.surfaceSunken);
         StrokeRounded(dr, bounds_, 11.0f, p.border, 1.0f);
+        logo_.SetPath(PhoneticIpa::AppIcon::AssetOr(AssetPath(L"ipa-bigfish.png")));
         logo_.Arrange({bounds_.x + 10.0f, bounds_.y + 10.0f, 32.0f, 32.0f});
         logo_.Render(dr);
     }
 
   private:
-    BitmapImage logo_{AssetPath(L"ipa-bird.png"), 32.0f, 32.0f};
+    BitmapImage logo_{AssetPath(L"ipa-bigfish.png"), 32.0f, 32.0f};
 };
 
 CssButton::Style DialogButtonStyle(bool primary)
@@ -274,6 +278,46 @@ VisualPtr BuildAboutPage(PageContext &context)
         });
         links->Add(std::make_shared<AboutRow>(left, state->check, false));
     }
+    auto iconActions = std::make_shared<Row>(9.0f);
+    auto customIcon = std::make_shared<Button>(L"选择图片更换图标");
+    customIcon->SetOnClick([ctx = &context]() {
+        WCHAR path[32768]{};
+        OPENFILENAMEW picker{sizeof(picker)};
+        picker.hwndOwner = ctx->host.Hwnd();
+        picker.lpstrFile = path;
+        picker.nMaxFile = 32768;
+        picker.lpstrFilter = L"图片\0*.png;*.jpg;*.jpeg;*.bmp\0\0";
+        picker.Flags = OFN_NOCHANGEDIR | OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST;
+        if (!GetOpenFileNameW(&picker))
+            return;
+        try
+        {
+            PhoneticIpa::AppIcon::Import(path);
+            ctx->host.ShowToast(L"图标已更换。", true);
+            ctx->host.Window()->Invalidate();
+        }
+        catch (const std::exception &error)
+        {
+            ctx->host.ShowToast(Widen(error.what()), false);
+        }
+    });
+    iconActions->Add(customIcon);
+    auto defaultIcon = std::make_shared<Button>(L"恢复大肥鱼图标");
+    defaultIcon->SetOnClick([ctx = &context]() {
+        try
+        {
+            PhoneticIpa::AppIcon::Reset();
+            ctx->host.ShowToast(L"已恢复默认图标。", true);
+            ctx->host.Window()->Invalidate();
+        }
+        catch (const std::exception &error)
+        {
+            ctx->host.ShowToast(Widen(error.what()), false);
+        }
+    });
+    iconActions->Add(defaultIcon);
+    links->Add(MakeRow(L"应用显示图标", L"PNG、JPEG、BMP，最大 10 MB。用于设置窗口与任务栏，程序文件保留默认图标。",
+                       iconActions));
     auto automatic = std::make_shared<ToggleSwitch>(PhoneticIpa::Updates::Automatic());
     automatic->SetOnChanged([](bool enabled) { PhoneticIpa::Updates::SetAutomatic(enabled); });
     links->Add(MakeRow(L"自动检查新版本", L"每天检查官网与 GitHub，发现新版时提醒下载。", automatic));
@@ -286,6 +330,7 @@ VisualPtr BuildAboutPage(PageContext &context)
     const Link documents[] = {
         // The space before the detail <span> belongs to the title text.
         {L"官网 ", L"phonetictoolbox.com", kWebsiteUrl},
+        {L"致谢水杉输入法", L"原始 Windows 项目与贡献者", "https://github.com/metasequoiaime/MSIME-Windows"},
         {L"开源许可协议", nullptr, kLicenseUrl},
         {L"隐私政策", nullptr, kPrivacyUrl},
     };

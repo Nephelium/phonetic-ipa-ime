@@ -2,9 +2,11 @@
 
 输入拼音，选择带声调的国际音标；也可以按键位点选 IPA、extIPA 和 VoQS 符号。支持 Windows、macOS、Android 和 iOS。
 
-当前源码为 **0.1.4 开发测试版**。官网输入法下载暂时撤下，安装包完成复核后再恢复。iOS 提供需要自行签名的 IPA。
+当前版本 **0.1.5 测试版**。[官网下载](https://www.phonetictoolbox.com/#ipa-ime-download) · [GitHub 下载](https://github.com/Nephelium/phonetic-ipa-ime/releases/tag/ipa-v0.1.5)。iOS 提供需要自行签名的 IPA。
 
-<p align="center"><img src="../assets/icons/ipa-bird-v2.png" width="120" alt="紫色小鸟抱着 ə 键帽的应用图标"></p>
+本项目基于 [水杉输入法 MSIME-Windows](https://github.com/metasequoiaime/MSIME-Windows) 开发。感谢水杉原作者及贡献者提供的输入法基础、原生界面与皮肤素材，保留上游历史、GPLv3 及原始署名。
+
+<p align="center"><img src="../assets/icons/ipa-bigfish-v1.png" width="120" alt="大肥鱼抱着 ə 键帽的应用图标"></p>
 
 ## 两种输入方式
 
@@ -64,7 +66,9 @@ Android 按住退格可连续删除，松手或移出按键后停止。选中文
 
 ## 首次使用教学
 
-四个平台首次打开设置 App／窗口会弹出四步教学，之后可在使用说明中重新打开。Windows 使用蓝色大肥鱼示意图，Mac 与手机沿用各自的原生界面。
+四个平台首次打开设置 App／窗口会弹出四步教学，之后可在使用说明中重新打开。Windows 安装成功后会主动打开教学，完整解压目录中的 **使用教学.cmd** 也可以随时重看，即使以前已经看过。Windows 使用蓝色大肥鱼示意图，Mac 与手机沿用各自的原生界面。
+
+Windows 新安装默认使用普通蓝色大肥鱼皮肤，皮肤设置保留探头和国庆献礼等其他选择。四个平台统一使用大肥鱼抱着 ə 的应用图标。Windows 的关于页面可以从本机选择 PNG、JPEG、BMP 图片替换设置窗口、任务栏和设置页的显示图标，最大 10 MB；也可以恢复默认。图片仅保存在本机，程序文件图标保留默认大肥鱼。macOS、iOS、Android 不提供任意图片更换图标。
 
 <details><summary>查看四步教学的界面</summary>
 
@@ -95,11 +99,11 @@ Android 按住退格可连续删除，松手或移出按键后停止。选中文
 - 用户编写的 `ipa.cin`、固定字表和本次修改记录见 [来源与许可](../prototype/THIRD_PARTY.md) 与 [修改记录](../MODIFICATIONS.md)。
 - 词语读音采用 CC-CEDICT 衍生资料，保留 CC BY-SA 4.0 署名与修改说明。
 - 音标使用 Doulos SIL，扩展缺字使用 PTB IPA Plus，均随包保留 OFL 与来源。文字上屏后的字体由接收软件决定。
-- 蓝色大肥鱼沿用水杉上游皮肤素材及作者元数据。紫色小鸟图标的生成记录见 [图标说明](../assets/icons/README.md)。
+- 蓝色大肥鱼沿用水杉上游皮肤素材及作者元数据。抱 ə 的应用图标参考同一角色制作，生成记录见 [图标说明](../assets/icons/README.md)。
 - 其余依赖的原始声明见 [THIRD_PARTY_NOTICES.txt](../THIRD_PARTY_NOTICES.txt)。
 
 ## 开发与验证
 
-构建入口分别见 [Windows](../prototype/README.md)、[Apple](../apple/README.md)、[Android](../android/README.md)。当前验证记录见 [0.1.4 代码复核与验证](testing/2026-10-24-014-review.md)。
+构建入口分别见 [Windows](../prototype/README.md)、[Apple](../apple/README.md)、[Android](../android/README.md)。当前验证记录见 [0.1.5 代码复核与验证](testing/2026-10-24-015-review.md)。
 
 Windows 原生控件与渲染、两个 TSF 架构、Mac 专用 NSTextView 跨进程输入，以及 Android / iOS 模拟器真实键盘分别记录。iPhone 实机签名与各厂商 Android 实机尚未完成逐一验证。

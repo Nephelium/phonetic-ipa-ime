@@ -15,3 +15,11 @@ Create one beautiful original app icon for an International Phonetic Alphabet ke
 `ipa-bird-v2.png` 于 2026-10-24 按用户要求使用 Codex 内置 image_gen 生成。紫色小鸟抱着带 ə 的米白键帽，未使用外部参考图或品牌标志。原图 SHA-256：`590af660c87b5cae42520b26254a80e8e0a7a68a89c13b42b6d4ce75ca259019`。Windows ICO、设置 PNG、Apple 图标和 Android 图标仅按平台尺寸缩放／转换格式。旧候选原图保留。
 
 生成要求：原创、可爱的紫色圆润小鸟，抱着米白键帽，键帽上精确显示 ə，淡紫色方形背景，简洁柔和的立体纸黏土风格，无其他文字或品牌元素，适用于小尺寸应用图标。
+
+## 当前图标 0.1.5：大肥鱼抱 ə
+
+`ipa-bigfish-v1.png` 于 2026-10-24 按用户要求使用 Codex 内置 image_gen 制作，参考本仓水杉上游普通大肥鱼皮肤 `skins/bigfish/assets/character.png` 的角色形象，再编辑为抱着米白色 ə 键帽的应用图标。蓝色头发、女仆头饰与服饰沿用该参考形象，原皮肤作者归属和元数据保持不变。本图不是无参考的原创角色。
+
+原图 SHA-256：`b8b01d8d35acaba7f2313d639753becba32103500b4ea8510df85384d5d6b8bc`。Windows ICO、设置 PNG、Android mipmap 与 Apple 图标仅进行尺寸转换。旧图保留供历史版本追溯。
+
+制作要求：沿用普通蓝色大肥鱼角色，居中抱着一枚大号米白色键帽，键帽上清晰显示国际音标 ə，浅蓝色不透明背景，适合小尺寸应用图标，保持可爱、简洁、清楚的角色轮廓。四个平台使用相同原图。

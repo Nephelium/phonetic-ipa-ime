@@ -1,32 +1,32 @@
 {
   "schema": 1,
   "product": "phonetic-ipa-ime",
-  "version": "0.1.3",
-  "notes": "默认拼音选音标，多音字两次数字选择；十套转写快捷切换；修复手机音标选择、字体与紧凑布局。",
+  "version": "0.1.5",
+  "notes": "修复 Windows 教学入口与大肥鱼皮肤打包，普通大肥鱼为新安装默认；四端采用抱 ə 图标；Windows 可自选图片更换显示图标。",
   "platforms": {
     "windows": {
-      "url": "https://www.phonetictoolbox.com/releases/phonetic-ipa-ime/0.1.3/PhoneticIPA-Windows-0.1.3.zip",
-      "githubUrl": "https://github.com/Nephelium/phonetic-ipa-ime/releases/download/ipa-v0.1.3/PhoneticIPA-Windows-0.1.3.zip",
-      "bytes": 88985052,
-      "sha256": "31a9aa30ec1ed39ce80b20e9d5f0efd72c89fbd81a498bdabdfc7867011300fc"
+      "url": "https://www.phonetictoolbox.com/releases/phonetic-ipa-ime/0.1.5/PhoneticIPA-Windows-0.1.5.zip",
+      "githubUrl": "https://github.com/Nephelium/phonetic-ipa-ime/releases/download/ipa-v0.1.5/PhoneticIPA-Windows-0.1.5.zip",
+      "bytes": 95934140,
+      "sha256": "75a972fc6b0e32fae62a82dd181b6b0afed127e65ba5bbc4d881f4e28ebee49a"
     },
     "macos": {
-      "url": "https://www.phonetictoolbox.com/releases/phonetic-ipa-ime/0.1.3/PhoneticIPA-macOS-0.1.3.zip",
-      "githubUrl": "https://github.com/Nephelium/phonetic-ipa-ime/releases/download/ipa-v0.1.3/PhoneticIPA-macOS-0.1.3.zip",
-      "bytes": 54631974,
-      "sha256": "ce1cf54929ebd82ff527b6aac75718b8b3edf678e1654ebce50ac9a23b4e1211"
+      "url": "https://www.phonetictoolbox.com/releases/phonetic-ipa-ime/0.1.5/PhoneticIPA-macOS-0.1.5.zip",
+      "githubUrl": "https://github.com/Nephelium/phonetic-ipa-ime/releases/download/ipa-v0.1.5/PhoneticIPA-macOS-0.1.5.zip",
+      "bytes": 60927507,
+      "sha256": "0be1914ba86dc177782669dda27e9819cdbddc4b761904817dfbd4e6c5fd0f71"
     },
     "ios": {
-      "url": "https://www.phonetictoolbox.com/releases/phonetic-ipa-ime/0.1.3/PhoneticIPA-iOS-0.1.3-unsigned.ipa",
-      "githubUrl": "https://github.com/Nephelium/phonetic-ipa-ime/releases/download/ipa-v0.1.3/PhoneticIPA-iOS-0.1.3-unsigned.ipa",
-      "bytes": 105066596,
-      "sha256": "c7a94c55f2dda8c19ad4e286b3c8ade3df29d985c078e9dc5056517de4b424e4"
+      "url": "https://www.phonetictoolbox.com/releases/phonetic-ipa-ime/0.1.5/PhoneticIPA-iOS-0.1.5-unsigned.ipa",
+      "githubUrl": "https://github.com/Nephelium/phonetic-ipa-ime/releases/download/ipa-v0.1.5/PhoneticIPA-iOS-0.1.5-unsigned.ipa",
+      "bytes": 105829344,
+      "sha256": "f4e2f766d1895d626bdf8c26fd17bb9c3d803533745c9fdd03df0ab4bd0ef635"
     },
     "android": {
-      "url": "https://www.phonetictoolbox.com/releases/phonetic-ipa-ime/0.1.3/PhoneticIPA-Android-0.1.3.apk",
-      "githubUrl": "https://github.com/Nephelium/phonetic-ipa-ime/releases/download/ipa-v0.1.3/PhoneticIPA-Android-0.1.3.apk",
-      "bytes": 121791614,
-      "sha256": "14be1d8c3d04dcd016adf8178f4553e0730bf5c9c0a410989cf0c32b2e7825d1"
+      "url": "https://www.phonetictoolbox.com/releases/phonetic-ipa-ime/0.1.5/PhoneticIPA-Android-0.1.5.apk",
+      "githubUrl": "https://github.com/Nephelium/phonetic-ipa-ime/releases/download/ipa-v0.1.5/PhoneticIPA-Android-0.1.5.apk",
+      "bytes": 122228889,
+      "sha256": "95ee589969a9d601ed4d73ce5a41c23b0fb60258a6e69c021420e30c69e4c3b1"
     }
   }
 }
