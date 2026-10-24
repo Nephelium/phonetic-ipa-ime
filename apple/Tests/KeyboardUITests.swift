@@ -211,4 +211,55 @@ final class KeyboardUITests: XCTestCase {
         let editorShot = XCTAttachment(screenshot: app.screenshot()); editorShot.name = "Editor modifier letter preview"; editorShot.lifetime = .keepAlways; add(editorShot)
 
     }
+    func testCandidateRowsStayAboveDigitKeys() throws {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launch()
+        app.tabBars.buttons["试打"].tap()
+        let area = app.textViews["typing-area"]
+        area.tap()
+        XCTAssertTrue(app.buttons["key-k"].waitForExistence(timeout: 20))
+        if app.buttons["function-IPA"].exists { app.buttons["function-IPA"].tap() }
+        if app.buttons["output-mode"].label == "汉字" { app.buttons["output-mode"].tap() }
+        defer { XCUIDevice.shared.orientation = .portrait }
+        func type(_ text: String) {
+            for key in text { app.buttons["key-" + String(key)].tap() }
+        }
+        func check(_ identifiers: [String], _ name: String) {
+            let digit = app.buttons["digit-1"]
+            for orientation in [UIDeviceOrientation.portrait, .landscapeLeft] {
+                XCUIDevice.shared.orientation = orientation
+                let settled = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
+                    identifiers.allSatisfy { id in
+                        let item = app.buttons[id]
+                        return item.exists && item.frame.height > 12 && item.frame.maxY + 3 <= digit.frame.minY
+                    }
+                }, object: nil)
+                XCTAssertEqual(XCTWaiter.wait(for: [settled], timeout: 8), .completed,
+                               "Candidate content must end above the digit row: " + name)
+                let shot = XCTAttachment(screenshot: app.screenshot())
+                shot.name = name + (orientation == .portrait ? " portrait" : " landscape")
+                shot.lifetime = .keepAlways
+                add(shot)
+            }
+            XCUIDevice.shared.orientation = .portrait
+        }
+        type("kuaile")
+        check(["hanzi-快乐-kuai'le", "ipa-快乐-kuai'le"], "Word candidates")
+        app.buttons["ipa-快乐-kuai'le"].tap()
+        type("hao")
+        app.buttons["ipa-好-hao"].tap()
+        check(["reading-hao3", "reading-hao4"], "Pronunciation choices")
+        app.buttons["reading-hao4"].tap()
+        let two = app.buttons["digit-2"]
+        two.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.8)).press(forDuration: 0.05,
+            thenDragTo: two.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: -0.4)))
+        app.buttons["digit-1"].tap(); app.buttons["digit-4"].tap()
+        check(["hanzi-˨˩˦-"], "Tone choices")
+        app.buttons["hanzi-˨˩˦-"].tap()
+        type("quanguorenmindaibiaodahui")
+        check(["hanzi-全国人民代表大会-quan'guo'ren'min'dai'biao'da'hui",
+               "ipa-全国人民代表大会-quan'guo'ren'min'dai'biao'da'hui"], "Long word candidates")
+    }
+
 }

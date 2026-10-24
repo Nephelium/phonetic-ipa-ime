@@ -329,7 +329,7 @@ VisualPtr BuildAboutPage(PageContext &context)
     };
     const Link documents[] = {
         // The space before the detail <span> belongs to the title text.
-        {L"官网 ", L"phonetictoolbox.com", kWebsiteUrl},
+        {L"PhoneticToolbox 语音工具箱官网 ", L"phonetictoolbox.com", kWebsiteUrl},
         {L"致谢水杉输入法", L"原始 Windows 项目与贡献者", "https://github.com/metasequoiaime/MSIME-Windows"},
         {L"开源许可协议", nullptr, kLicenseUrl},
         {L"隐私政策", nullptr, kPrivacyUrl},

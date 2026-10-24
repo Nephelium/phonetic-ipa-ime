@@ -1,0 +1,360 @@
+{
+  "windows": {
+    "hanzi-mode": {
+      "file": "windows-hanzi-mode-c4818ba552.png",
+      "w": 760,
+      "h": 820
+    },
+    "hanzi-result": {
+      "file": "windows-hanzi-result-4ecaed7e2e.png",
+      "w": 760,
+      "h": 820
+    },
+    "hanzi-word": {
+      "file": "windows-hanzi-word-6343c95f98.png",
+      "w": 760,
+      "h": 820
+    },
+    "hao": {
+      "file": "windows-hao-eb6ed40f47.png",
+      "w": 760,
+      "h": 820
+    },
+    "ipa-mode": {
+      "file": "windows-ipa-mode-071374ed6d.png",
+      "w": 760,
+      "h": 820
+    },
+    "ipa-picker": {
+      "file": "windows-ipa-picker-f6ff7c8662.png",
+      "w": 760,
+      "h": 820
+    },
+    "ipa-result": {
+      "file": "windows-ipa-result-742b5d7490.png",
+      "w": 760,
+      "h": 820
+    },
+    "plus-chart": {
+      "file": "windows-plus-chart-6038fff159.png",
+      "w": 1400,
+      "h": 960
+    },
+    "reading-result": {
+      "file": "windows-reading-result-2a442349da.png",
+      "w": 760,
+      "h": 820
+    },
+    "readings": {
+      "file": "windows-readings-9c584fd852.png",
+      "w": 760,
+      "h": 820
+    },
+    "rule-button": {
+      "file": "windows-rule-button-071374ed6d.png",
+      "w": 760,
+      "h": 820
+    },
+    "settings": {
+      "file": "windows-settings-17daafcd62.png",
+      "w": 1400,
+      "h": 2445
+    },
+    "start": {
+      "file": "windows-start-071374ed6d.png",
+      "w": 760,
+      "h": 820
+    },
+    "tone-result": {
+      "file": "windows-tone-result-d741398092.png",
+      "w": 760,
+      "h": 820
+    },
+    "tone": {
+      "file": "windows-tone-6244f3bc05.png",
+      "w": 760,
+      "h": 820
+    },
+    "word-result": {
+      "file": "windows-word-result-5fbe920442.png",
+      "w": 760,
+      "h": 820
+    },
+    "word": {
+      "file": "windows-word-326911106e.png",
+      "w": 760,
+      "h": 820
+    }
+  },
+  "macos": {
+    "hanzi-mode": {
+      "file": "macos-hanzi-mode-67393dda14.png",
+      "w": 760,
+      "h": 540
+    },
+    "hanzi-result": {
+      "file": "macos-hanzi-result-eea6227a46.png",
+      "w": 760,
+      "h": 540
+    },
+    "hanzi-word": {
+      "file": "macos-hanzi-word-f9d7283dbd.png",
+      "w": 760,
+      "h": 540
+    },
+    "hao": {
+      "file": "macos-hao-0b835cea31.png",
+      "w": 760,
+      "h": 540
+    },
+    "ipa-mode": {
+      "file": "macos-ipa-mode-c84ac36c11.png",
+      "w": 760,
+      "h": 540
+    },
+    "ipa-picker": {
+      "file": "macos-ipa-picker-bb49ca6ce7.png",
+      "w": 760,
+      "h": 540
+    },
+    "ipa-result": {
+      "file": "macos-ipa-result-741114b3d5.png",
+      "w": 760,
+      "h": 540
+    },
+    "plus-chart": {
+      "file": "macos-plus-chart-ccf441e23e.png",
+      "w": 1160,
+      "h": 820
+    },
+    "reading-result": {
+      "file": "macos-reading-result-2558e0f94c.png",
+      "w": 760,
+      "h": 540
+    },
+    "readings": {
+      "file": "macos-readings-ae997b8e39.png",
+      "w": 760,
+      "h": 540
+    },
+    "rule-button": {
+      "file": "macos-rule-button-31de8c0240.png",
+      "w": 760,
+      "h": 540
+    },
+    "settings": {
+      "file": "macos-settings-b81263b8bf.png",
+      "w": 1180,
+      "h": 1440
+    },
+    "start": {
+      "file": "macos-start-87a31f3505.png",
+      "w": 760,
+      "h": 540
+    },
+    "tone-result": {
+      "file": "macos-tone-result-bfc469270f.png",
+      "w": 760,
+      "h": 540
+    },
+    "tone": {
+      "file": "macos-tone-420c7fbc11.png",
+      "w": 760,
+      "h": 540
+    },
+    "word-result": {
+      "file": "macos-word-result-e8bf205cb8.png",
+      "w": 760,
+      "h": 540
+    },
+    "word": {
+      "file": "macos-word-6fe0f89461.png",
+      "w": 760,
+      "h": 540
+    }
+  },
+  "android": {
+    "hanzi-mode": {
+      "file": "android-hanzi-mode-fe376dc9a3.png",
+      "w": 1080,
+      "h": 2400
+    },
+    "hanzi-result": {
+      "file": "android-hanzi-result-8b4d247f75.png",
+      "w": 1080,
+      "h": 2400
+    },
+    "hanzi-word": {
+      "file": "android-hanzi-word-98ed449915.png",
+      "w": 1080,
+      "h": 2400
+    },
+    "hao": {
+      "file": "android-hao-9b8f2ab33f.png",
+      "w": 1080,
+      "h": 2400
+    },
+    "ipa-mode": {
+      "file": "android-ipa-mode-3a4b8b99e1.png",
+      "w": 1080,
+      "h": 2400
+    },
+    "ipa-picker": {
+      "file": "android-ipa-picker-0ee7a723f5.png",
+      "w": 1080,
+      "h": 2400
+    },
+    "ipa-result": {
+      "file": "android-ipa-result-c790ae3fbb.png",
+      "w": 1080,
+      "h": 2400
+    },
+    "plus-chart": {
+      "file": "android-plus-chart-adbc04cb0d.png",
+      "w": 1080,
+      "h": 2400
+    },
+    "plus-open": {
+      "file": "android-plus-open-eb1556aa24.png",
+      "w": 1080,
+      "h": 2400
+    },
+    "plus-result": {
+      "file": "android-plus-result-081ea541b2.png",
+      "w": 1080,
+      "h": 2400
+    },
+    "reading-result": {
+      "file": "android-reading-result-849b520d24.png",
+      "w": 1080,
+      "h": 2400
+    },
+    "readings": {
+      "file": "android-readings-74e6e8369a.png",
+      "w": 1080,
+      "h": 2400
+    },
+    "rules": {
+      "file": "android-rules-d3c3f6a69b.png",
+      "w": 1080,
+      "h": 2400
+    },
+    "start": {
+      "file": "android-start-65db29263c.png",
+      "w": 1080,
+      "h": 2400
+    },
+    "tone-result": {
+      "file": "android-tone-result-a2fae12d31.png",
+      "w": 1080,
+      "h": 2400
+    },
+    "tone": {
+      "file": "android-tone-17d95f217a.png",
+      "w": 1080,
+      "h": 2400
+    },
+    "word-result": {
+      "file": "android-word-result-68d50b5f18.png",
+      "w": 1080,
+      "h": 2400
+    },
+    "word": {
+      "file": "android-word-365017a591.png",
+      "w": 1080,
+      "h": 2400
+    }
+  },
+  "ios": {
+    "rules": {
+      "file": "ios-rules-b0dd9e5bda.png",
+      "w": 1206,
+      "h": 2622
+    },
+    "plus-result": {
+      "file": "ios-plus-result-60307c0f6b.png",
+      "w": 1206,
+      "h": 2622
+    },
+    "plus-chart": {
+      "file": "ios-plus-chart-66f06c37f1.png",
+      "w": 1206,
+      "h": 2622
+    },
+    "plus-open": {
+      "file": "ios-plus-open-bead9d2376.png",
+      "w": 1206,
+      "h": 2622
+    },
+    "tone-result": {
+      "file": "ios-tone-result-1f48d2bfad.png",
+      "w": 1206,
+      "h": 2622
+    },
+    "tone": {
+      "file": "ios-tone-60908fadc6.png",
+      "w": 1206,
+      "h": 2622
+    },
+    "ipa-result": {
+      "file": "ios-ipa-result-8f41c729d6.png",
+      "w": 1206,
+      "h": 2622
+    },
+    "ipa-picker": {
+      "file": "ios-ipa-picker-7ff0cc8b48.png",
+      "w": 1206,
+      "h": 2622
+    },
+    "ipa-mode": {
+      "file": "ios-ipa-mode-7dbfc88299.png",
+      "w": 1206,
+      "h": 2622
+    },
+    "hanzi-result": {
+      "file": "ios-hanzi-result-7e35754eea.png",
+      "w": 1206,
+      "h": 2622
+    },
+    "hanzi-word": {
+      "file": "ios-hanzi-word-5454c97c4f.png",
+      "w": 1206,
+      "h": 2622
+    },
+    "hanzi-mode": {
+      "file": "ios-hanzi-mode-44b3690693.png",
+      "w": 1206,
+      "h": 2622
+    },
+    "reading-result": {
+      "file": "ios-reading-result-165a0d1400.png",
+      "w": 1206,
+      "h": 2622
+    },
+    "readings": {
+      "file": "ios-readings-ca1dad1bb5.png",
+      "w": 1206,
+      "h": 2622
+    },
+    "hao": {
+      "file": "ios-hao-f1ab6b0f29.png",
+      "w": 1206,
+      "h": 2622
+    },
+    "word-result": {
+      "file": "ios-word-result-be525ed70a.png",
+      "w": 1206,
+      "h": 2622
+    },
+    "word": {
+      "file": "ios-word-20c34af12d.png",
+      "w": 1206,
+      "h": 2622
+    },
+    "start": {
+      "file": "ios-start-8160dfc22e.png",
+      "w": 1206,
+      "h": 2622
+    }
+  }
+}

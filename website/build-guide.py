@@ -57,3 +57,7 @@ for directory in ['docs/images/0.1.4','docs/images/0.1.6','assets/icons']:
             dest=destination/(p.relative_to(repo/'docs') if directory.startswith('docs/') else p.relative_to(repo))
             dest.parent.mkdir(exist_ok=True,parents=True);shutil.copy2(p,dest)
 print('Static illustrated guide generated:',destination)
+visual_builder=repo/'website/visual-guide/build.py'
+if visual_builder.is_file():
+    import runpy
+    runpy.run_path(str(visual_builder),init_globals={'destination':destination,'text_article':''.join(body)})

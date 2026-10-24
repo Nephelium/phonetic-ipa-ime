@@ -2,31 +2,31 @@
   "schema": 1,
   "product": "phonetic-ipa-ime",
   "version": "0.1.6",
-  "notes": "Mac 双击安装，无需命令行工具；四端扩充首次教学，讲清切换按键、输入状态、数字选读音、直接音标和声调；新增官网图文教程。",
+  "notes": "iOS 候选区按内容确定高度，汉字、音标和读音提示完整显示，音标字号与行距更紧凑；四端设置增加 PhoneticToolbox 官网入口；官网教程改为逐步截图与操作标注。",
   "platforms": {
     "windows": {
       "url": "https://www.phonetictoolbox.com/releases/phonetic-ipa-ime/0.1.6/PhoneticIPA-Windows-0.1.6.zip",
       "githubUrl": "https://github.com/Nephelium/phonetic-ipa-ime/releases/download/ipa-v0.1.6/PhoneticIPA-Windows-0.1.6.zip",
-      "bytes": 97500961,
-      "sha256": "34785652f2454782e9e8beb834e4cd32b63a6509905b3029acac4b4b73145d84"
+      "bytes": 97500915,
+      "sha256": "32c340f8f987fde17a9f93e69d31a125b4763580f65dc55817a628cd34f9894b"
     },
     "macos": {
       "url": "https://www.phonetictoolbox.com/releases/phonetic-ipa-ime/0.1.6/PhoneticIPA-macOS-0.1.6.zip",
       "githubUrl": "https://github.com/Nephelium/phonetic-ipa-ime/releases/download/ipa-v0.1.6/PhoneticIPA-macOS-0.1.6.zip",
-      "bytes": 55683730,
-      "sha256": "3a44e6f9a11cf10866d80d1b4efc7601e24a6e6f422a10a0b97098227f984613"
+      "bytes": 55734908,
+      "sha256": "abe9fbc5ad739a9382c74abd5418a79bb5be69070139d6f9f619fbd4c84bbd8e"
     },
     "ios": {
       "url": "https://www.phonetictoolbox.com/releases/phonetic-ipa-ime/0.1.6/PhoneticIPA-iOS-0.1.6-unsigned.ipa",
       "githubUrl": "https://github.com/Nephelium/phonetic-ipa-ime/releases/download/ipa-v0.1.6/PhoneticIPA-iOS-0.1.6-unsigned.ipa",
-      "bytes": 105832569,
-      "sha256": "9ddaa66be133770077458016af4c6fe7b1b61e348fff28520b2f277b8d51281f"
+      "bytes": 105845080,
+      "sha256": "397e14193c0d81c4a16a4eb1615c28236393d08bd5c39b2c8cec8f8dd2d6934f"
     },
     "android": {
       "url": "https://www.phonetictoolbox.com/releases/phonetic-ipa-ime/0.1.6/PhoneticIPA-Android-0.1.6.apk",
       "githubUrl": "https://github.com/Nephelium/phonetic-ipa-ime/releases/download/ipa-v0.1.6/PhoneticIPA-Android-0.1.6.apk",
-      "bytes": 122370534,
-      "sha256": "050c04122b80ad5a17e634af5dd463b1f072bfe70852861a19cd2d0b9ad625e3"
+      "bytes": 122228889,
+      "sha256": "34559c984a7ab4c67614f850da883bf08f16181ef5aa4a9d6e1177395c395611"
     }
   }
 }

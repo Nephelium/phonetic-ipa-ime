@@ -9,13 +9,15 @@ import java.util.*;
 /** Runs on Android, including the packaged JNI libraries and actual fixed resources. */
 public final class CoreTests extends Instrumentation {
     private boolean keyboard;
+    private boolean layout;
     private boolean updates;
     private boolean updateProxy;
-    @Override public void onCreate(Bundle arguments) { super.onCreate(arguments); keyboard = "keyboard".equals(arguments.getString("suite")); updates = "updates".equals(arguments.getString("suite")); updateProxy = "true".equals(arguments.getString("updateProxy")); start(); }
+    @Override public void onCreate(Bundle arguments) { super.onCreate(arguments); keyboard = "keyboard".equals(arguments.getString("suite")); layout = "layout".equals(arguments.getString("suite")); updates = "updates".equals(arguments.getString("suite")); updateProxy = "true".equals(arguments.getString("updateProxy")); start(); }
     private static void require(boolean value, String message) { if (!value) throw new AssertionError(message); }
     @Override public void onStart() {
         Bundle result = new Bundle();
         try {
+            if (layout) { new KeyboardChecks(this).runLayout(); result.putString("layout", "passed"); finish(-1, result); return; }
             if (updates) {
                 // Optional process-local proxy for this QA emulator's GitHub connectivity.
                 if (updateProxy) { System.setProperty("https.proxyHost", "10.0.2.2"); System.setProperty("https.proxyPort", "7892"); }

@@ -77,6 +77,7 @@ public final class SettingsActivity extends Activity {
         LinearLayout files = UI.row(this); UI.weighted(files, UI.button(this, "导入", this::importFile), 1, 42); UI.weighted(files, UI.button(this, "导出 JSON", () -> exportFile(true)), 1, 42); UI.weighted(files, UI.button(this, "导出 IPA", () -> exportFile(false)), 1, 42); UI.full(content, files, -2);
         updateCard(content);
         status = UI.text(this, engine.profileError, 13); status.setPadding(0, pad, 0, 0); UI.full(content, status, -2);
+        UI.full(content, UI.button(this, "PhoneticToolbox 语音工具箱官网 ↗", () -> download("https://www.phonetictoolbox.com/")), 42);
         UI.full(content, UI.button(this, "来源与许可", this::licenses), 40); choose("a");
     }
     @Override protected void onResume() {

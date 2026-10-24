@@ -57,6 +57,19 @@ final class KeyboardChecks {
     }
     void touch(float x, float y, float endY) {
         long start = SystemClock.uptimeMillis();
+        if (y == endY) {
+            // A short tap must not become a held key while the emulator renders.
+            MotionEvent down = MotionEvent.obtain(start, start, MotionEvent.ACTION_DOWN, x, y, 0);
+            down.setSource(InputDevice.SOURCE_TOUCHSCREEN); ui.injectInputEvent(down, true); down.recycle();
+            SystemClock.sleep(35);
+            long released = SystemClock.uptimeMillis();
+            MotionEvent up = MotionEvent.obtain(start, released, MotionEvent.ACTION_UP, x, y, 0);
+            up.setSource(InputDevice.SOURCE_TOUCHSCREEN); ui.injectInputEvent(up, true); up.recycle();
+            android.util.Log.i("IPATouchQA", "short tap duration=" + (released - start));
+            if (released - start >= ViewConfiguration.getLongPressTimeout())
+                throw new AssertionError("Short tap exceeded the long-press threshold: " + (released - start));
+            return;
+        }
         for (int step = 0; step <= 8; step++) {
             int action = step == 0 ? MotionEvent.ACTION_DOWN : step == 8 ? MotionEvent.ACTION_UP : MotionEvent.ACTION_MOVE;
             MotionEvent event = MotionEvent.obtain(start, SystemClock.uptimeMillis(), action, x, y + (endY-y)*step/8, 0);
@@ -114,6 +127,33 @@ final class KeyboardChecks {
     }
     void run() throws Exception {
         try { runChecks(); } catch (Throwable error) { screenshot("android-failure"); throw error; }
+    }
+    void candidateAboveDigits(String... labels) {
+        Rect digit = new Rect(); waitFor("digit-1", true).getBoundsInScreen(digit);
+        for (String label : labels) {
+            Rect bounds = new Rect(); waitFor(label, true).getBoundsInScreen(bounds);
+            if (bounds.height() < 20 || bounds.bottom + 3 > digit.top) throw new AssertionError(label + " overlaps digit row: " + bounds + " / " + digit);
+        }
+    }
+    void clearTrial() {
+        android.os.Bundle args = new android.os.Bundle(); args.putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, "");
+        waitFor("typing-area", true).performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, args); tap("typing-area", true);
+    }
+    void runLayout() throws Exception {
+        AccessibilityServiceInfo info = ui.getServiceInfo(); info.flags |= AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS | AccessibilityServiceInfo.FLAG_REPORT_VIEW_IDS; ui.setServiceInfo(info);
+        try {
+            for (int rotation : new int[] {UiAutomation.ROTATION_FREEZE_0, UiAutomation.ROTATION_FREEZE_90}) {
+                ui.setRotation(rotation); SystemClock.sleep(800);
+                test.startActivitySync(new Intent(test.getTargetContext(), SettingsActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK));
+                tap("试打", false); tap("typing-area", true);
+                if (!"拼音".contentEquals(waitFor("keyboard-mode", true).getText())) tap("keyboard-mode", true);
+                if ("汉字".contentEquals(waitFor("output-mode", true).getText())) tap("output-mode", true);
+                clearTrial(); code("kuaile"); candidateAboveDigits("hanzi-快乐-kuai'le", "ipa-快乐-kuai'le"); screenshot("android-layout-" + rotation + "-word"); candidate("ipa-快乐-kuai'le");
+                code("hao"); candidate("ipa-好-hao"); candidateAboveDigits("reading-hao3", "reading-hao4"); screenshot("android-layout-" + rotation + "-readings"); tap("reading-hao4", true);
+                Rect two = new Rect(); waitFor("digit-2", true).getBoundsInScreen(two); touch(two.centerX(), two.bottom - 8, two.top - 24); SystemClock.sleep(300);
+                tap("digit-1", true); tap("digit-4", true); candidateAboveDigits("hanzi-˨˩˦-"); screenshot("android-layout-" + rotation + "-tone"); candidate("hanzi-˨˩˦-");
+            }
+        } finally { ui.setRotation(UiAutomation.ROTATION_UNFREEZE); }
     }
     void runChecks() throws Exception {
         AccessibilityServiceInfo info = ui.getServiceInfo(); info.flags |= AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS | AccessibilityServiceInfo.FLAG_REPORT_VIEW_IDS; ui.setServiceInfo(info);

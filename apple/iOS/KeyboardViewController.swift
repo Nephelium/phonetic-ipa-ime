@@ -6,6 +6,7 @@ final class KeyboardViewController: UIInputViewController {
     private var host: UIHostingController<TouchKeyboard>?
     private var keyboardHeight: NSLayoutConstraint?
     private var landscape = false
+    private var candidateHeight: CGFloat = 44
     override func loadView() {
         let keyboardView = UIInputView(frame: CGRect(x: 0, y: 0, width: 0, height: 296), inputViewStyle: .keyboard)
         keyboardView.allowsSelfSizing = true
@@ -15,7 +16,12 @@ final class KeyboardViewController: UIInputViewController {
         TouchKeyboard(model: model, showsGlobe: needsInputModeSwitchKey, compactLayout: landscape,
                       nextKeyboard: { [weak self] in self?.advanceToNextInputMode() },
                       delete: { [weak self] in self?.textDocumentProxy.deleteBackward() },
-                      newline: { [weak self] in self?.textDocumentProxy.insertText("\n") })
+                      newline: { [weak self] in self?.textDocumentProxy.insertText("\n") },
+                      candidateHeightChanged: { [weak self] height in
+                          guard let self, height.isFinite, height > 0, abs(self.candidateHeight - height) > 0.5 else { return }
+                          self.candidateHeight = ceil(height)
+                          self.updateKeyboardLayout()
+                      })
     }
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -53,10 +59,15 @@ final class KeyboardViewController: UIInputViewController {
     private func updateKeyboardLayout() {
         let next = view.window?.windowScene?.interfaceOrientation.isLandscape ?? false
         if next != landscape { landscape = next; host?.rootView = keyboard() }
-        let height: CGFloat = (landscape ? 216 : 296) + (model.raw.isEmpty ? 0 : 50)
+        let height = max(landscape ? 216 : 296, TouchKeyboard.keyRowsHeight(compact: landscape) + candidateHeight)
         if let keyboardHeight, abs(keyboardHeight.constant - height) > 0.5 { keyboardHeight.constant = height }
     }
     override func textWillChange(_ textInput: UITextInput?) { model.clear() }
+}
+
+private struct KeyboardCandidateHeightKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = max(value, nextValue()) }
 }
 
 struct TouchKeyboard: View {
@@ -66,6 +77,7 @@ struct TouchKeyboard: View {
     var nextKeyboard: () -> Void
     var delete: () -> Void
     var newline: () -> Void
+    var candidateHeightChanged: (CGFloat) -> Void = { _ in }
     @State private var help = false
     @State private var rules = false
     @State private var plus = false
@@ -78,6 +90,11 @@ struct TouchKeyboard: View {
     private var keyColor: Color { scheme == .dark ? Color(red: 0.24, green: 0.28, blue: 0.30) : .white }
     private var letterHeight: CGFloat { compactLayout ? 28 : 44 }
     private var actionHeight: CGFloat { compactLayout ? 28 : 40 }
+    static func keyRowsHeight(compact: Bool) -> CGFloat {
+        // Digits, three letter rows and their gaps, action row, outer gaps and padding.
+        (compact ? 24 : 36) + 3 * (compact ? 28 : 44) + 2 * (compact ? 3 : 5)
+            + (compact ? 28 : 40) + 3 * (compact ? 3 : 6) + 2 * (compact ? 4 : 7)
+    }
     var body: some View {
         ZStack(alignment: .top) {
             keyboardContent.allowsHitTesting(!help && !plus && !rules && symbolKey == nil).accessibilityHidden(help || plus || rules || symbolKey != nil)
@@ -131,7 +148,9 @@ struct TouchKeyboard: View {
     }
     private var keyboardContent: some View {
         VStack(spacing: compactLayout ? 3 : 6) {
-            CandidateStrip(model: model, openPlus: { if model.raw.isEmpty { plus = true } else { model.status = "先确认当前候选，再打开音标表" } }, openRules: { rules = true }).frame(height: model.raw.isEmpty ? 44 : 94, alignment: .top)
+            CandidateStrip(model: model, openPlus: { if model.raw.isEmpty { plus = true } else { model.status = "先确认当前候选，再打开音标表" } }, openRules: { rules = true }, fittingRows: true)
+                .fixedSize(horizontal: false, vertical: true)
+                .background(GeometryReader { proxy in Color.clear.preference(key: KeyboardCandidateHeightKey.self, value: proxy.size.height) })
                 .background(keyColor.opacity(0.45), in: RoundedRectangle(cornerRadius: 10))
             HStack(spacing: 4) {
                 ForEach(Array("1234567890").map(String.init), id: \.self) { digit in
@@ -207,6 +226,7 @@ struct TouchKeyboard: View {
         .padding(.horizontal, 6).padding(.vertical, compactLayout ? 4 : 7)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .background(surface).tint(accent).ignoresSafeArea(.container)
+        .onPreferenceChange(KeyboardCandidateHeightKey.self, perform: candidateHeightChanged)
     }
 
     private func directOutput(_ key: String) -> String? {

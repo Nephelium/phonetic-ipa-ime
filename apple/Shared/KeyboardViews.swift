@@ -127,15 +127,35 @@ struct UsageGuideView: View {
     }
 }
 
+private struct CandidateRowHeightKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = max(value, nextValue()) }
+}
+
+private struct CandidateScrollEdges: ViewModifier {
+    let enabled: Bool
+    @ViewBuilder func body(content: Content) -> some View {
+        #if os(iOS)
+        if #available(iOS 26.0, *), enabled { content.scrollEdgeEffectHidden() }
+        else { content }
+        #else
+        content
+        #endif
+    }
+}
+
 struct CandidateStrip: View {
     @ObservedObject var model: InputModel
     var openPlus: (() -> Void)? = nil
     var openRules: (() -> Void)? = nil
+    var fittingRows = false
+    @State private var candidateRowHeight: CGFloat = 80
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: fittingRows ? 3 : 6) {
             HStack {
                 Text(model.raw.isEmpty ? (model.pinyin ? (model.outputIpa ? "拼音 → 音标" : "拼音 → 汉字") : "IPA · 点选音标") : model.raw)
                     .font(.system(.body, design: .monospaced)).foregroundStyle(.secondary).lineLimit(1).truncationMode(.head)
+                    .accessibilityIdentifier("composition-code")
                 Spacer()
                 if model.pinyin {
                     Button(model.outputIpa ? "音标" : "汉字") { model.outputIpa.toggle(); model.onChange() }
@@ -161,34 +181,39 @@ struct CandidateStrip: View {
                 }
             }
             if model.pending != nil {
-                HStack { Text("选择带调读音").font(.caption.bold()); Spacer(); Button("返回") { model.pending = nil; model.onChange() } }
+                HStack { Text("选择带调读音").font(fittingRows ? .system(size: 10, weight: .medium) : .caption.bold()); Spacer(); Button("返回") { model.pending = nil; model.onChange() } }
                 ScrollView(.horizontal) {
                     HStack(spacing: 8) {
                         ForEach(Array(model.readingOptions.enumerated()), id: \.offset) { index, option in
                             Button { model.chooseReading(index) } label: {
-                                VStack { Text("\(index + 1)  \(option.pinyin)").font(.caption); Text(option.ipa).font(.ipa(25)) }
-                                    .padding(9).background(Color.accentColor.opacity(0.10), in: RoundedRectangle(cornerRadius: 12))
+                                VStack(spacing: fittingRows ? 2 : 8) { Text("\(index + 1)  \(option.pinyin)").font(fittingRows ? .system(size: 10) : .caption).lineLimit(1); Text(option.ipa).font(.ipa(fittingRows ? 18 : 25)).lineLimit(1) }
+                                    .padding(fittingRows ? 7 : 9).background(Color.accentColor.opacity(0.10), in: RoundedRectangle(cornerRadius: 12))
                             }.buttonStyle(.plain).accessibilityIdentifier("reading-" + option.pinyin)
                         }
                     }
+                    .padding(.vertical, fittingRows ? 4 : 0)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .background(GeometryReader { proxy in Color.clear.preference(key: CandidateRowHeightKey.self, value: proxy.size.height) })
                 }
+                .frame(height: fittingRows ? candidateRowHeight : nil)
+                .modifier(CandidateScrollEdges(enabled: fittingRows))
             } else if !model.candidates.isEmpty {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(alignment: .top, spacing: 6) {
                         ForEach(Array(model.visible.enumerated()), id: \.element.id) { index, candidate in
-                            VStack(spacing: 2) {
+                            VStack(spacing: fittingRows ? 0 : 2) {
                                 Button { model.choose(index, ipa: false) } label: {
                                     HStack(spacing: 5) {
                                         Text("\(index + 1)").font(.caption2).foregroundStyle(.secondary)
-                                        Text(candidate.word).font(candidate.symbol ? .ipa(29) : .system(size: 20))
-                                    }.padding(.horizontal, 9).padding(.vertical, 5)
+                                        Text(candidate.word).font(candidate.symbol ? .ipa(fittingRows ? 23 : 29) : .system(size: fittingRows ? 17 : 20)).lineLimit(1)
+                                    }.padding(.horizontal, 9).padding(.vertical, fittingRows ? 3 : 5)
                                 }
                                 .accessibilityIdentifier("hanzi-" + candidate.word + "-" + candidate.canonical)
                                 if !candidate.symbol {
                                     Button { model.choose(index, ipa: true) } label: {
                                         Text(candidate.ipa.isEmpty ? (candidate.reading?.ambiguous == true ? "选择读音…" : "暂无音标") : candidate.ipa)
-                                            .font(.ipa(23)).foregroundStyle(Color.accentColor)
-                                            .padding(.horizontal, 9).padding(.bottom, 7)
+                                            .font(.ipa(fittingRows ? 18 : 23)).foregroundStyle(Color.accentColor).lineLimit(1)
+                                            .padding(.horizontal, 9).padding(.bottom, fittingRows ? 3 : 7)
                                     }.disabled(candidate.ipa.isEmpty && candidate.reading?.ambiguous != true)
                                         .accessibilityIdentifier("ipa-" + candidate.word + "-" + candidate.canonical)
                                 }
@@ -198,12 +223,21 @@ struct CandidateStrip: View {
                             .contextMenu { Button("切换读音") { model.reopenReading(index) } }
                         }
                     }
+                    .padding(.vertical, fittingRows ? 4 : 0)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .background(GeometryReader { proxy in Color.clear.preference(key: CandidateRowHeightKey.self, value: proxy.size.height) })
                 }
+                .frame(height: fittingRows ? candidateRowHeight : nil)
+                .modifier(CandidateScrollEdges(enabled: fittingRows))
                 .accessibilityIdentifier("candidate-scroll")
             }
             if !model.status.isEmpty { Text(model.status).font(.caption2).foregroundStyle(.secondary).lineLimit(2) }
         }
-        .padding(10)
+        .padding(fittingRows ? 8 : 10)
+        .onPreferenceChange(CandidateRowHeightKey.self) { height in
+            guard fittingRows, height.isFinite, height > 0, abs(candidateRowHeight - height) > 0.5 else { return }
+            candidateRowHeight = ceil(height)
+        }
     }
 }
 
@@ -522,6 +556,11 @@ struct SettingsView: View {
                     Button("导出 IPA") { export(json: false) }
                 }
                 UpdateSettingsView()
+                Link(destination: URL(string: "https://www.phonetictoolbox.com/")!) {
+                    Label("PhoneticToolbox 语音工具箱官网", systemImage: "globe")
+                }
+                .accessibilityIdentifier("phonetictoolbox-website")
+                .font(.subheadline)
                 Text(model.status).font(.caption).foregroundStyle(.secondary)
                 Text("五度调值：上划数字 1–5，或在 Mac 按 Shift＋1–5。普通候选用 1–9 选择，0 保留映射。").font(.caption).foregroundStyle(.secondary)
             }.padding(22)
