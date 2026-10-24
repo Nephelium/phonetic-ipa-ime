@@ -23,7 +23,8 @@ public final class SettingsActivity extends Activity {
     private int selected;
     private boolean appendSymbol;
     private byte[] exporting;
-    private TextView status;
+    private TextView status, updateStatus;
+    private LinearLayout updateLinks;
     @Override public void onCreate(Bundle saved) {
         super.onCreate(saved);
         root = UI.column(this); root.setBackgroundColor(0xfff5f8fa);
@@ -53,6 +54,7 @@ public final class SettingsActivity extends Activity {
             UI.full(map, keys, -2);
         }
         UI.full(content, map, -2);
+        updateCard(content);
         LinearLayout pageRow = UI.row(this); UI.weighted(pageRow, UI.text(this, "每页候选", 14), 1, 40);
         pages = new Spinner(this); pages.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, new String[]{"3 个", "4 个", "5 个", "6 个", "7 个", "8 个", "9 个"}));
         try { pages.setSelection(engine.profile().getInt("pageSize") - 3); } catch (Exception e) { report(e); }
@@ -70,6 +72,38 @@ public final class SettingsActivity extends Activity {
         LinearLayout files = UI.row(this); UI.weighted(files, UI.button(this, "导入", this::importFile), 1, 42); UI.weighted(files, UI.button(this, "导出 JSON", () -> exportFile(true)), 1, 42); UI.weighted(files, UI.button(this, "导出 CIN", () -> exportFile(false)), 1, 42); UI.full(content, files, -2);
         status = UI.text(this, engine.profileError, 13); status.setPadding(0, pad, 0, 0); UI.full(content, status, -2);
         UI.full(content, UI.button(this, "来源与许可", this::licenses), 40); choose("a");
+    }
+    @Override protected void onResume() {
+        super.onResume();
+        Updates.check(this, false, message -> { if (!isDestroyed()) { refreshUpdates(message); notice(); } });
+    }
+    private void updateCard(LinearLayout content) {
+        LinearLayout card = UI.column(this); int pad = UI.dp(this, 12); card.setPadding(pad, pad, pad, pad);
+        card.setBackground(UI.background(0xffe9f1f4, UI.dp(this, 12)));
+        UI.full(card, UI.text(this, "软件更新 · " + Updates.VERSION, 17), -2);
+        CheckBox automatic = new CheckBox(this); automatic.setText("自动检查新版本"); automatic.setChecked(Updates.automatic(this));
+        automatic.setOnCheckedChangeListener((button, checked) -> Updates.automatic(this, checked)); UI.full(card, automatic, -2);
+        updateStatus = UI.text(this, "", 13); updateStatus.setContentDescription("update-status"); UI.full(card, updateStatus, -2);
+        UI.full(card, UI.button(this, "检查更新", () -> Updates.check(this, true, message -> { if (!isDestroyed()) refreshUpdates(message); })), 40);
+        updateLinks = UI.row(this); UI.full(card, updateLinks, -2); UI.full(content, card, -2); refreshUpdates(Updates.status(this));
+    }
+    private void refreshUpdates(String message) {
+        if (updateStatus == null) return; updateStatus.setText(message); updateLinks.removeAllViews(); Updates.Feed feed = Updates.available(this);
+        if (feed != null) {
+            UI.weighted(updateLinks, UI.button(this, "官网下载", () -> download(feed.url)), 1, 42);
+            UI.weighted(updateLinks, UI.button(this, "GitHub 下载", () -> download(feed.githubUrl)), 1, 42);
+        }
+    }
+    private void download(String url) {
+        try { startActivity(new Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url))); }
+        catch (ActivityNotFoundException e) { Toast.makeText(this, "请先安装浏览器后再下载", Toast.LENGTH_LONG).show(); }
+    }
+    private void notice() {
+        Updates.Feed feed = Updates.available(this);
+        if (!hasWindowFocus() || isFinishing() || !Updates.takeNotice(this, feed)) return;
+        new AlertDialog.Builder(this).setTitle("发现新版本 " + feed.version).setMessage(feed.notes)
+            .setPositiveButton("官网下载", (dialog, which) -> download(feed.url))
+            .setNeutralButton("GitHub 下载", (dialog, which) -> download(feed.githubUrl)).setNegativeButton("稍后", null).show();
     }
     private void choose(String key) {
         code.setText(key); outputs.clear(); selected = 0;

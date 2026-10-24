@@ -1,0 +1,782 @@
+{
+  "cases": [
+    {
+      "name": "valid",
+      "valid": true,
+      "feed": {
+        "schema": 1,
+        "product": "phonetic-ipa-ime",
+        "version": "0.1.2",
+        "notes": "新版输入法",
+        "platforms": {
+          "windows": {
+            "url": "https://www.phonetictoolbox.com/releases/phonetic-ipa-ime/0.1.2/PhoneticIPA.zip",
+            "githubUrl": "https://github.com/Nephelium/phonetic-ipa-ime/releases/download/v0.1.2/PhoneticIPA.zip",
+            "bytes": 100,
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          },
+          "macos": {
+            "url": "https://www.phonetictoolbox.com/releases/phonetic-ipa-ime/0.1.2/PhoneticIPA.zip",
+            "githubUrl": "https://github.com/Nephelium/phonetic-ipa-ime/releases/download/v0.1.2/PhoneticIPA.zip",
+            "bytes": 100,
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          },
+          "ios": {
+            "url": "https://www.phonetictoolbox.com/releases/phonetic-ipa-ime/0.1.2/PhoneticIPA.zip",
+            "githubUrl": "https://github.com/Nephelium/phonetic-ipa-ime/releases/download/v0.1.2/PhoneticIPA.zip",
+            "bytes": 100,
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          },
+          "android": {
+            "url": "https://www.phonetictoolbox.com/releases/phonetic-ipa-ime/0.1.2/PhoneticIPA.zip",
+            "githubUrl": "https://github.com/Nephelium/phonetic-ipa-ime/releases/download/v0.1.2/PhoneticIPA.zip",
+            "bytes": 100,
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          }
+        }
+      }
+    },
+    {
+      "name": "version-0.1.02",
+      "valid": false,
+      "feed": {
+        "schema": 1,
+        "product": "phonetic-ipa-ime",
+        "version": "0.1.02",
+        "notes": "新版输入法",
+        "platforms": {
+          "windows": {
+            "url": "https://www.phonetictoolbox.com/releases/phonetic-ipa-ime/0.1.2/PhoneticIPA.zip",
+            "githubUrl": "https://github.com/Nephelium/phonetic-ipa-ime/releases/download/v0.1.2/PhoneticIPA.zip",
+            "bytes": 100,
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          },
+          "macos": {
+            "url": "https://www.phonetictoolbox.com/releases/phonetic-ipa-ime/0.1.2/PhoneticIPA.zip",
+            "githubUrl": "https://github.com/Nephelium/phonetic-ipa-ime/releases/download/v0.1.2/PhoneticIPA.zip",
+            "bytes": 100,
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          },
+          "ios": {
+            "url": "https://www.phonetictoolbox.com/releases/phonetic-ipa-ime/0.1.2/PhoneticIPA.zip",
+            "githubUrl": "https://github.com/Nephelium/phonetic-ipa-ime/releases/download/v0.1.2/PhoneticIPA.zip",
+            "bytes": 100,
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          },
+          "android": {
+            "url": "https://www.phonetictoolbox.com/releases/phonetic-ipa-ime/0.1.2/PhoneticIPA.zip",
+            "githubUrl": "https://github.com/Nephelium/phonetic-ipa-ime/releases/download/v0.1.2/PhoneticIPA.zip",
+            "bytes": 100,
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          }
+        }
+      }
+    },
+    {
+      "name": "version-0.1",
+      "valid": false,
+      "feed": {
+        "schema": 1,
+        "product": "phonetic-ipa-ime",
+        "version": "0.1",
+        "notes": "新版输入法",
+        "platforms": {
+          "windows": {
+            "url": "https://www.phonetictoolbox.com/releases/phonetic-ipa-ime/0.1.2/PhoneticIPA.zip",
+            "githubUrl": "https://github.com/Nephelium/phonetic-ipa-ime/releases/download/v0.1.2/PhoneticIPA.zip",
+            "bytes": 100,
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          },
+          "macos": {
+            "url": "https://www.phonetictoolbox.com/releases/phonetic-ipa-ime/0.1.2/PhoneticIPA.zip",
+            "githubUrl": "https://github.com/Nephelium/phonetic-ipa-ime/releases/download/v0.1.2/PhoneticIPA.zip",
+            "bytes": 100,
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          },
+          "ios": {
+            "url": "https://www.phonetictoolbox.com/releases/phonetic-ipa-ime/0.1.2/PhoneticIPA.zip",
+            "githubUrl": "https://github.com/Nephelium/phonetic-ipa-ime/releases/download/v0.1.2/PhoneticIPA.zip",
+            "bytes": 100,
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          },
+          "android": {
+            "url": "https://www.phonetictoolbox.com/releases/phonetic-ipa-ime/0.1.2/PhoneticIPA.zip",
+            "githubUrl": "https://github.com/Nephelium/phonetic-ipa-ime/releases/download/v0.1.2/PhoneticIPA.zip",
+            "bytes": 100,
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          }
+        }
+      }
+    },
+    {
+      "name": "version-0.1.2-beta",
+      "valid": false,
+      "feed": {
+        "schema": 1,
+        "product": "phonetic-ipa-ime",
+        "version": "0.1.2-beta",
+        "notes": "新版输入法",
+        "platforms": {
+          "windows": {
+            "url": "https://www.phonetictoolbox.com/releases/phonetic-ipa-ime/0.1.2/PhoneticIPA.zip",
+            "githubUrl": "https://github.com/Nephelium/phonetic-ipa-ime/releases/download/v0.1.2/PhoneticIPA.zip",
+            "bytes": 100,
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          },
+          "macos": {
+            "url": "https://www.phonetictoolbox.com/releases/phonetic-ipa-ime/0.1.2/PhoneticIPA.zip",
+            "githubUrl": "https://github.com/Nephelium/phonetic-ipa-ime/releases/download/v0.1.2/PhoneticIPA.zip",
+            "bytes": 100,
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          },
+          "ios": {
+            "url": "https://www.phonetictoolbox.com/releases/phonetic-ipa-ime/0.1.2/PhoneticIPA.zip",
+            "githubUrl": "https://github.com/Nephelium/phonetic-ipa-ime/releases/download/v0.1.2/PhoneticIPA.zip",
+            "bytes": 100,
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          },
+          "android": {
+            "url": "https://www.phonetictoolbox.com/releases/phonetic-ipa-ime/0.1.2/PhoneticIPA.zip",
+            "githubUrl": "https://github.com/Nephelium/phonetic-ipa-ime/releases/download/v0.1.2/PhoneticIPA.zip",
+            "bytes": 100,
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          }
+        }
+      }
+    },
+    {
+      "name": "version-999999.1.1",
+      "valid": false,
+      "feed": {
+        "schema": 1,
+        "product": "phonetic-ipa-ime",
+        "version": "999999.1.1",
+        "notes": "新版输入法",
+        "platforms": {
+          "windows": {
+            "url": "https://www.phonetictoolbox.com/releases/phonetic-ipa-ime/0.1.2/PhoneticIPA.zip",
+            "githubUrl": "https://github.com/Nephelium/phonetic-ipa-ime/releases/download/v0.1.2/PhoneticIPA.zip",
+            "bytes": 100,
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          },
+          "macos": {
+            "url": "https://www.phonetictoolbox.com/releases/phonetic-ipa-ime/0.1.2/PhoneticIPA.zip",
+            "githubUrl": "https://github.com/Nephelium/phonetic-ipa-ime/releases/download/v0.1.2/PhoneticIPA.zip",
+            "bytes": 100,
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          },
+          "ios": {
+            "url": "https://www.phonetictoolbox.com/releases/phonetic-ipa-ime/0.1.2/PhoneticIPA.zip",
+            "githubUrl": "https://github.com/Nephelium/phonetic-ipa-ime/releases/download/v0.1.2/PhoneticIPA.zip",
+            "bytes": 100,
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          },
+          "android": {
+            "url": "https://www.phonetictoolbox.com/releases/phonetic-ipa-ime/0.1.2/PhoneticIPA.zip",
+            "githubUrl": "https://github.com/Nephelium/phonetic-ipa-ime/releases/download/v0.1.2/PhoneticIPA.zip",
+            "bytes": 100,
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          }
+        }
+      }
+    },
+    {
+      "name": "version-v0.1.2",
+      "valid": false,
+      "feed": {
+        "schema": 1,
+        "product": "phonetic-ipa-ime",
+        "version": "v0.1.2",
+        "notes": "新版输入法",
+        "platforms": {
+          "windows": {
+            "url": "https://www.phonetictoolbox.com/releases/phonetic-ipa-ime/0.1.2/PhoneticIPA.zip",
+            "githubUrl": "https://github.com/Nephelium/phonetic-ipa-ime/releases/download/v0.1.2/PhoneticIPA.zip",
+            "bytes": 100,
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          },
+          "macos": {
+            "url": "https://www.phonetictoolbox.com/releases/phonetic-ipa-ime/0.1.2/PhoneticIPA.zip",
+            "githubUrl": "https://github.com/Nephelium/phonetic-ipa-ime/releases/download/v0.1.2/PhoneticIPA.zip",
+            "bytes": 100,
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          },
+          "ios": {
+            "url": "https://www.phonetictoolbox.com/releases/phonetic-ipa-ime/0.1.2/PhoneticIPA.zip",
+            "githubUrl": "https://github.com/Nephelium/phonetic-ipa-ime/releases/download/v0.1.2/PhoneticIPA.zip",
+            "bytes": 100,
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          },
+          "android": {
+            "url": "https://www.phonetictoolbox.com/releases/phonetic-ipa-ime/0.1.2/PhoneticIPA.zip",
+            "githubUrl": "https://github.com/Nephelium/phonetic-ipa-ime/releases/download/v0.1.2/PhoneticIPA.zip",
+            "bytes": 100,
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          }
+        }
+      }
+    },
+    {
+      "name": "version-0.-1.2",
+      "valid": false,
+      "feed": {
+        "schema": 1,
+        "product": "phonetic-ipa-ime",
+        "version": "0.-1.2",
+        "notes": "新版输入法",
+        "platforms": {
+          "windows": {
+            "url": "https://www.phonetictoolbox.com/releases/phonetic-ipa-ime/0.1.2/PhoneticIPA.zip",
+            "githubUrl": "https://github.com/Nephelium/phonetic-ipa-ime/releases/download/v0.1.2/PhoneticIPA.zip",
+            "bytes": 100,
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          },
+          "macos": {
+            "url": "https://www.phonetictoolbox.com/releases/phonetic-ipa-ime/0.1.2/PhoneticIPA.zip",
+            "githubUrl": "https://github.com/Nephelium/phonetic-ipa-ime/releases/download/v0.1.2/PhoneticIPA.zip",
+            "bytes": 100,
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          },
+          "ios": {
+            "url": "https://www.phonetictoolbox.com/releases/phonetic-ipa-ime/0.1.2/PhoneticIPA.zip",
+            "githubUrl": "https://github.com/Nephelium/phonetic-ipa-ime/releases/download/v0.1.2/PhoneticIPA.zip",
+            "bytes": 100,
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          },
+          "android": {
+            "url": "https://www.phonetictoolbox.com/releases/phonetic-ipa-ime/0.1.2/PhoneticIPA.zip",
+            "githubUrl": "https://github.com/Nephelium/phonetic-ipa-ime/releases/download/v0.1.2/PhoneticIPA.zip",
+            "bytes": 100,
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          }
+        }
+      }
+    },
+    {
+      "name": "product",
+      "valid": false,
+      "feed": {
+        "schema": 1,
+        "product": "different",
+        "version": "0.1.2",
+        "notes": "新版输入法",
+        "platforms": {
+          "windows": {
+            "url": "https://www.phonetictoolbox.com/releases/phonetic-ipa-ime/0.1.2/PhoneticIPA.zip",
+            "githubUrl": "https://github.com/Nephelium/phonetic-ipa-ime/releases/download/v0.1.2/PhoneticIPA.zip",
+            "bytes": 100,
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          },
+          "macos": {
+            "url": "https://www.phonetictoolbox.com/releases/phonetic-ipa-ime/0.1.2/PhoneticIPA.zip",
+            "githubUrl": "https://github.com/Nephelium/phonetic-ipa-ime/releases/download/v0.1.2/PhoneticIPA.zip",
+            "bytes": 100,
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          },
+          "ios": {
+            "url": "https://www.phonetictoolbox.com/releases/phonetic-ipa-ime/0.1.2/PhoneticIPA.zip",
+            "githubUrl": "https://github.com/Nephelium/phonetic-ipa-ime/releases/download/v0.1.2/PhoneticIPA.zip",
+            "bytes": 100,
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          },
+          "android": {
+            "url": "https://www.phonetictoolbox.com/releases/phonetic-ipa-ime/0.1.2/PhoneticIPA.zip",
+            "githubUrl": "https://github.com/Nephelium/phonetic-ipa-ime/releases/download/v0.1.2/PhoneticIPA.zip",
+            "bytes": 100,
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          }
+        }
+      }
+    },
+    {
+      "name": "schema",
+      "valid": false,
+      "feed": {
+        "schema": 2,
+        "product": "phonetic-ipa-ime",
+        "version": "0.1.2",
+        "notes": "新版输入法",
+        "platforms": {
+          "windows": {
+            "url": "https://www.phonetictoolbox.com/releases/phonetic-ipa-ime/0.1.2/PhoneticIPA.zip",
+            "githubUrl": "https://github.com/Nephelium/phonetic-ipa-ime/releases/download/v0.1.2/PhoneticIPA.zip",
+            "bytes": 100,
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          },
+          "macos": {
+            "url": "https://www.phonetictoolbox.com/releases/phonetic-ipa-ime/0.1.2/PhoneticIPA.zip",
+            "githubUrl": "https://github.com/Nephelium/phonetic-ipa-ime/releases/download/v0.1.2/PhoneticIPA.zip",
+            "bytes": 100,
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          },
+          "ios": {
+            "url": "https://www.phonetictoolbox.com/releases/phonetic-ipa-ime/0.1.2/PhoneticIPA.zip",
+            "githubUrl": "https://github.com/Nephelium/phonetic-ipa-ime/releases/download/v0.1.2/PhoneticIPA.zip",
+            "bytes": 100,
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          },
+          "android": {
+            "url": "https://www.phonetictoolbox.com/releases/phonetic-ipa-ime/0.1.2/PhoneticIPA.zip",
+            "githubUrl": "https://github.com/Nephelium/phonetic-ipa-ime/releases/download/v0.1.2/PhoneticIPA.zip",
+            "bytes": 100,
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          }
+        }
+      }
+    },
+    {
+      "name": "boolean-schema",
+      "valid": false,
+      "feed": {
+        "schema": true,
+        "product": "phonetic-ipa-ime",
+        "version": "0.1.2",
+        "notes": "新版输入法",
+        "platforms": {
+          "windows": {
+            "url": "https://www.phonetictoolbox.com/releases/phonetic-ipa-ime/0.1.2/PhoneticIPA.zip",
+            "githubUrl": "https://github.com/Nephelium/phonetic-ipa-ime/releases/download/v0.1.2/PhoneticIPA.zip",
+            "bytes": 100,
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          },
+          "macos": {
+            "url": "https://www.phonetictoolbox.com/releases/phonetic-ipa-ime/0.1.2/PhoneticIPA.zip",
+            "githubUrl": "https://github.com/Nephelium/phonetic-ipa-ime/releases/download/v0.1.2/PhoneticIPA.zip",
+            "bytes": 100,
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          },
+          "ios": {
+            "url": "https://www.phonetictoolbox.com/releases/phonetic-ipa-ime/0.1.2/PhoneticIPA.zip",
+            "githubUrl": "https://github.com/Nephelium/phonetic-ipa-ime/releases/download/v0.1.2/PhoneticIPA.zip",
+            "bytes": 100,
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          },
+          "android": {
+            "url": "https://www.phonetictoolbox.com/releases/phonetic-ipa-ime/0.1.2/PhoneticIPA.zip",
+            "githubUrl": "https://github.com/Nephelium/phonetic-ipa-ime/releases/download/v0.1.2/PhoneticIPA.zip",
+            "bytes": 100,
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          }
+        }
+      }
+    },
+    {
+      "name": "zero-bytes",
+      "valid": false,
+      "feed": {
+        "schema": 1,
+        "product": "phonetic-ipa-ime",
+        "version": "0.1.2",
+        "notes": "新版输入法",
+        "platforms": {
+          "windows": {
+            "url": "https://www.phonetictoolbox.com/releases/phonetic-ipa-ime/0.1.2/PhoneticIPA.zip",
+            "githubUrl": "https://github.com/Nephelium/phonetic-ipa-ime/releases/download/v0.1.2/PhoneticIPA.zip",
+            "bytes": 0,
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          },
+          "macos": {
+            "url": "https://www.phonetictoolbox.com/releases/phonetic-ipa-ime/0.1.2/PhoneticIPA.zip",
+            "githubUrl": "https://github.com/Nephelium/phonetic-ipa-ime/releases/download/v0.1.2/PhoneticIPA.zip",
+            "bytes": 0,
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          },
+          "ios": {
+            "url": "https://www.phonetictoolbox.com/releases/phonetic-ipa-ime/0.1.2/PhoneticIPA.zip",
+            "githubUrl": "https://github.com/Nephelium/phonetic-ipa-ime/releases/download/v0.1.2/PhoneticIPA.zip",
+            "bytes": 0,
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          },
+          "android": {
+            "url": "https://www.phonetictoolbox.com/releases/phonetic-ipa-ime/0.1.2/PhoneticIPA.zip",
+            "githubUrl": "https://github.com/Nephelium/phonetic-ipa-ime/releases/download/v0.1.2/PhoneticIPA.zip",
+            "bytes": 0,
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          }
+        }
+      }
+    },
+    {
+      "name": "huge-bytes",
+      "valid": false,
+      "feed": {
+        "schema": 1,
+        "product": "phonetic-ipa-ime",
+        "version": "0.1.2",
+        "notes": "新版输入法",
+        "platforms": {
+          "windows": {
+            "url": "https://www.phonetictoolbox.com/releases/phonetic-ipa-ime/0.1.2/PhoneticIPA.zip",
+            "githubUrl": "https://github.com/Nephelium/phonetic-ipa-ime/releases/download/v0.1.2/PhoneticIPA.zip",
+            "bytes": 2147483649,
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          },
+          "macos": {
+            "url": "https://www.phonetictoolbox.com/releases/phonetic-ipa-ime/0.1.2/PhoneticIPA.zip",
+            "githubUrl": "https://github.com/Nephelium/phonetic-ipa-ime/releases/download/v0.1.2/PhoneticIPA.zip",
+            "bytes": 2147483649,
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          },
+          "ios": {
+            "url": "https://www.phonetictoolbox.com/releases/phonetic-ipa-ime/0.1.2/PhoneticIPA.zip",
+            "githubUrl": "https://github.com/Nephelium/phonetic-ipa-ime/releases/download/v0.1.2/PhoneticIPA.zip",
+            "bytes": 2147483649,
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          },
+          "android": {
+            "url": "https://www.phonetictoolbox.com/releases/phonetic-ipa-ime/0.1.2/PhoneticIPA.zip",
+            "githubUrl": "https://github.com/Nephelium/phonetic-ipa-ime/releases/download/v0.1.2/PhoneticIPA.zip",
+            "bytes": 2147483649,
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          }
+        }
+      }
+    },
+    {
+      "name": "fraction-bytes",
+      "valid": false,
+      "feed": {
+        "schema": 1,
+        "product": "phonetic-ipa-ime",
+        "version": "0.1.2",
+        "notes": "新版输入法",
+        "platforms": {
+          "windows": {
+            "url": "https://www.phonetictoolbox.com/releases/phonetic-ipa-ime/0.1.2/PhoneticIPA.zip",
+            "githubUrl": "https://github.com/Nephelium/phonetic-ipa-ime/releases/download/v0.1.2/PhoneticIPA.zip",
+            "bytes": 1.5,
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          },
+          "macos": {
+            "url": "https://www.phonetictoolbox.com/releases/phonetic-ipa-ime/0.1.2/PhoneticIPA.zip",
+            "githubUrl": "https://github.com/Nephelium/phonetic-ipa-ime/releases/download/v0.1.2/PhoneticIPA.zip",
+            "bytes": 1.5,
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          },
+          "ios": {
+            "url": "https://www.phonetictoolbox.com/releases/phonetic-ipa-ime/0.1.2/PhoneticIPA.zip",
+            "githubUrl": "https://github.com/Nephelium/phonetic-ipa-ime/releases/download/v0.1.2/PhoneticIPA.zip",
+            "bytes": 1.5,
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          },
+          "android": {
+            "url": "https://www.phonetictoolbox.com/releases/phonetic-ipa-ime/0.1.2/PhoneticIPA.zip",
+            "githubUrl": "https://github.com/Nephelium/phonetic-ipa-ime/releases/download/v0.1.2/PhoneticIPA.zip",
+            "bytes": 1.5,
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          }
+        }
+      }
+    },
+    {
+      "name": "hash",
+      "valid": false,
+      "feed": {
+        "schema": 1,
+        "product": "phonetic-ipa-ime",
+        "version": "0.1.2",
+        "notes": "新版输入法",
+        "platforms": {
+          "windows": {
+            "url": "https://www.phonetictoolbox.com/releases/phonetic-ipa-ime/0.1.2/PhoneticIPA.zip",
+            "githubUrl": "https://github.com/Nephelium/phonetic-ipa-ime/releases/download/v0.1.2/PhoneticIPA.zip",
+            "bytes": 100,
+            "sha256": "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz"
+          },
+          "macos": {
+            "url": "https://www.phonetictoolbox.com/releases/phonetic-ipa-ime/0.1.2/PhoneticIPA.zip",
+            "githubUrl": "https://github.com/Nephelium/phonetic-ipa-ime/releases/download/v0.1.2/PhoneticIPA.zip",
+            "bytes": 100,
+            "sha256": "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz"
+          },
+          "ios": {
+            "url": "https://www.phonetictoolbox.com/releases/phonetic-ipa-ime/0.1.2/PhoneticIPA.zip",
+            "githubUrl": "https://github.com/Nephelium/phonetic-ipa-ime/releases/download/v0.1.2/PhoneticIPA.zip",
+            "bytes": 100,
+            "sha256": "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz"
+          },
+          "android": {
+            "url": "https://www.phonetictoolbox.com/releases/phonetic-ipa-ime/0.1.2/PhoneticIPA.zip",
+            "githubUrl": "https://github.com/Nephelium/phonetic-ipa-ime/releases/download/v0.1.2/PhoneticIPA.zip",
+            "bytes": 100,
+            "sha256": "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz"
+          }
+        }
+      }
+    },
+    {
+      "name": "untrusted-14",
+      "valid": false,
+      "feed": {
+        "schema": 1,
+        "product": "phonetic-ipa-ime",
+        "version": "0.1.2",
+        "notes": "新版输入法",
+        "platforms": {
+          "windows": {
+            "url": "http://www.phonetictoolbox.com/releases/phonetic-ipa-ime/a.zip",
+            "githubUrl": "https://github.com/Nephelium/phonetic-ipa-ime/releases/download/v0.1.2/PhoneticIPA.zip",
+            "bytes": 100,
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          },
+          "macos": {
+            "url": "http://www.phonetictoolbox.com/releases/phonetic-ipa-ime/a.zip",
+            "githubUrl": "https://github.com/Nephelium/phonetic-ipa-ime/releases/download/v0.1.2/PhoneticIPA.zip",
+            "bytes": 100,
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          },
+          "ios": {
+            "url": "http://www.phonetictoolbox.com/releases/phonetic-ipa-ime/a.zip",
+            "githubUrl": "https://github.com/Nephelium/phonetic-ipa-ime/releases/download/v0.1.2/PhoneticIPA.zip",
+            "bytes": 100,
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          },
+          "android": {
+            "url": "http://www.phonetictoolbox.com/releases/phonetic-ipa-ime/a.zip",
+            "githubUrl": "https://github.com/Nephelium/phonetic-ipa-ime/releases/download/v0.1.2/PhoneticIPA.zip",
+            "bytes": 100,
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          }
+        }
+      }
+    },
+    {
+      "name": "untrusted-15",
+      "valid": false,
+      "feed": {
+        "schema": 1,
+        "product": "phonetic-ipa-ime",
+        "version": "0.1.2",
+        "notes": "新版输入法",
+        "platforms": {
+          "windows": {
+            "url": "https://www.phonetictoolbox.com.evil.example/releases/phonetic-ipa-ime/a.zip",
+            "githubUrl": "https://github.com/Nephelium/phonetic-ipa-ime/releases/download/v0.1.2/PhoneticIPA.zip",
+            "bytes": 100,
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          },
+          "macos": {
+            "url": "https://www.phonetictoolbox.com.evil.example/releases/phonetic-ipa-ime/a.zip",
+            "githubUrl": "https://github.com/Nephelium/phonetic-ipa-ime/releases/download/v0.1.2/PhoneticIPA.zip",
+            "bytes": 100,
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          },
+          "ios": {
+            "url": "https://www.phonetictoolbox.com.evil.example/releases/phonetic-ipa-ime/a.zip",
+            "githubUrl": "https://github.com/Nephelium/phonetic-ipa-ime/releases/download/v0.1.2/PhoneticIPA.zip",
+            "bytes": 100,
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          },
+          "android": {
+            "url": "https://www.phonetictoolbox.com.evil.example/releases/phonetic-ipa-ime/a.zip",
+            "githubUrl": "https://github.com/Nephelium/phonetic-ipa-ime/releases/download/v0.1.2/PhoneticIPA.zip",
+            "bytes": 100,
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          }
+        }
+      }
+    },
+    {
+      "name": "untrusted-16",
+      "valid": false,
+      "feed": {
+        "schema": 1,
+        "product": "phonetic-ipa-ime",
+        "version": "0.1.2",
+        "notes": "新版输入法",
+        "platforms": {
+          "windows": {
+            "url": "https://user@www.phonetictoolbox.com/releases/phonetic-ipa-ime/a.zip",
+            "githubUrl": "https://github.com/Nephelium/phonetic-ipa-ime/releases/download/v0.1.2/PhoneticIPA.zip",
+            "bytes": 100,
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          },
+          "macos": {
+            "url": "https://user@www.phonetictoolbox.com/releases/phonetic-ipa-ime/a.zip",
+            "githubUrl": "https://github.com/Nephelium/phonetic-ipa-ime/releases/download/v0.1.2/PhoneticIPA.zip",
+            "bytes": 100,
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          },
+          "ios": {
+            "url": "https://user@www.phonetictoolbox.com/releases/phonetic-ipa-ime/a.zip",
+            "githubUrl": "https://github.com/Nephelium/phonetic-ipa-ime/releases/download/v0.1.2/PhoneticIPA.zip",
+            "bytes": 100,
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          },
+          "android": {
+            "url": "https://user@www.phonetictoolbox.com/releases/phonetic-ipa-ime/a.zip",
+            "githubUrl": "https://github.com/Nephelium/phonetic-ipa-ime/releases/download/v0.1.2/PhoneticIPA.zip",
+            "bytes": 100,
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          }
+        }
+      }
+    },
+    {
+      "name": "untrusted-17",
+      "valid": false,
+      "feed": {
+        "schema": 1,
+        "product": "phonetic-ipa-ime",
+        "version": "0.1.2",
+        "notes": "新版输入法",
+        "platforms": {
+          "windows": {
+            "url": "https://www.phonetictoolbox.com/releases/phonetic-ipa-ime/../a.zip",
+            "githubUrl": "https://github.com/Nephelium/phonetic-ipa-ime/releases/download/v0.1.2/PhoneticIPA.zip",
+            "bytes": 100,
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          },
+          "macos": {
+            "url": "https://www.phonetictoolbox.com/releases/phonetic-ipa-ime/../a.zip",
+            "githubUrl": "https://github.com/Nephelium/phonetic-ipa-ime/releases/download/v0.1.2/PhoneticIPA.zip",
+            "bytes": 100,
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          },
+          "ios": {
+            "url": "https://www.phonetictoolbox.com/releases/phonetic-ipa-ime/../a.zip",
+            "githubUrl": "https://github.com/Nephelium/phonetic-ipa-ime/releases/download/v0.1.2/PhoneticIPA.zip",
+            "bytes": 100,
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          },
+          "android": {
+            "url": "https://www.phonetictoolbox.com/releases/phonetic-ipa-ime/../a.zip",
+            "githubUrl": "https://github.com/Nephelium/phonetic-ipa-ime/releases/download/v0.1.2/PhoneticIPA.zip",
+            "bytes": 100,
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          }
+        }
+      }
+    },
+    {
+      "name": "untrusted-18",
+      "valid": false,
+      "feed": {
+        "schema": 1,
+        "product": "phonetic-ipa-ime",
+        "version": "0.1.2",
+        "notes": "新版输入法",
+        "platforms": {
+          "windows": {
+            "url": "https://www.phonetictoolbox.com/releases/phonetic-ipa-ime/%2e%2e/a.zip",
+            "githubUrl": "https://github.com/Nephelium/phonetic-ipa-ime/releases/download/v0.1.2/PhoneticIPA.zip",
+            "bytes": 100,
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          },
+          "macos": {
+            "url": "https://www.phonetictoolbox.com/releases/phonetic-ipa-ime/%2e%2e/a.zip",
+            "githubUrl": "https://github.com/Nephelium/phonetic-ipa-ime/releases/download/v0.1.2/PhoneticIPA.zip",
+            "bytes": 100,
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          },
+          "ios": {
+            "url": "https://www.phonetictoolbox.com/releases/phonetic-ipa-ime/%2e%2e/a.zip",
+            "githubUrl": "https://github.com/Nephelium/phonetic-ipa-ime/releases/download/v0.1.2/PhoneticIPA.zip",
+            "bytes": 100,
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          },
+          "android": {
+            "url": "https://www.phonetictoolbox.com/releases/phonetic-ipa-ime/%2e%2e/a.zip",
+            "githubUrl": "https://github.com/Nephelium/phonetic-ipa-ime/releases/download/v0.1.2/PhoneticIPA.zip",
+            "bytes": 100,
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          }
+        }
+      }
+    },
+    {
+      "name": "untrusted-19",
+      "valid": false,
+      "feed": {
+        "schema": 1,
+        "product": "phonetic-ipa-ime",
+        "version": "0.1.2",
+        "notes": "新版输入法",
+        "platforms": {
+          "windows": {
+            "url": "https://www.phonetictoolbox.com/releases/phonetic-ipa-ime/a.zip?other=1",
+            "githubUrl": "https://github.com/Nephelium/phonetic-ipa-ime/releases/download/v0.1.2/PhoneticIPA.zip",
+            "bytes": 100,
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          },
+          "macos": {
+            "url": "https://www.phonetictoolbox.com/releases/phonetic-ipa-ime/a.zip?other=1",
+            "githubUrl": "https://github.com/Nephelium/phonetic-ipa-ime/releases/download/v0.1.2/PhoneticIPA.zip",
+            "bytes": 100,
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          },
+          "ios": {
+            "url": "https://www.phonetictoolbox.com/releases/phonetic-ipa-ime/a.zip?other=1",
+            "githubUrl": "https://github.com/Nephelium/phonetic-ipa-ime/releases/download/v0.1.2/PhoneticIPA.zip",
+            "bytes": 100,
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          },
+          "android": {
+            "url": "https://www.phonetictoolbox.com/releases/phonetic-ipa-ime/a.zip?other=1",
+            "githubUrl": "https://github.com/Nephelium/phonetic-ipa-ime/releases/download/v0.1.2/PhoneticIPA.zip",
+            "bytes": 100,
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          }
+        }
+      }
+    },
+    {
+      "name": "long-notes",
+      "valid": false,
+      "feed": {
+        "schema": 1,
+        "product": "phonetic-ipa-ime",
+        "version": "0.1.2",
+        "notes": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "platforms": {
+          "windows": {
+            "url": "https://www.phonetictoolbox.com/releases/phonetic-ipa-ime/0.1.2/PhoneticIPA.zip",
+            "githubUrl": "https://github.com/Nephelium/phonetic-ipa-ime/releases/download/v0.1.2/PhoneticIPA.zip",
+            "bytes": 100,
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          },
+          "macos": {
+            "url": "https://www.phonetictoolbox.com/releases/phonetic-ipa-ime/0.1.2/PhoneticIPA.zip",
+            "githubUrl": "https://github.com/Nephelium/phonetic-ipa-ime/releases/download/v0.1.2/PhoneticIPA.zip",
+            "bytes": 100,
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          },
+          "ios": {
+            "url": "https://www.phonetictoolbox.com/releases/phonetic-ipa-ime/0.1.2/PhoneticIPA.zip",
+            "githubUrl": "https://github.com/Nephelium/phonetic-ipa-ime/releases/download/v0.1.2/PhoneticIPA.zip",
+            "bytes": 100,
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          },
+          "android": {
+            "url": "https://www.phonetictoolbox.com/releases/phonetic-ipa-ime/0.1.2/PhoneticIPA.zip",
+            "githubUrl": "https://github.com/Nephelium/phonetic-ipa-ime/releases/download/v0.1.2/PhoneticIPA.zip",
+            "bytes": 100,
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          }
+        }
+      }
+    }
+  ],
+  "versions": [
+    [
+      "0.1.10",
+      "0.1.2",
+      1
+    ],
+    [
+      "0.1.1",
+      "0.1.1",
+      0
+    ],
+    [
+      "1.0.0",
+      "0.99.99",
+      1
+    ],
+    [
+      "0.1.0",
+      "0.1.1",
+      -1
+    ]
+  ]
+}

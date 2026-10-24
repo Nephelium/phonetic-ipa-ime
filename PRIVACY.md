@@ -1,3 +1,17 @@
+# 国际音标输入法的网络与隐私
+
+0.1.1 原型的汉字、音标、CIN 和多音字处理在本机进行。公开 Windows 包使用出厂配置，云候选关闭，不包含个人学习库。Apple 和 Android 使用固定的离线索引。
+
+默认开启的更新检查只读取以下公开 JSON：
+- https://www.phonetictoolbox.com/releases/phonetic-ipa-ime/update.json
+- https://raw.githubusercontent.com/Nephelium/phonetic-ipa-ime/ipa-prototype/updates/latest.json
+
+请求包含版本号 User-Agent 与通常的 HTTPS 连接信息，不包含按键、宿主文本、候选词、字表或个人配置。可在设置中关闭自动检查。手机端 iOS 只在配套 App 前台检测，键盘扩展不联网；Android App 和输入法共用检查间隔。用户点击下载后由浏览器连接官网或 GitHub。
+
+下方保留上游水杉可选联网模块的原始说明，便于审查仍保留在 Windows 源码中的功能。原型包的默认值与资料目录以本节和安装说明为准。
+
+---
+
 # Privacy
 
 Metasequoia IME for Windows converts keystrokes, composition text and candidates locally, using the shared C++ engine and the SQLite dictionaries installed under `%LOCALAPPDATA%\metasequoiaime\`. Local conversion never contacts the network. This document describes the optional online features that do, exactly what each one sends, and how to turn each one off.

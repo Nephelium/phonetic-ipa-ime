@@ -3,6 +3,9 @@ import SwiftUI
 @main struct PhoneticIPAApp: App {
     @StateObject private var model = InputModel()
     @State private var selectedTab = 0
+    @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.openURL) private var openURL
+    @StateObject private var updates = UpdateStore.shared
     var body: some Scene {
         WindowGroup {
             TabView(selection: $selectedTab) {
@@ -16,6 +19,17 @@ import SwiftUI
                 NavigationStack { InputTrialView().navigationTitle("试打") }.tabItem { Label("试打", systemImage: "text.cursor") }.tag(1)
                 NavigationStack { UsageGuideView().navigationTitle("使用说明") }.tabItem { Label("说明", systemImage: "questionmark.circle") }.tag(2)
             }.tint(Color(red: 0.32, green: 0.36, blue: 0.72))
+            .task { await updates.check() }
+            .onChange(of: scenePhase) { phase in
+                if phase == .active { Task { await updates.check() } }
+            }
+            .alert("发现新版本 " + (updates.latest?.version ?? ""), isPresented: $updates.noticeVisible) {
+                if let download = updates.download {
+                    Button("官网下载") { openURL(URL(string: download.url)!) }
+                    Button("GitHub 下载") { openURL(URL(string: download.githubUrl)!) }
+                }
+                Button("稍后", role: .cancel) {}
+            } message: { Text(updates.latest?.notes ?? "") }
         }
     }
 }

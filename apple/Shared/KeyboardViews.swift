@@ -307,6 +307,7 @@ struct SettingsView: View {
                     Button("使用说明") { help = true }
                 }
                 KeyboardMap(mappings: model.mappings, edit: chooseCode)
+                UpdateSettingsView()
                 GroupBox {
                     VStack(alignment: .leading, spacing: 13) {
                         HStack {

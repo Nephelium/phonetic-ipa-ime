@@ -5,11 +5,40 @@ import SwiftUI
 @MainActor final class ApplicationDelegate: NSObject, NSApplicationDelegate {
     private var server: IMKServer?
     private var settings: NSWindow?
+    private var updateNotice: NSPanel?
+    private var updateTimer: Timer?
     private let settingsModel = InputModel()
     func applicationDidFinishLaunching(_ notification: Notification) {
         server = IMKServer(name: Bundle.main.object(forInfoDictionaryKey: "InputMethodConnectionName") as? String, bundleIdentifier: Bundle.main.bundleIdentifier)
         NSLog("PhoneticIPA InputMethodKit server initialized: %@", server == nil ? "no" : "yes")
         if CommandLine.arguments.contains("--settings") { openSettings() }
+        UpdateStore.shared.onAvailable = { [weak self] in self?.showUpdateNotice() }
+        Task { await UpdateStore.shared.check() }
+        updateTimer = Timer.scheduledTimer(withTimeInterval: 3600, repeats: true) { _ in
+            Task { @MainActor in await UpdateStore.shared.check() }
+        }
+    }
+    private func showUpdateNotice() {
+        guard updateNotice == nil, let latest = UpdateStore.shared.latest,
+              let download = UpdateStore.shared.download else { return }
+        let panel = NSPanel(contentRect: NSRect(x: 0, y: 0, width: 360, height: 175),
+                            styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
+        panel.level = .popUpMenu; panel.isFloatingPanel = true; panel.hidesOnDeactivate = false
+        panel.isReleasedWhenClosed = false
+        panel.contentView = NSHostingView(rootView:
+            VStack(alignment: .leading, spacing: 12) {
+                Text("国际音标输入法有更新").font(.headline)
+                Text("版本 " + latest.version + " 已可下载").foregroundStyle(.secondary)
+                HStack {
+                    Link("官网下载", destination: URL(string: download.url)!)
+                    Link("GitHub", destination: URL(string: download.githubUrl)!)
+                    Spacer()
+                    Button("稍后") { [weak self] in self?.updateNotice?.orderOut(nil); self?.updateNotice = nil }
+                }
+            }.padding(20).frame(width: 360, height: 175).background(.regularMaterial))
+        let bounds = NSScreen.main?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1024, height: 768)
+        panel.setFrameOrigin(NSPoint(x: bounds.maxX - 380, y: bounds.maxY - 195))
+        updateNotice = panel; panel.orderFrontRegardless()
     }
     @objc func openSettings() {
         if settings == nil {
@@ -22,6 +51,7 @@ import SwiftUI
         }
         settings?.center(); settings?.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
+        Task { await UpdateStore.shared.check() }
     }
 }
 

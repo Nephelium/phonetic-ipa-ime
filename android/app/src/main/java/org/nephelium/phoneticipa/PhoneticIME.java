@@ -9,6 +9,7 @@ import java.util.*;
 
 public final class PhoneticIME extends InputMethodService {
     private LinearLayout root, candidatePanel, keyPanel;
+    private TextView updateNotice;
     private Session model;
     private boolean uppercase, symbols, alive = true;
     @Override public View onCreateInputView() {
@@ -24,13 +25,24 @@ public final class PhoneticIME extends InputMethodService {
             if (error != null) { root.addView(UI.text(this, "资料载入失败：" + error.getMessage(), 14)); return; }
             model = new Session(engine); model.commit = text -> { InputConnection input = getCurrentInputConnection(); if (input != null) input.commitText(text, 1); };
             model.changed = this::candidates;
+            updateNotice = UI.text(this, "", 12); updateNotice.setTextColor(UI.ACCENT);
+            updateNotice.setPadding(UI.dp(this, 8), UI.dp(this, 4), UI.dp(this, 8), UI.dp(this, 4));
+            updateNotice.setOnClickListener(v -> startActivity(new android.content.Intent(this, SettingsActivity.class).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)));
+            UI.full(root, updateNotice, -2); updateNotice();
             candidatePanel = UI.column(this); keyPanel = UI.column(this); UI.full(root, candidatePanel, -2); UI.full(root, keyPanel, -2);
             keys(); candidates();
         }));
         return root;
     }
     @Override public boolean onEvaluateFullscreenMode() { return false; }
-    @Override public void onStartInput(EditorInfo info, boolean restarting) { super.onStartInput(info, restarting); if (model != null) model.reload(); }
+    @Override public void onStartInput(EditorInfo info, boolean restarting) { super.onStartInput(info, restarting); if (model != null) model.reload();
+        Updates.check(this, false, message -> { if (alive) updateNotice(); });
+    }
+    private void updateNotice() {
+        if (updateNotice == null) return; Updates.Feed feed = Updates.available(this);
+        updateNotice.setVisibility(feed == null ? View.GONE : View.VISIBLE);
+        if (feed != null) updateNotice.setText("新版本 " + feed.version + " 可用 · 点此下载");
+    }
     @Override public void onFinishInput() { if (model != null) model.clear(); super.onFinishInput(); }
     @Override public void onDestroy() { alive = false; super.onDestroy(); }
     @Override public void onUpdateSelection(int oldStart, int oldEnd, int newStart, int newEnd, int composingStart, int composingEnd) {

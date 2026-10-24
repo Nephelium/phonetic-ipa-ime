@@ -12,6 +12,6 @@ cat > "$snapshot_app/Contents/Info.plist" <<'PLIST'
 <?xml version="1.0" encoding="UTF-8"?><!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd"><plist version="1.0"><dict><key>CFBundleIdentifier</key><string>org.nephelium.phonetic-ipa.snapshots</string><key>CFBundleExecutable</key><string>Snapshots</string><key>CFBundlePackageType</key><string>APPL</string></dict></plist>
 PLIST
 xcrun clang++ -std=c++17 -O2 -fobjc-arc -I"$source_root" -IShared -c Shared/IPAEngine.mm -o build/snapshot-engine.o
-xcrun swiftc -swift-version 5 -parse-as-library -import-objc-header Shared/IPAEngine.h Shared/InputModel.swift Shared/KeyboardViews.swift Tests/Snapshots.swift build/snapshot-engine.o -framework AppKit -framework SwiftUI -lc++ -lsqlite3 -o "$snapshot_app/Contents/MacOS/Snapshots"
-"$snapshot_app/Contents/MacOS/Snapshots" "$PWD/build/previews" > build/session-tests.log 2>&1
+xcrun swiftc -swift-version 5 -parse-as-library -import-objc-header Shared/IPAEngine.h Shared/InputModel.swift Shared/Updates.swift Shared/KeyboardViews.swift Tests/Snapshots.swift build/snapshot-engine.o -framework AppKit -framework SwiftUI -lc++ -lsqlite3 -o "$snapshot_app/Contents/MacOS/Snapshots"
+IPA_UPDATE_DISABLE_NETWORK=1 "$snapshot_app/Contents/MacOS/Snapshots" "$PWD/build/previews" > build/session-tests.log 2>&1
 cat build/session-tests.log

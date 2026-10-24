@@ -1,4 +1,5 @@
 #include "ipa/ipa_runtime.h"
+#include "utils/ipa_update.h"
 #include "msimeui/Fonts.h"
 #include "ipc/event_listener.h"
 #include "log/fanylog.h"
@@ -229,7 +230,9 @@ int CALLBACK WinMain(_In_ HINSTANCE hInstance, _In_ HINSTANCE /*hPrevInstance*/,
         });
     }
 
+    PhoneticIpa::Updates::StartMonitor();
     int ret = CreateCandidateWindow(hInstance);
+    PhoneticIpa::Updates::StopMonitor();
     if (radical_warmup.joinable())
         radical_warmup.join();
 

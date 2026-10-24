@@ -14,6 +14,8 @@ public final class CoreTests extends Instrumentation {
     @Override public void onStart() {
         Bundle result = new Bundle();
         try {
+            Updates.automatic(getTargetContext(), false);
+            UpdateChecks.run(getContext());
             if (keyboard) { new KeyboardChecks(this).run(); result.putString("stream", "Android real keyboard UI checks passed\n"); finish(-1, result); return; }
             Engine engine = Engine.get(getTargetContext()).get();
             require(engine.symbols("a").getString(0).equals("a"), "CIN a");

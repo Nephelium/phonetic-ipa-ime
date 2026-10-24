@@ -55,4 +55,8 @@
 
 ## 分发范围
 
-本仓公开本次衍生实现、作者提供的码表与限定数据快照、可再分发的字体及来源声明。字体 OFL、CC 数据许可和程序 GPL 分别保留。系统字体不随包，用户输入、活动码表、个人配置、学习词库、工具链缓存与本机路径不进入提交。未发布安装包或承诺真实宿主验收。
+本仓公开本次衍生实现、作者提供的码表与限定数据快照、可再分发的字体及来源声明。字体 OFL、CC 数据许可和程序 GPL 分别保留。系统字体不随包，用户输入、活动码表、个人配置、学习词库、工具链缓存与本机路径不进入提交。0.1.1 提供四平台测试包。实际验证边界见仓库 docs/testing，不承诺所有宿主与实体设备兼容。
+
+## Windows 包的 Microsoft 运行库
+
+Windows 0.1.1 ZIP 附带未修改的 Microsoft Visual C++ Runtime 14.44.35112（x64 Microsoft.VC143.CRT），来自 Visual Studio 2022 Build Tools 的 Redist 目录，版权归 Microsoft Corporation。按 [Visual Studio 2022 可再分发代码清单](https://learn.microsoft.com/visualstudio/releases/2022/redistribution)及其原许可分发，独立于本项目 GPL。包内附 Microsoft-CRT-NOTICE.txt，不包含构建工具或开发者凭据。

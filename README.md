@@ -1,5 +1,13 @@
 # 国际音标输入法 · Phonetic IPA IME
 
+## 0.1.1 测试版
+
+[四平台安装与使用](docs/INSTALL.md) · [GitHub 下载](https://github.com/Nephelium/phonetic-ipa-ime/releases/tag/v0.1.1) · [官网下载](https://www.phonetictoolbox.com/#ipa-ime-download)
+
+Windows、macOS、iOS 和 Android 已加入官网与 GitHub 双来源更新检测。默认每天自动检查，也可在设置页手动检查或关闭。iOS 只在配套 App 前台检查，键盘扩展不联网。下载后的升级由用户确认并安装。
+
+Windows ZIP 含注册脚本，macOS ZIP 需要命令行工具，iOS 为待签名 IPA，Android 为测试签名 APK。Mac 专用宿主、iOS/Android 模拟器真实键盘和 Windows 后台控件检查分别通过，实体手机与更多桌面宿主仍待验证。见[本次验证记录](docs/testing/2026-10-23-四平台更新与官网发布.md)。
+
 <img src="assets/icons/ipa-bird-concept-v1.png" alt="抱着音标键帽的小鸟" width="128">
 
 汉字候选下方显示国际音标，汉字与 IPA 分别输入，支持词语读音、手动多音字选择与可编辑 CIN 音标键盘。现有 Windows 原型，并新增 macOS、iOS/iPadOS 和 Android 平台实现。

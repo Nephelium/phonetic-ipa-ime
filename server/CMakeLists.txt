@@ -298,6 +298,7 @@ set(SRC_FILES
     "./src/utils/ime_paths.cpp"
     "./src/utils/ime_utils.cpp"
     "./src/utils/ime_utils.h"
+    "./src/utils/ipa_update.cpp"
     "./src/utils/network_proxy.cpp"
     "./src/utils/network_proxy.h"
     "./src/utils/serial_task_runner.cpp"
@@ -605,6 +606,7 @@ add_executable(${SETTINGS_EXECUTABLE_NAME} WIN32
     "./src/utils/hanzi_pinyin.cpp"
     "./src/utils/hanzi_pinyin.h"
     "./src/utils/ime_paths.cpp"
+    "./src/utils/ipa_update.cpp"
     "./src/utils/network_proxy.cpp"
     "./src/utils/network_proxy.h"
     "./src/resource/resource.rc"
@@ -710,3 +712,14 @@ if(BUILD_TESTING)
 endif()
 
 set_target_properties(${SETTINGS_EXECUTABLE_NAME} PROPERTIES OUTPUT_NAME "PhoneticIpaSettings")
+
+if(BUILD_TESTING)
+    add_executable(IpaUpdateTests tests/src/test_ipa_updates.cpp)
+    target_link_libraries(IpaUpdateTests PRIVATE nlohmann_json::nlohmann_json)
+    target_include_directories(IpaUpdateTests PRIVATE "${CMAKE_SOURCE_DIR}/..")
+    add_test(NAME ipa_update_manifest COMMAND IpaUpdateTests "${CMAKE_SOURCE_DIR}/../prototype/update-test-vectors.json")
+    add_executable(IpaUpdateNetworkCheck tests/src/test_ipa_update_network.cpp src/utils/ipa_update.cpp)
+    target_include_directories(IpaUpdateNetworkCheck PRIVATE "${CMAKE_SOURCE_DIR}/src" "${CMAKE_SOURCE_DIR}/..")
+    target_compile_definitions(IpaUpdateNetworkCheck PRIVATE NOMINMAX=1)
+    target_link_libraries(IpaUpdateNetworkCheck PRIVATE nlohmann_json::nlohmann_json winhttp shell32 advapi32)
+endif()

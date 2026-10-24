@@ -1,14 +1,8 @@
 #include "settings/native/native_page_help_widgets.h"
 
-#include "msime_version.h"
-
+#include "utils/ipa_update.h"
 #include "msimeui/DeviceResources.h"
 #include "msimeui/Window.h"
-
-#include <winhttp.h>
-
-#include <chrono>
-#include <regex>
 
 // partials/about-settings.html + modules/about-settings.ts + modules/update-manifest.ts;
 // styles in styles/modules/document-settings.css (.about-*).
@@ -16,104 +10,10 @@ namespace native_settings
 {
 namespace
 {
-constexpr char kUpdateManifestUrl[] = "https://msime.app/update.json";
-constexpr char kReleasesPageUrl[] = "https://github.com/metasequoiaime/MSIME-Windows/releases";
-constexpr char kDownloadMirrorPrefix[] = "https://dl.msime.app/gh/";
-constexpr char kWebsiteUrl[] = "https://msime.app/";
-constexpr char kLicenseUrl[] = "https://github.com/metasequoiaime/MSIME-Windows/blob/main/LICENSE";
-constexpr char kPrivacyUrl[] = "https://github.com/metasequoiaime/MSIME-Windows/blob/main/PRIVACY.md";
-// The version the page shows (partials/about-settings.html), sourced from version.txt.
-constexpr char kShownVersion[] = "v" MSIME_PRODUCT_VERSION;
-
-struct Version
-{
-    std::string display;
-    std::vector<long> parts;
-};
-
-bool ParseVersion(const std::string &value, Version &version)
-{
-    static const std::regex pattern(R"(^\s*[vV]?(\d+(?:\.\d+)*)(?:[-+].*)?\s*$)");
-    std::smatch match;
-    if (!std::regex_match(value, match, pattern))
-        return false;
-    version.display = match[1].str();
-    version.parts.clear();
-    size_t start = 0;
-    while (start <= version.display.size())
-    {
-        const size_t dot = version.display.find('.', start);
-        version.parts.push_back(std::stol(version.display.substr(start, dot - start)));
-        if (dot == std::string::npos)
-            break;
-        start = dot + 1;
-    }
-    return true;
-}
-
-int CompareVersions(const Version &left, const Version &right)
-{
-    const size_t length = std::max(left.parts.size(), right.parts.size());
-    for (size_t i = 0; i < length; ++i)
-    {
-        const long l = i < left.parts.size() ? left.parts[i] : 0;
-        const long r = i < right.parts.size() ? right.parts[i] : 0;
-        if (l != r)
-            return l < r ? -1 : 1;
-    }
-    return 0;
-}
-
-// GET over WinHTTP; empty on any failure. Runs on a worker thread.
-std::string HttpGet(const std::string &url)
-{
-    const std::wstring wide = Widen(url);
-    URL_COMPONENTS parts{sizeof(parts)};
-    wchar_t host[256]{};
-    wchar_t path[2048]{};
-    parts.lpszHostName = host;
-    parts.dwHostNameLength = 256;
-    parts.lpszUrlPath = path;
-    parts.dwUrlPathLength = 2048;
-    if (!WinHttpCrackUrl(wide.c_str(), 0, 0, &parts))
-        return {};
-    std::string body;
-    HINTERNET session =
-        WinHttpOpen(L"MetasequoiaImeSettings", WINHTTP_ACCESS_TYPE_AUTOMATIC_PROXY, nullptr, nullptr, 0);
-    if (!session)
-        return {};
-    WinHttpSetTimeouts(session, 10000, 10000, 10000, 10000);
-    HINTERNET connection = WinHttpConnect(session, host, parts.nPort, 0);
-    HINTERNET request =
-        connection
-            ? WinHttpOpenRequest(connection, L"GET", path, nullptr, WINHTTP_NO_REFERER, WINHTTP_DEFAULT_ACCEPT_TYPES,
-                                 parts.nScheme == INTERNET_SCHEME_HTTPS ? WINHTTP_FLAG_SECURE : 0)
-            : nullptr;
-    DWORD status = 0;
-    DWORD statusSize = sizeof(status);
-    if (request && WinHttpSendRequest(request, WINHTTP_NO_ADDITIONAL_HEADERS, 0, nullptr, 0, 0, 0) &&
-        WinHttpReceiveResponse(request, nullptr) &&
-        WinHttpQueryHeaders(request, WINHTTP_QUERY_STATUS_CODE | WINHTTP_QUERY_FLAG_NUMBER, nullptr, &status,
-                            &statusSize, nullptr) &&
-        status == 200)
-    {
-        DWORD available = 0;
-        while (WinHttpQueryDataAvailable(request, &available) && available > 0 && body.size() < 1024 * 1024)
-        {
-            std::string chunk(available, '\0');
-            DWORD read = 0;
-            if (!WinHttpReadData(request, chunk.data(), available, &read) || read == 0)
-                break;
-            body.append(chunk.data(), read);
-        }
-    }
-    if (request)
-        WinHttpCloseHandle(request);
-    if (connection)
-        WinHttpCloseHandle(connection);
-    WinHttpCloseHandle(session);
-    return body;
-}
+constexpr char kWebsiteUrl[] = "https://www.phonetictoolbox.com/";
+constexpr char kLicenseUrl[] = "https://github.com/Nephelium/phonetic-ipa-ime/blob/ipa-prototype/LICENSE";
+constexpr char kPrivacyUrl[] = "https://github.com/Nephelium/phonetic-ipa-ime/blob/ipa-prototype/PRIVACY.md";
+constexpr char kShownVersion[] = "0.1.1";
 
 // `.about-link-row`: min-height 66px with a hairline under every row but the last.
 class AboutRow : public msimeui::Panel
@@ -266,130 +166,52 @@ struct AboutState
     std::shared_ptr<Hideable> statusBox;
 };
 
-void ShowUpdateDialog(PageContext &context, const Version &latest, const std::string &releaseUrl,
-                      const std::string &mirrorUrl, const nlohmann::json &manifest)
+void ShowUpdateDialog(PageContext &context, const PhoneticIpa::Updates::Feed &feed)
 {
-    SettingsModel *model = &context.model;
-    HostServices *host = &context.host;
-    auto column = std::make_shared<Column>(0.0f);
-    column->Add(MakeLabel(L"发现新版本", DocStyle(16.0f, DWRITE_FONT_WEIGHT_SEMI_BOLD), TextRole::Primary));
-    auto message = MakeLabel(L"水杉 IME v" + Widen(latest.display) + L" 已发布，是否前往下载？",
-                             DocStyle(13.0f, DWRITE_FONT_WEIGHT_NORMAL, 1.65f, true), TextRole::Muted);
-    message->SetMargin({0.0f, 10.0f, 0.0f, 0.0f});
-    column->Add(message);
-
-    // describeInstallerTrust
-    static const std::regex installerName(R"(^MetasequoiaIME_Setup_v[\w.-]+\.exe$)", std::regex::icase);
-    static const std::regex sha256(R"(^[0-9a-f]{64}$)");
-    const std::string name = manifest.value("installerName", std::string());
-    const std::string digest = manifest.value("installerSha256", std::string());
-    const bool nameValid = std::regex_match(name, installerName);
-    if (manifest.contains("signed") && manifest["signed"].is_boolean() && !manifest["signed"].get<bool>())
-    {
-        auto warning = MakeLabel(L"该版本未经代码签名，SmartScreen 会拦截，且 uiAccess "
-                                 L"失效（候选窗无法浮在以管理员身份运行的程序之上）。请务必核对下面的校验值。",
-                                 DocStyle(13.0f, DWRITE_FONT_WEIGHT_NORMAL, 1.65f, true), TextRole::Danger);
-        warning->SetMargin({0.0f, 10.0f, 0.0f, 0.0f});
-        column->Add(warning);
-    }
-    if (std::regex_match(digest, sha256))
-    {
-        auto label = MakeLabel(L"下载后请核对 SHA256：", DocStyle(13.0f, DWRITE_FONT_WEIGHT_NORMAL, 1.65f, true),
-                               TextRole::Muted);
-        label->SetMargin({0.0f, 10.0f, 0.0f, 6.0f});
-        column->Add(label);
-        const std::wstring file = nameValid ? Widen(name) : L"MetasequoiaIME_Setup_v<版本>.exe";
-        TextStyle code = MonoStyle(11.0f);
-        code.lineHeight = 1.5f;
-        code.wrap = true;
-        column->Add(MakeLabel(L"Get-FileHash .\\" + file + L" -Algorithm SHA256", code, TextRole::Primary));
-        auto digestLabel = MakeLabel(Widen(digest), code, TextRole::Primary);
-        digestLabel->SetMargin({0.0f, 6.0f, 0.0f, 0.0f});
-        column->Add(digestLabel);
-    }
-
+    auto column = std::make_shared<Column>(12.0f);
+    column->Add(MakeLabel(L"国际音标输入法 " + Widen(feed.version), DocStyle(16.0f, DWRITE_FONT_WEIGHT_SEMI_BOLD),
+                          TextRole::Primary));
+    column->Add(MakeLabel(Widen(feed.notes), DocStyle(13.0f, DWRITE_FONT_WEIGHT_NORMAL, 1.65f, true), TextRole::Muted));
     auto actions = std::make_shared<Row>(9.0f);
     actions->SetJustify(Row::Justify::End);
-    actions->SetMargin({0.0f, 18.0f, 0.0f, 0.0f});
+    HostServices *host = &context.host;
     auto later = std::make_shared<CssButton>(L"稍后", DialogButtonStyle(false));
-    later->SetOnClick([host]() { host->CloseModal(); });
+    later->SetOnClick([host] { host->CloseModal(); });
     actions->Add(later);
-    if (!mirrorUrl.empty())
+    for (const auto &entry :
+         std::vector<std::pair<std::wstring, std::string>>{{L"GitHub 下载", feed.github_url}, {L"官网下载", feed.url}})
     {
-        auto mirror = std::make_shared<CssButton>(L"国内镜像下载", DialogButtonStyle(false));
-        mirror->SetOnClick([host, model, mirrorUrl]() {
+        auto button = std::make_shared<CssButton>(entry.first, DialogButtonStyle(entry.first == L"官网下载"));
+        button->SetOnClick([host, url = entry.second] {
             host->CloseModal();
-            model->Post("openExternalUrl", Json(mirrorUrl));
+            ShellExecuteW(nullptr, L"open", Widen(url).c_str(), nullptr, nullptr, SW_SHOWNORMAL);
         });
-        actions->Add(mirror);
+        actions->Add(button);
     }
-    auto download = std::make_shared<CssButton>(L"前往下载", DialogButtonStyle(true));
-    download->SetOnClick([host, model, releaseUrl]() {
-        host->CloseModal();
-        model->Post("openExternalUrl", Json(releaseUrl));
-    });
-    actions->Add(download);
     column->Add(actions);
     context.host.ShowModal(column);
 }
 
 void CheckForUpdate(PageContext &context, const std::shared_ptr<AboutState> &state)
 {
-    const auto setStatus = [state](const std::wstring &message, TextRole role) {
-        state->status->SetText(message);
-        state->status->SetRole(role);
-        state->statusBox->SetVisible(!message.empty());
-    };
-    Version current;
-    if (!ParseVersion(kShownVersion, current))
-    {
-        setStatus(L"无法识别当前版本", TextRole::Danger);
-        return;
-    }
     state->check->SetDisabled(true);
     state->check->SetText(L"正在检查…");
-    setStatus(L"", TextRole::Muted);
+    state->status->SetText(L"正在检查官网与 GitHub…");
+    state->statusBox->SetVisible(true);
+    auto result = std::make_shared<PhoneticIpa::Updates::Result>();
     PageContext *ctx = &context;
-    const auto stamp = std::chrono::system_clock::now().time_since_epoch().count();
-    const std::string url = std::string(kUpdateManifestUrl) + "?t=" + std::to_string(stamp);
     RunInBackground(
-        context.host.Hwnd(), [url]() { return HttpGet(url); },
-        [ctx, state, current, setStatus](const std::string &body) {
+        context.host.Hwnd(),
+        [result] {
+            *result = PhoneticIpa::Updates::Check(true);
+            return std::string{};
+        },
+        [ctx, state, result](const std::string &) {
             state->check->SetDisabled(false);
             state->check->SetText(L"检查更新");
-            const nlohmann::json manifest = nlohmann::json::parse(body, nullptr, false);
-            const std::string releases = kReleasesPageUrl;
-            Version latest;
-            std::string releaseUrl;
-            bool valid = manifest.is_object() && manifest.contains("version") && manifest["version"].is_string() &&
-                         manifest.contains("releaseUrl") && manifest["releaseUrl"].is_string();
-            if (valid)
-            {
-                releaseUrl = manifest["releaseUrl"].get<std::string>();
-                valid = (releaseUrl == releases || releaseUrl.rfind(releases + "/", 0) == 0) &&
-                        ParseVersion(manifest["version"].get<std::string>(), latest);
-            }
-            if (!valid)
-            {
-                setStatus(L"检查失败，请稍后重试", TextRole::Danger);
-                return;
-            }
-            if (CompareVersions(latest, current) <= 0)
-            {
-                setStatus(L"已是最新版本", TextRole::Accent);
-                return;
-            }
-            // mirrorDownloadUrl
-            std::string mirror;
-            static const std::regex tag(R"(^https://github\.com/metasequoiaime/([\w.-]+)/releases/tag/([\w.+-]+)$)");
-            static const std::regex installer(R"(^MetasequoiaIME_Setup_v[\w.-]+\.exe$)", std::regex::icase);
-            std::smatch match;
-            const std::string name = manifest.value("installerName", std::string());
-            if (std::regex_match(releaseUrl, match, tag) && std::regex_match(name, installer))
-                mirror = std::string(kDownloadMirrorPrefix) + "https://github.com/metasequoiaime/" + match[1].str() +
-                         "/releases/download/" + match[2].str() + "/" + name;
-            setStatus(L"发现新版本 v" + Widen(latest.display), TextRole::Accent);
-            ShowUpdateDialog(*ctx, latest, releaseUrl, mirror, manifest);
+            state->status->SetText(result->status);
+            if (result->latest)
+                ShowUpdateDialog(*ctx, *result->latest);
         });
 }
 
@@ -415,7 +237,8 @@ VisualPtr BuildAboutPage(PageContext &context)
     // .about-hero: mark, then eyebrow / title / text, gap 20px. The eyebrow is uppercased.
     auto heroRow = std::make_shared<Row>(20.0f);
     heroRow->Add(std::make_shared<AboutMark>());
-    heroRow->Add(MakeDocumentHero(L"METASEQUOIA IME", L"水杉 IME", L"为现代 Windows 桌面体验打造的开放中文输入法。"),
+    heroRow->Add(MakeDocumentHero(L"PHONETIC IPA", L"国际音标输入法",
+                                  L"输入汉字与国际音标，按自己的习惯编辑键位。基于水杉输入法开发。"),
                  1.0f);
     page.AddRaw(std::make_shared<PaddedSection>(heroRow, Thickness{28.0f, 26.0f, 28.0f, 26.0f}));
 
@@ -452,6 +275,9 @@ VisualPtr BuildAboutPage(PageContext &context)
         });
         links->Add(std::make_shared<AboutRow>(left, state->check, false));
     }
+    auto automatic = std::make_shared<ToggleSwitch>(PhoneticIpa::Updates::Automatic());
+    automatic->SetOnChanged([](bool enabled) { PhoneticIpa::Updates::SetAutomatic(enabled); });
+    links->Add(MakeRow(L"自动检查新版本", L"每天检查官网与 GitHub，发现新版时提醒下载。", automatic));
     struct Link
     {
         const wchar_t *title;
@@ -460,7 +286,7 @@ VisualPtr BuildAboutPage(PageContext &context)
     };
     const Link documents[] = {
         // The space before the detail <span> belongs to the title text.
-        {L"官网 ", L"msime.app", kWebsiteUrl},
+        {L"官网 ", L"phonetictoolbox.com", kWebsiteUrl},
         {L"开源许可协议", nullptr, kLicenseUrl},
         {L"隐私政策", nullptr, kPrivacyUrl},
     };

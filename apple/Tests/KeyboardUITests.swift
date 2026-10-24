@@ -4,7 +4,9 @@ final class KeyboardUITests: XCTestCase {
     func testRealKeyboardCommit() throws {
         continueAfterFailure = false
         let app = XCUIApplication()
+        app.launchEnvironment["IPA_UPDATE_DISABLE_NETWORK"] = "1"
         app.launch()
+        XCTAssertTrue(app.buttons["check-for-update"].waitForExistence(timeout: 15))
         let settings = XCUIApplication(bundleIdentifier: "com.apple.Preferences")
         settings.launch()
         print("SETTINGS_INITIAL\n" + settings.debugDescription)

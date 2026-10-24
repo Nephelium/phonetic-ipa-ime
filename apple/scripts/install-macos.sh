@@ -72,6 +72,9 @@ else
     mv "$staged" "$target_app"
 fi
 codesign --verify --deep --strict "$target_app"
+# Changing only Contents does not update the watched bundle/directory timestamps.
+# Wake the input-source catalogue after replacing the app, including a version change.
+touch "$target_app" "$HOME/Library/Input Methods"
 "$lsregister" -f "$target_app"
 
 # Run registration in the GUI login session without activating a window.

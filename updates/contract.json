@@ -1,0 +1,10 @@
+{
+  "schema": 1,
+  "product": "phonetic-ipa-ime",
+  "version": "0.1.1",
+  "build": 2,
+  "server": "https://www.phonetictoolbox.com/releases/phonetic-ipa-ime/update.json",
+  "github": "https://raw.githubusercontent.com/Nephelium/phonetic-ipa-ime/ipa-prototype/updates/latest.json",
+  "intervalHours": 24,
+  "platforms": ["windows", "macos", "ios", "android"]
+}

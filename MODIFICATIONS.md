@@ -116,3 +116,11 @@ Original upstream history, GPLv3 license, font/data licenses and `THIRD_PARTY_NO
 - The earlier -50 limitation above is superseded by the dedicated macOS repair record. Other desktop hosts and physical mobile devices retain their previous verification boundaries.
 
 References and investigation sources are listed in `docs/testing/2026-10-23-Mac输入源修复与真实输入验证.md`; no third-party implementation was copied for this repair.
+
+## 2026-10-23 · 0.1.1 双来源更新与发布
+
+新增 `engine/ipa/update_manifest.h`、Windows `utils/ipa_update.*`、Apple `Shared/Updates.swift`、Android `Updates.java`，在设置与后台启动入口接入官网/GitHub 检测。Android 仅为公开版本信息增加 INTERNET 权限。共享更新向量覆盖版本排序、来源独立性与下载地址限制。
+
+更新 Windows 关于页产品名和下载入口，保留水杉与依赖来源。Mac 安装脚本刷新应用和输入法目录时间戳，修复更新版本后系统输入源目录未刷新的情况。Mac 实际宿主回归通过并恢复原焦点。新增四平台使用说明、官网可展开下载组件、测试和发布记录。用户码表、学习库、凭据、私有系统偏好与大构建产物不进入源码。
+
+Windows 包内附带 Microsoft Visual C++ 14.44.35112 的未修改可再分发运行库，按微软 Visual Studio 许可分发，独立于本项目 GPL。原有字体、CC-CEDICT 与 IPA Plus 资料许可保持。
