@@ -1,4 +1,4 @@
-$ErrorActionPreference = 'Stop'
+﻿$ErrorActionPreference = 'Stop'
 $taskRoot = Split-Path -Parent $PSScriptRoot
 $runtime = Join-Path $taskRoot 'output\runtime'
 $env:METASEQUOIA_IME_DATA_DIR = Join-Path $runtime 'data'

@@ -124,3 +124,9 @@ References and investigation sources are listed in `docs/testing/2026-10-23-Mac�
 更新 Windows 关于页产品名和下载入口，保留水杉与依赖来源。Mac 安装脚本刷新应用和输入法目录时间戳，修复更新版本后系统输入源目录未刷新的情况。Mac 实际宿主回归通过并恢复原焦点。新增四平台使用说明、官网可展开下载组件、测试和发布记录。用户码表、学习库、凭据、私有系统偏好与大构建产物不进入源码。
 
 Windows 包内附带 Microsoft Visual C++ 14.44.35112 的未修改可再分发运行库，按微软 Visual Studio 许可分发，独立于本项目 GPL。原有字体、CC-CEDICT 与 IPA Plus 资料许可保持。
+
+## 2026-10-24 · Windows 安装入口 r2 与下载浮窗
+
+根据实际安装反馈，补齐 PowerShell 5.1 的 UTF-8 BOM 兼容性，增加包预检、安装日志和提升权限退出码传递，批处理保留结果。r2 只改安装脚本和说明，不改变输入法二进制与词库。
+
+官网下载组件新增独立 JS，实现默认隐藏、悬停预览、点击固定、Esc / 空白关闭与视口内浮动定位，无 JS 保留点击操作。更新向量与应用不变。Android 增补线上检查 instrumentation，明确直连 GitHub 超时与 QA 进程代理下双来源通过的区别。

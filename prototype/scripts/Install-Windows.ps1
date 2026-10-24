@@ -1,15 +1,49 @@
+﻿param([switch]$CheckOnly, [string]$LogFile = '')
 $ErrorActionPreference = 'Stop'
-$identity = [Security.Principal.WindowsIdentity]::GetCurrent()
-$administrator = [Security.Principal.WindowsPrincipal]::new($identity).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
-if (!$administrator) {
-    Start-Process powershell.exe -Verb RunAs -ArgumentList @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', "`"$PSCommandPath`"") -Wait
-    exit
+$taskRoot = Split-Path -Parent $PSScriptRoot
+$taskLogs = Join-Path $taskRoot 'install-logs'
+$taskResult = 0
+function Write-InstallLog([string]$Message) {
+    Write-Host $Message
+    if ($script:taskLogFile) {
+        try { Add-Content -LiteralPath $script:taskLogFile -Value ((Get-Date -Format 'yyyy-MM-dd HH:mm:ss') + ' ' + $Message) -Encoding UTF8 } catch { Write-Host ('Log write failed: ' + $_.Exception.Message) }
+    }
 }
 try {
-    & (Join-Path $PSScriptRoot 'Register-Prototype.ps1')
-    Write-Host '安装完成。请按 Win + 空格选择国际音标输入法原型。'
+    New-Item -ItemType Directory -Path $taskLogs -Force | Out-Null
+    if ($LogFile) {
+        $taskResolvedLog = [IO.Path]::GetFullPath($LogFile)
+        if (!$taskResolvedLog.StartsWith([IO.Path]::GetFullPath($taskLogs) + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) { throw 'Unexpected installer log path.' }
+        $script:taskLogFile = $taskResolvedLog
+    } else {
+        $script:taskLogFile = Join-Path $taskLogs ('install-' + (Get-Date -Format 'yyyyMMdd-HHmmss') + '-' + $PID + '.log')
+    }
+    Write-InstallLog ('Windows installer r2 / PowerShell ' + $PSVersionTable.PSVersion)
+    foreach ($taskRelative in @('scripts\Register-Prototype.ps1', 'output\runtime\PhoneticIpaServer.exe', 'output\runtime\PhoneticIpaSettings.exe', 'output\runtime\tsf-x64\PhoneticIpaTsf.dll', 'output\runtime\tsf-x86\PhoneticIpaTsf.dll', 'output\runtime\data\config.toml')) {
+        if (!(Test-Path -LiteralPath (Join-Path $taskRoot $taskRelative) -PathType Leaf)) { throw ('Missing package file: ' + $taskRelative + '. Extract the complete ZIP first.') }
+    }
+    if ($CheckOnly) {
+        Write-InstallLog 'Preflight passed. No system registration was performed.'
+    } else {
+        $taskIdentity = [Security.Principal.WindowsIdentity]::GetCurrent()
+        $taskAdministrator = ([Security.Principal.WindowsPrincipal]::new($taskIdentity)).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+        if (!$taskAdministrator) {
+            Write-InstallLog '请在管理员授权窗口中确认安装。'
+            $taskArguments = '-NoProfile -ExecutionPolicy Bypass -File "' + $PSCommandPath + '" -LogFile "' + $script:taskLogFile + '"'
+            $taskChild = Start-Process -FilePath (Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe') -Verb RunAs -ArgumentList $taskArguments -Wait -PassThru
+            $taskResult = $taskChild.ExitCode
+            if ($taskResult -ne 0) { Write-Host (Get-Content -LiteralPath $script:taskLogFile -Raw -Encoding UTF8); throw ('安装未完成，退出码 ' + $taskResult) }
+            Write-InstallLog '安装完成。请按 Win + 空格选择国际音标输入法原型。'
+        } else {
+            & (Join-Path $PSScriptRoot 'Register-Prototype.ps1') | ForEach-Object { Write-InstallLog ([string]$_) }
+            Write-InstallLog '安装完成。请按 Win + 空格选择国际音标输入法原型。'
+        }
+    }
 } catch {
-    Write-Error $_ -ErrorAction Continue
+    $taskResult = 1
+    Write-InstallLog ('安装失败：' + $_.Exception.Message)
+    Write-InstallLog ([string]$_.InvocationInfo.PositionMessage)
 } finally {
-    Read-Host '按回车关闭安装窗口'
+    if ($script:taskLogFile) { Write-Host ('安装日志：' + $script:taskLogFile) }
 }
+exit $taskResult

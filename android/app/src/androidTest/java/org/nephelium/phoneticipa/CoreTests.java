@@ -9,11 +9,34 @@ import java.util.*;
 /** Runs on Android, including the packaged JNI libraries and actual fixed resources. */
 public final class CoreTests extends Instrumentation {
     private boolean keyboard;
-    @Override public void onCreate(Bundle arguments) { super.onCreate(arguments); keyboard = "keyboard".equals(arguments.getString("suite")); start(); }
+    private boolean updates;
+    private boolean updateProxy;
+    @Override public void onCreate(Bundle arguments) { super.onCreate(arguments); keyboard = "keyboard".equals(arguments.getString("suite")); updates = "updates".equals(arguments.getString("suite")); updateProxy = "true".equals(arguments.getString("updateProxy")); start(); }
     private static void require(boolean value, String message) { if (!value) throw new AssertionError(message); }
     @Override public void onStart() {
         Bundle result = new Bundle();
         try {
+            if (updates) {
+                // Optional process-local proxy for this QA emulator's GitHub connectivity.
+                if (updateProxy) { System.setProperty("https.proxyHost", "10.0.2.2"); System.setProperty("https.proxyPort", "7892"); }
+                java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(1);
+                java.util.concurrent.atomic.AtomicReference<String> message = new java.util.concurrent.atomic.AtomicReference<>();
+                runOnMainSync(() -> Updates.check(getTargetContext(), true, text -> { if (!text.startsWith("正在")) { message.set(text); done.countDown(); } }));
+                require(done.await(50, java.util.concurrent.TimeUnit.SECONDS), "Online check timed out");
+                if (!"已是最新版本".equals(message.get())) {
+                    for (String endpoint : Updates.SOURCES) {
+                        java.net.HttpURLConnection probe = null;
+                        try {
+                            probe = (java.net.HttpURLConnection)new java.net.URL(endpoint).openConnection();
+                            probe.setConnectTimeout(8000); probe.setReadTimeout(8000); probe.setInstanceFollowRedirects(false);
+                            android.util.Log.i("IPAUpdateQA", endpoint + " status=" + probe.getResponseCode());
+                        } catch (Exception error) { android.util.Log.i("IPAUpdateQA", endpoint + " " + error); }
+                        finally { if (probe != null) probe.disconnect(); }
+                    }
+                }
+                require("已是最新版本".equals(message.get()), "Both live sources required: " + message.get());
+                result.putString("stream", "Both live Android update sources current: passed\n"); finish(-1, result); return;
+            }
             Updates.automatic(getTargetContext(), false);
             UpdateChecks.run(getContext());
             if (keyboard) { new KeyboardChecks(this).run(); result.putString("stream", "Android real keyboard UI checks passed\n"); finish(-1, result); return; }

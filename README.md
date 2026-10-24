@@ -6,7 +6,7 @@
 
 Windows、macOS、iOS 和 Android 已加入官网与 GitHub 双来源更新检测。默认每天自动检查，也可在设置页手动检查或关闭。iOS 只在配套 App 前台检查，键盘扩展不联网。下载后的升级由用户确认并安装。
 
-Windows ZIP 含注册脚本，macOS ZIP 需要命令行工具，iOS 为待签名 IPA，Android 为测试签名 APK。Mac 专用宿主、iOS/Android 模拟器真实键盘和 Windows 后台控件检查分别通过，实体手机与更多桌面宿主仍待验证。见[本次验证记录](docs/testing/2026-10-23-四平台更新与官网发布.md)。
+Windows 请使用 r2 修复包，已下载初版可用约 4 KB 安装补丁覆盖。Windows ZIP 含注册脚本，macOS ZIP 需要命令行工具，iOS 为待签名 IPA，Android 为测试签名 APK。Mac 专用宿主、iOS/Android 模拟器真实键盘和 Windows 后台控件检查分别通过，实体手机与更多桌面宿主仍待验证。见[本次验证记录](docs/testing/2026-10-23-四平台更新与官网发布.md)。
 
 <img src="assets/icons/ipa-bird-concept-v1.png" alt="抱着音标键帽的小鸟" width="128">
 

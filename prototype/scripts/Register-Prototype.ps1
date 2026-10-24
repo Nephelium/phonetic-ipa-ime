@@ -1,4 +1,4 @@
-# Run only after explicit approval to register this prototype in Windows.
+﻿# Run only after explicit approval to register this prototype in Windows.
 # Requires an elevated PowerShell. No existing input method is removed or made the default.
 #Requires -RunAsAdministrator
 $ErrorActionPreference = 'Stop'
