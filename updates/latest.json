@@ -1,0 +1,32 @@
+{
+  "schema": 1,
+  "product": "phonetic-ipa-ime",
+  "version": "0.1.1",
+  "notes": "官网与 GitHub 双来源更新提示，Mac 输入源升级修复，四平台键位设置、汉字与音标分别输入。",
+  "platforms": {
+    "windows": {
+      "url": "https://www.phonetictoolbox.com/releases/phonetic-ipa-ime/0.1.1/PhoneticIPA-Windows-0.1.1.zip",
+      "githubUrl": "https://github.com/Nephelium/phonetic-ipa-ime/releases/download/v0.1.1/PhoneticIPA-Windows-0.1.1.zip",
+      "sha256": "483b42213735430ca2c9524a9b00f215144ab1a02c9715472e6df83c39636fe1",
+      "bytes": 87504384
+    },
+    "macos": {
+      "url": "https://www.phonetictoolbox.com/releases/phonetic-ipa-ime/0.1.1/PhoneticIPA-macOS-0.1.1.zip",
+      "githubUrl": "https://github.com/Nephelium/phonetic-ipa-ime/releases/download/v0.1.1/PhoneticIPA-macOS-0.1.1.zip",
+      "sha256": "1fd78fb469f7071463db87bbbf3e57742be68ab53722fd75a59d0be4299de648",
+      "bytes": 53800227
+    },
+    "ios": {
+      "url": "https://www.phonetictoolbox.com/releases/phonetic-ipa-ime/0.1.1/PhoneticIPA-iOS-0.1.1-unsigned.ipa",
+      "githubUrl": "https://github.com/Nephelium/phonetic-ipa-ime/releases/download/v0.1.1/PhoneticIPA-iOS-0.1.1-unsigned.ipa",
+      "sha256": "5da9bab1375436ecc54501af0b2a942fc7a9ee646a830421ea3883e435e767b0",
+      "bytes": 103618339
+    },
+    "android": {
+      "url": "https://www.phonetictoolbox.com/releases/phonetic-ipa-ime/0.1.1/PhoneticIPA-Android-0.1.1.apk",
+      "githubUrl": "https://github.com/Nephelium/phonetic-ipa-ime/releases/download/v0.1.1/PhoneticIPA-Android-0.1.1.apk",
+      "sha256": "2eedc1c12aa2a4f2eee990def3fe47b554f23089456f541a0bf6a66fb91ffd09",
+      "bytes": 120785329
+    }
+  }
+}
