@@ -16,6 +16,9 @@
 #include "engine/local_modes/quick_phrase_query.h"
 #include "log/candidate_diag_log.h"
 #include "statistics/stats_candidate_capture.h"
+#include "ipa/ipa_runtime.h"
+#include "window/window_hook.h"
+#include "engine/common/helpcode_utils.h"
 
 using namespace event_listener_detail;
 
@@ -104,6 +107,81 @@ void LearnEnglishSlot(const WordItem &selected, size_t absolute_index, uint64_t 
 
 namespace FanyNamedPipe
 {
+bool ProcessIpaSelection(int index_in_page, uint64_t client_id, uint64_t activation_epoch)
+{
+    Global::MsgTypeToTsf = Global::DataFromServerMsgType::OutofRange;
+    auto &ui = Global::candidate_ui;
+    if (g_ipa_reading_page_active)
+    {
+        const auto *pending = g_ipa_readings.Pending();
+        if (!pending || index_in_page < 0 || index_in_page >= ui.current_page_count())
+            return true;
+        const bool back = static_cast<size_t>(ui.current_page_start() + index_in_page) == pending->options.size();
+        if (!SelectIpaReading(index_in_page) || back || g_ipa_reading_page_active)
+            return true;
+        index_in_page = ui.selected_index_in_page;
+    }
+    WordItem item;
+    if (g_english_input_mode || !ResolveCandidateItem(index_in_page + 1, item))
+        return false;
+    const auto word = CandidateTextForOutput(item.word);
+    if (HelpcodeUtils::count_han_chars(word) == 0)
+        return false;
+    const auto transcription = g_ipa_readings.Resolve(PhoneticIpa::Hanzi(), word, item.canonical_pinyin);
+    if (transcription.ambiguous)
+    {
+        EnterIpaReadingPage(index_in_page);
+        return true;
+    }
+    if (transcription.text.empty())
+        return true;
+    const std::string raw = g_inputSession->get_pinyin_sequence_with_cases();
+    const auto transition =
+        g_inputSession->advance_composition_after_selection(item.pinyin, item.word, item.canonical_pinyin, item.scheme);
+    const std::string rest = transition.continues_composition ? g_inputSession->get_pinyin_sequence_with_cases() : "";
+    const size_t consumed =
+        transition.continues_composition ? transition.consumed_raw_input_with_cases.size() : raw.size();
+    const bool valid_transition = consumed > 0 && consumed <= raw.size() && raw.substr(consumed) == rest;
+    if (!valid_transition)
+    {
+        ClearState();
+        for (unsigned char c : raw)
+            g_inputSession->handle_key(c >= 'a' && c <= 'z' ? c - 'a' + 'A' : c, 0, c);
+        GlobalIme::composition.raw_input_with_cases = raw;
+        GlobalIme::composition.segmented_pinyin = g_inputSession->get_pinyin_segmentation_with_cases();
+        GlobalIme::composition.caret_position = raw.size();
+        PrepareCandidateList(client_id, activation_epoch);
+        RequestShowCandidateWindow();
+        return true;
+    }
+    const auto output = string_to_wstring(transcription.text);
+    const bool sent = rest.empty() ? SendToTsfWorkerThreadClientViaNamedpipe(
+                                         client_id, activation_epoch,
+                                         Global::DataFromServerMsgTypeToTsfWorkerThread::CommitCandidate, output)
+                                   : SendToTsfWorkerThreadClientViaNamedpipe(
+                                         client_id, activation_epoch,
+                                         Global::DataFromServerMsgTypeToTsfWorkerThread::CommitCandidateAndContinue,
+                                         std::to_wstring(consumed) + L"\t" + output);
+    // Rebuild just the unconsumed spelling. IPA selections do not teach IPA
+    // strings to the Hanzi dictionary or create a mixed Hanzi/IPA word.
+    ClearState();
+    const std::string &remaining = sent ? rest : raw;
+    for (unsigned char c : remaining)
+        g_inputSession->handle_key(c >= 'a' && c <= 'z' ? c - 'a' + 'A' : c, 0, c);
+    if (!remaining.empty())
+    {
+        GlobalIme::composition.raw_input_with_cases = g_inputSession->get_pinyin_sequence_with_cases();
+        GlobalIme::composition.segmented_pinyin = g_inputSession->get_pinyin_segmentation_with_cases();
+        GlobalIme::composition.caret_position = remaining.size();
+        PrepareCandidateList(client_id, activation_epoch);
+        RequestShowCandidateWindow();
+    }
+    if (sent)
+        NoteTopCommitPushed(client_id, activation_epoch);
+    Global::MsgTypeToTsf = Global::DataFromServerMsgType::OutofRange;
+    return true;
+}
+
 bool ResolveCandidateItem(int one_based_index, WordItem &item)
 {
     if (!g_inputSession || one_based_index <= 0)
@@ -185,7 +263,7 @@ void ProcessSelectionKey(UINT keycode, uint64_t client_id, uint64_t activation_e
         const int index = forced_index_in_page >= 0 ? forced_index_in_page
                           : keycode == VK_SPACE     ? Global::candidate_ui.selected_index_in_page
                                                     : static_cast<int>(keycode - '1');
-        SelectIpaReading(index);
+        ProcessIpaSelection(index, client_id, activation_epoch);
         // SELECT_BY_NUMBER accepts only Normal/OutofRange. Keep the composition
         // alive while returning to Hanzi or advancing to another ambiguous character.
         Global::MsgTypeToTsf = Global::DataFromServerMsgType::OutofRange;
@@ -234,6 +312,9 @@ void ProcessSelectionKey(UINT keycode, uint64_t client_id, uint64_t activation_e
     const int index = is_direct_selection
                           ? forced_index_in_page
                           : (is_space ? Global::candidate_ui.selected_index_in_page : static_cast<int>(keycode - '1'));
+    if (!is_direct_selection && !g_english_input_mode && GetServerCapsLockState() == 0 &&
+        ProcessIpaSelection(index, client_id, activation_epoch))
+        return;
     WordItem curWordItem;
     const int page_size =
         Global::candidate_ui.page_size > 0 ? Global::candidate_ui.page_size : GetConfiguredCandidatePageSize();

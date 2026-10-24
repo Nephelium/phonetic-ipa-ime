@@ -470,6 +470,35 @@ int main(int argc, char **argv)
         Require(MappedIpaFamily(L"\u27c5", {}) == L"PTB IPA Plus", "Extended glyph lost private fallback");
         Require(MappedIpaFamily(L"汉", {}) != L"Doulos SIL", "Chinese text cannot fall back to a CJK font");
     });
+    run("Long dual-line candidate pages stay inside a scrollable viewport", [&] {
+        CandidateSkinScene scene;
+        CandidateSkinScene::Settings settings;
+        settings.skinId = "fluent";
+        settings.fontSize = 24;
+        settings.fontFamily = L"Segoe UI";
+        settings.pageSize = 9;
+        scene.Apply(settings);
+        std::vector<msimeui::CandidateList::Item> items;
+        for (int i = 1; i <= 9; ++i)
+            items.push_back({std::to_wstring(i),
+                             L"汉字",
+                             L"",
+                             L"xan\u02e5\u02e9 ts\u027f\u02e5\u02e9",
+                             {},
+                             true,
+                             L"",
+                             L"Doulos SIL"});
+        scene.List()->SetItems(items);
+        const auto size = scene.Root()->MeasureInLayout({400, 300});
+        scene.Root()->ArrangeInLayout({0, 0, size.width, size.height});
+        Require(size.height <= 300, "Candidate window exceeded its height limit");
+        auto scroll = scene.BodyScroller();
+        Require(scroll && scroll->GetMaxScrollOffset() > 0, "Last IPA candidates have no scrolling route");
+        scroll->ScrollIntoView(scene.List()->GetItemBounds(8));
+        const auto last = scene.List()->GetItemBounds(8), viewport = scroll->GetBounds();
+        Require(last.y >= viewport.y - 1 && last.y + last.height <= viewport.y + viewport.height + 1,
+                "Last candidate stays outside the visible viewport");
+    });
     POINT pointerAfter{};
     GetCursorPos(&pointerAfter);
     std::cout << "Desktop foreground unchanged: " << (foreground == GetForegroundWindow())

@@ -28,5 +28,5 @@ for suite in ['core', 'keyboard']:
     result.check_returncode()
     assert 'INSTRUMENTATION_CODE: -1' in text and 'passed' in text.lower() and 'FAILURES' not in text and 'AssertionError' not in text, 'Instrumentation did not pass'
 subprocess.run(base+['pull', '/sdcard/Android/data/org.nephelium.phoneticipa/files/qa', str(run/'previews')], check=True, timeout=60)
-(run/'result.json').write_text(json.dumps({'passed':True, 'serial':record['serial'], 'text':'厌恶wu˥˩a˨˩˦6˥/', 'suites':['JNI/core','real InputMethodService UI']}, ensure_ascii=False, indent=2), encoding='utf-8')
+(run/'result.json').write_text(json.dumps({'passed':True, 'serial':record['serial'], 'last_asserted_host_text':'厌恶wu˥˩a˨˩˦6˥/ɠΘ∅pp̪jan˥˩ wu˥˩厌恶jɛ̠n̚˥˩ uᵝ˥˩', 'suites':['JNI/core','real InputMethodService UI']}, ensure_ascii=False, indent=2), encoding='utf-8')
 print(run)

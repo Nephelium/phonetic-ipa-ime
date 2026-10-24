@@ -34,7 +34,8 @@ inline void ValidateProfile(const phonetic_ipa::CinTable &table)
     }
     for (const auto &[key, value] : table.AllHotkeys())
     {
-        if (!PhoneticIpaKey::EditableChord(key.first, key.second))
+        if (!PhoneticIpaKey::EditableChord(key.first, key.second) &&
+            !PhoneticIpaKey::IsToneShortcut(key.second, key.first))
             throw std::runtime_error("此组合键属于系统或输入法控制键，请选择其他组合");
         ValidateOutput(value);
     }

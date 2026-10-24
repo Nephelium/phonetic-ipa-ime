@@ -1,6 +1,6 @@
 # 国际音标输入法的网络与隐私
 
-0.1.1 原型的汉字、音标、CIN 和多音字处理在本机进行。公开 Windows 包使用出厂配置，云候选关闭，不包含个人学习库。Apple 和 Android 使用固定的离线索引。
+0.1.3 版本的汉字、音标、CIN 和多音字处理在本机进行。公开 Windows 包使用出厂配置，云候选关闭，不包含个人学习库。Apple 和 Android 使用固定的离线索引。
 
 默认开启的更新检查只读取以下公开 JSON：
 - https://www.phonetictoolbox.com/releases/phonetic-ipa-ime/update.json

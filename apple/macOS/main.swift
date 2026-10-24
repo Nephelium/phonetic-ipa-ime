@@ -59,6 +59,8 @@ import SwiftUI
 @MainActor final class PhoneticInputController: IMKInputController {
     private let model = InputModel()
     private var panel: NSPanel?
+    private var shiftArmed = false
+    private var lastCapsLock: Bool?
     private weak var inputClient: (any IMKTextInput)?
     override init!(server: IMKServer!, delegate: Any!, client inputClient: Any!) {
         super.init(server: server, delegate: delegate, client: inputClient)
@@ -73,13 +75,24 @@ import SwiftUI
         inputClient = sender as? any IMKTextInput
         if model.pending != nil { model.pending = nil }
         if model.candidates.isEmpty { model.onCommit(model.raw); model.clear() }
-        else { model.choose(model.selectedIndex, ipa: false) }
+        else { model.chooseDefault(model.selectedIndex) }
     }
-    override func recognizedEvents(_ sender: Any!) -> Int { Int(NSEvent.EventTypeMask.keyDown.rawValue) }
+    override func recognizedEvents(_ sender: Any!) -> Int { Int(NSEvent.EventTypeMask.keyDown.rawValue | NSEvent.EventTypeMask.flagsChanged.rawValue) }
     override func handle(_ event: NSEvent!, client sender: Any!) -> Bool {
         guard let event else { return false }
         inputClient = sender as? any IMKTextInput
         let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+        let caps = flags.contains(.capsLock)
+        if lastCapsLock != caps { model.outputIpa = !caps; lastCapsLock = caps }
+        if event.type == .flagsChanged {
+            if event.keyCode == 56 || event.keyCode == 60 {
+                if flags.contains(.shift) { shiftArmed = flags.intersection([.command, .option, .control]).isEmpty }
+                else if shiftArmed { shiftArmed = false; model.toggleMode() }
+            } else { shiftArmed = false }
+            model.onChange()
+            return true
+        }
+        shiftArmed = false
         if flags.contains(.command) || flags.contains(.option) { return false }
         if event.keyCode == 49 && flags.contains(.shift) { model.toggleMode(); return true }
         let digits: [UInt16: String] = [18:"1",19:"2",20:"3",21:"4",23:"5"]
@@ -101,22 +114,24 @@ import SwiftUI
         case 36, 49:
             if model.raw.isEmpty { return false }
             if model.candidates.isEmpty { model.onCommit(model.raw); model.clear() }
-            else { model.choose(model.selectedIndex, ipa: false) }
+            else { model.chooseDefault(model.selectedIndex) }
             return true
         default: break
         }
-        guard let text = event.characters, text.count == 1, let scalar = text.unicodeScalars.first,
+        guard let characters = event.characters else { return false }
+        let text = flags.contains(.capsLock) ? (flags.contains(.shift) ? characters.uppercased() : characters.lowercased()) : characters
+        guard text.count == 1, let scalar = text.unicodeScalars.first,
               scalar.value >= 0x21, scalar.value <= 0x7e else { return false }
         if model.raw.isEmpty, let digit = Int(text), (1...9).contains(digit) { return false }
         if !model.raw.isEmpty && !model.raw.hasPrefix("tone:") && !model.raw.hasPrefix("code:"), let digit = Int(text), (1...9).contains(digit) {
-            model.choose(digit - 1, ipa: false); return true
+            model.chooseDefault(digit - 1); return true
         }
         if model.raw.isEmpty && model.pinyin && !text.allSatisfy({ $0.isLetter }) { return false }
         model.append(text); return true
     }
     override func menu() -> NSMenu! {
         let menu = NSMenu()
-        let mode = NSMenuItem(title: "切换汉字 / IPA（Shift＋空格）", action: #selector(toggleMode), keyEquivalent: "")
+        let mode = NSMenuItem(title: "切换拼音 / CIN（Shift／Shift＋空格）", action: #selector(toggleMode), keyEquivalent: "")
         mode.target = self; menu.addItem(mode)
         let settings = NSMenuItem(title: "键位与音标设置…", action: #selector(ApplicationDelegate.openSettings), keyEquivalent: "")
         settings.target = NSApp.delegate; menu.addItem(settings)

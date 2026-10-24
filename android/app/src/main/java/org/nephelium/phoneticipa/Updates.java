@@ -14,7 +14,7 @@ import java.util.function.Consumer;
 
 /** Fetches public version metadata only. It never receives the input session or text. */
 final class Updates {
-    static final String VERSION = "0.1.1";
+    static final String VERSION = BuildConfig.VERSION_NAME;
     static final String[] SOURCES = {
         "https://www.phonetictoolbox.com/releases/phonetic-ipa-ime/update.json",
         "https://raw.githubusercontent.com/Nephelium/phonetic-ipa-ime/ipa-prototype/updates/latest.json"

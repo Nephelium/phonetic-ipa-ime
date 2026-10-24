@@ -5,7 +5,7 @@ import android.view.MotionEvent;
 import android.widget.Button;
 
 /** A digit button: ordinary accessibility click selects; an upward touch gesture adds tone. */
-final class ToneKey extends Button {
+final class ToneKey extends IpaKey {
     private final Runnable swipe;
     private float startX, startY;
     private boolean moved;

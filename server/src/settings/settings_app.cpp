@@ -1342,7 +1342,8 @@ void HandleClientMessage(HWND hwnd, const std::string &raw)
                 return [saved, completion = std::move(completion)] {
                     completion();
                     if (!saved)
-                        MessageBoxW(g_settings_hwnd, L"设置保存失败，请重试。", L"水杉输入法", MB_OK | MB_ICONWARNING);
+                        MessageBoxW(g_settings_hwnd, L"设置保存失败，请重试。", L"国际音标输入法",
+                                    MB_OK | MB_ICONWARNING);
                 };
             });
         }
@@ -1457,7 +1458,7 @@ void HandleClientMessage(HWND hwnd, const std::string &raw)
         {
             if (!NotifyImeServerRestart())
             {
-                MessageBoxW(g_settings_hwnd, L"未能重启输入法进程，请稍后重试。", L"水杉输入法",
+                MessageBoxW(g_settings_hwnd, L"未能重启输入法进程，请稍后重试。", L"国际音标输入法",
                             MB_OK | MB_ICONWARNING);
             }
         }
@@ -1911,7 +1912,7 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR command_line, int show_
     g_settings_hwnd = hwnd;
     g_worker = std::make_unique<SerialTaskQueue>(
         [hwnd] { PostMessageW(hwnd, kWorkerCompleted, 0, 0); },
-        [] { MessageBoxW(g_settings_hwnd, L"设置操作失败，请重试。", L"水杉输入法", MB_OK | MB_ICONWARNING); },
+        [] { MessageBoxW(g_settings_hwnd, L"设置操作失败，请重试。", L"国际音标输入法", MB_OK | MB_ICONWARNING); },
         [] {
             if (g_worker_com_initialized)
                 CoUninitialize();

@@ -18,6 +18,7 @@ public final class SettingsActivity extends Activity {
     private Engine engine;
     private LinearLayout root, body, editor;
     private EditText code, trial;
+    private LinearLayout trialControls;
     private Spinner pages;
     private final List<String> outputs = new ArrayList<>();
     private int selected;
@@ -29,7 +30,7 @@ public final class SettingsActivity extends Activity {
         super.onCreate(saved);
         root = UI.column(this); root.setBackgroundColor(0xfff5f8fa);
         root.setOnApplyWindowInsetsListener((v, insets) -> {
-            if (android.os.Build.VERSION.SDK_INT >= 30) { android.graphics.Insets system = insets.getInsets(WindowInsets.Type.systemBars()); v.setPadding(system.left, system.top, system.right, system.bottom); }
+            if (android.os.Build.VERSION.SDK_INT >= 30) { if (trialControls != null && getResources().getConfiguration().orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE) trialControls.setVisibility(insets.isVisible(WindowInsets.Type.ime()) ? View.GONE : View.VISIBLE); android.graphics.Insets system = insets.getInsets(WindowInsets.Type.systemBars()); v.setPadding(system.left, system.top, system.right, system.bottom); }
             else v.setPadding(insets.getSystemWindowInsetLeft(), insets.getSystemWindowInsetTop(), insets.getSystemWindowInsetRight(), insets.getSystemWindowInsetBottom());
             return insets;
         });
@@ -44,7 +45,7 @@ public final class SettingsActivity extends Activity {
         }));
     }
     private void settings() {
-        body.removeAllViews(); ScrollView scroll = new ScrollView(this); LinearLayout content = UI.column(this); int pad = UI.dp(this, 16); content.setPadding(pad, pad, pad, pad); scroll.addView(content); UI.full(body, scroll, -1);
+        body.removeAllViews(); ScrollView scroll = new ScrollView(this); scroll.setContentDescription("settings-page"); LinearLayout content = UI.column(this); int pad = UI.dp(this, 16); content.setPadding(pad, pad, pad, pad); scroll.addView(content); UI.full(body, scroll, -1);
         TextView title = UI.text(this, "让每个音，都有自己的键位。", 23); title.setPadding(0, 0, 0, pad); UI.full(content, title, -2);
         UI.full(content, UI.text(this, "点击按键编辑，长按查看组合输入。数字 1–9 用于选词，上划 1–5 输入调值。", 13), -2);
         LinearLayout map = UI.column(this);
@@ -54,7 +55,6 @@ public final class SettingsActivity extends Activity {
             UI.full(map, keys, -2);
         }
         UI.full(content, map, -2);
-        updateCard(content);
         LinearLayout pageRow = UI.row(this); UI.weighted(pageRow, UI.text(this, "每页候选", 14), 1, 40);
         pages = new Spinner(this); pages.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, new String[]{"3 个", "4 个", "5 个", "6 个", "7 个", "8 个", "9 个"}));
         try { pages.setSelection(engine.profile().getInt("pageSize") - 3); } catch (Exception e) { report(e); }
@@ -70,6 +70,7 @@ public final class SettingsActivity extends Activity {
         CheckBox append = new CheckBox(this); append.setText("追加到当前候选"); append.setChecked(appendSymbol); append.setOnCheckedChangeListener((button, checked) -> appendSymbol = checked); UI.full(content, append, -2);
         LinearLayout saveRow = UI.row(this); UI.weighted(saveRow, UI.button(this, "保存方案", this::save), 1, 44); UI.weighted(saveRow, UI.button(this, "撤销编辑", () -> choose(code.getText().toString())), 1, 44); UI.full(content, saveRow, -2);
         LinearLayout files = UI.row(this); UI.weighted(files, UI.button(this, "导入", this::importFile), 1, 42); UI.weighted(files, UI.button(this, "导出 JSON", () -> exportFile(true)), 1, 42); UI.weighted(files, UI.button(this, "导出 CIN", () -> exportFile(false)), 1, 42); UI.full(content, files, -2);
+        updateCard(content);
         status = UI.text(this, engine.profileError, 13); status.setPadding(0, pad, 0, 0); UI.full(content, status, -2);
         UI.full(content, UI.button(this, "来源与许可", this::licenses), 40); choose("a");
     }
@@ -111,13 +112,16 @@ public final class SettingsActivity extends Activity {
         catch (Exception e) { report(e); } renderOutputs();
     }
     private void renderOutputs() {
-        editor.removeAllViews(); HorizontalScrollView scroll = new HorizontalScrollView(this); LinearLayout row = UI.row(this); scroll.addView(row);
+        editor.removeAllViews(); HorizontalScrollView scroll = new HorizontalScrollView(this); scroll.setContentDescription("output-list"); LinearLayout row = UI.row(this); scroll.addView(row);
         for (int i = 0; i < outputs.size(); i++) {
             int index = i; LinearLayout card = UI.column(this); card.setPadding(UI.dp(this, 6), UI.dp(this, 3), UI.dp(this, 6), 0); card.setBackground(UI.background(selected == i ? 0xffdcebef : 0xffedf2f4, UI.dp(this, 8)));
-            card.addView(UI.text(this, "" + (i + 1), 11)); EditText output = new EditText(this); output.setSingleLine(); output.setText(outputs.get(i)); output.setTextSize(30); output.setTypeface(UI.ipa(this)); output.setContentDescription("output-" + i); output.setSelectAllOnFocus(true);
+            card.addView(UI.text(this, "候选 " + (i + 1), 11));
+            TextView preview = UI.text(this, UI.displaySymbol(outputs.get(i)), 32); preview.setTypeface(UI.ipa(this)); preview.setGravity(Gravity.CENTER); preview.setMinHeight(UI.dp(this, UI.fontHeight(this, 32, 64))); preview.setPadding(UI.dp(this, 6), UI.dp(this, 4), UI.dp(this, 6), UI.dp(this, 4)); preview.setContentDescription("output-preview-" + i); UI.full(card, preview, -2);
+            TextView points = UI.text(this, UI.codePoints(outputs.get(i)), 10); points.setTextColor(UI.MUTED); points.setContentDescription("output-codepoints-" + i); UI.full(card, points, -2);
+            EditText output = new EditText(this); output.setSingleLine(); output.setText(outputs.get(i)); output.setTextSize(24); output.setTypeface(UI.ipa(this)); output.setContentDescription("output-" + i); output.setSelectAllOnFocus(true);
             output.setOnFocusChangeListener((v, focused) -> { if (focused) selected = index; });
-            output.addTextChangedListener(new TextWatcher() { public void beforeTextChanged(CharSequence s, int start, int count, int after) {} public void onTextChanged(CharSequence s, int start, int before, int count) { if (index < outputs.size()) outputs.set(index, s.toString()); } public void afterTextChanged(Editable e) {} });
-            card.addView(output, new LinearLayout.LayoutParams(UI.dp(this, 100), UI.dp(this, 55))); LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(-2, -2); p.setMargins(UI.dp(this, 3), UI.dp(this, 5), UI.dp(this, 3), UI.dp(this, 5)); row.addView(card, p);
+            output.addTextChangedListener(new TextWatcher() { public void beforeTextChanged(CharSequence s, int start, int count, int after) {} public void onTextChanged(CharSequence s, int start, int before, int count) { if (index < outputs.size()) outputs.set(index, s.toString()); preview.setText(UI.displaySymbol(s.toString())); points.setText(UI.codePoints(s.toString())); } public void afterTextChanged(Editable e) {} });
+            card.addView(output, new LinearLayout.LayoutParams(UI.dp(this, 116), -2)); LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(-2, -2); p.setMargins(UI.dp(this, 3), UI.dp(this, 5), UI.dp(this, 3), UI.dp(this, 5)); row.addView(card, p);
         }
         UI.full(editor, scroll, -2); if (outputs.isEmpty()) UI.full(editor, UI.text(this, "此编码尚无候选，点击「＋ 候选」或 IPA Plus 添加。", 13), 44);
     }
@@ -137,9 +141,10 @@ public final class SettingsActivity extends Activity {
     }
     private void typing() {
         body.removeAllViews(); LinearLayout panel = UI.column(this); panel.setPadding(UI.dp(this, 16), UI.dp(this, 16), UI.dp(this, 16), 0); UI.full(body, panel, -1);
-        UI.full(panel, UI.text(this, "试打", 24), 40); UI.full(panel, UI.text(this, "启用后切换到国际音标输入法。点击候选汉字或下方音标分别上屏。", 14), -2);
-        LinearLayout actions = UI.row(this); UI.weighted(actions, UI.button(this, "启用键盘", () -> startActivity(new Intent(Settings.ACTION_INPUT_METHOD_SETTINGS))), 1, 42); UI.weighted(actions, UI.button(this, "切换键盘", () -> ((InputMethodManager)getSystemService(INPUT_METHOD_SERVICE)).showInputMethodPicker()), 1, 42); UI.full(panel, actions, -2);
-        trial = new EditText(this); trial.setGravity(Gravity.TOP); trial.setTextSize(27); trial.setTypeface(UI.ipa(this)); trial.setHint("在这里输入"); trial.setContentDescription("typing-area"); trial.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE | android.text.InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS); UI.full(panel, trial, -1);
+        trialControls = UI.column(this); UI.full(panel, trialControls, -2);
+        UI.full(trialControls, UI.text(this, "点选汉字或下方音标分别输入。", 14), -2);
+        LinearLayout actions = UI.row(this); UI.weighted(actions, UI.button(this, "启用键盘", () -> startActivity(new Intent(Settings.ACTION_INPUT_METHOD_SETTINGS))), 1, 42); UI.weighted(actions, UI.button(this, "切换键盘", () -> ((InputMethodManager)getSystemService(INPUT_METHOD_SERVICE)).showInputMethodPicker()), 1, 42); UI.full(trialControls, actions, -2);
+        trial = new EditText(this); trial.setGravity(Gravity.TOP); trial.setTextSize(getResources().getConfiguration().orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE ? 20 : 27); trial.setTypeface(UI.ipa(this)); trial.setHint("在这里输入"); trial.setContentDescription("typing-area"); trial.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE | android.text.InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS); panel.addView(trial, new LinearLayout.LayoutParams(-1, 0, 1));
     }
     private void importFile() { Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType("*/*"); startActivityForResult(intent, 10); }
     private void exportFile(boolean json) {
@@ -166,51 +171,14 @@ public final class SettingsActivity extends Activity {
     }
     private void plus(String initial) {
         try {
-            JSONObject catalog = new JSONObject(new String(Files.readAllBytes(new File(engine.directory, "plus-catalog.json").toPath()), StandardCharsets.UTF_8));
-            Map<String, JSONObject> entries = new LinkedHashMap<>(); JSONArray list = catalog.getJSONArray("entries"); for (int i = 0; i < list.length(); i++) { JSONObject e = list.getJSONObject(i); entries.put(e.getString("id"), e); }
-            LinearLayout dialogBody = UI.column(this), tabs = UI.row(this); UI.full(dialogBody, tabs, -2); ScrollView scroll = new ScrollView(this); LinearLayout charts = UI.column(this); scroll.addView(charts); UI.full(dialogBody, scroll, -1);
-            AlertDialog dialog = new AlertDialog.Builder(this).setTitle("IPA Plus · 点选音标").setView(dialogBody).setNegativeButton("完成", null).create();
-            for (String system : new String[]{"ipa", "extipa", "voqs"}) UI.weighted(tabs, UI.button(this, system.equals("ipa") ? "IPA" : system.equals("extipa") ? "extIPA" : "VoQS", () -> drawCharts(charts, catalog, entries, system)), 1, 40);
-            drawCharts(charts, catalog, entries, initial); dialog.show(); dialog.getWindow().setLayout(-1, Math.round(getResources().getDisplayMetrics().heightPixels * 0.85f));
+            android.app.Dialog dialog = new android.app.Dialog(this);
+            PlusPanel panel = new PlusPanel(this, engine.directory, false, value -> {
+                if (outputs.isEmpty()) { outputs.add(""); selected = 0; }
+                selected = Math.min(selected, outputs.size() - 1); outputs.set(selected, appendSymbol ? outputs.get(selected) + value : value); renderOutputs();
+            }, dialog::dismiss);
+            dialog.setContentView(panel); dialog.show();
+            dialog.getWindow().setBackgroundDrawable(UI.background(0xffffffff, UI.dp(this, 14)));
+            dialog.getWindow().setLayout(getResources().getDisplayMetrics().widthPixels - UI.dp(this, 16), Math.round(getResources().getDisplayMetrics().heightPixels * 0.88f));
         } catch (Exception e) { report(e); }
-    }
-    private void drawCharts(LinearLayout target, JSONObject catalog, Map<String, JSONObject> entries, String system) {
-        target.removeAllViews(); Set<String> shown = new HashSet<>();
-        try {
-            JSONArray charts = catalog.getJSONObject("charts").getJSONArray(system);
-            for (int i = 0; i < charts.length(); i++) {
-                JSONObject chart = charts.getJSONObject(i); if (!chart.optString("kind").equals("matrix")) continue;
-                TextView title = UI.text(this, chart.getString("title"), 14); title.setPadding(6, 10, 6, 6); UI.full(target, title, -2);
-                TableLayout table = new TableLayout(this); TableRow head = new TableRow(this); head.addView(cellTitle("方式 / 部位", 72)); JSONArray columns = chart.getJSONArray("columns"); for (int c = 0; c < columns.length(); c++) head.addView(cellTitle(columns.getString(c), 68)); table.addView(head);
-                JSONArray rows = chart.getJSONArray("rows");
-                for (int r = 0; r < rows.length(); r++) {
-                    JSONObject row = rows.getJSONObject(r); TableRow tableRow = new TableRow(this); tableRow.addView(cellTitle(row.getString("label"), 72)); JSONArray cells = row.getJSONArray("cells");
-                    for (int c = 0; c < cells.length(); c++) {
-                        GridLayout cell = new GridLayout(this); cell.setColumnCount(2); cell.setPadding(2, 1, 2, 1); cell.setBackground(UI.background(0xfff0f4f6, 0)); JSONArray ids = cells.getJSONObject(c).getJSONArray("ids");
-                        for (int n = 0; n < ids.length(); n++) { String id = ids.getString(n); JSONObject entry = entries.get(id); if (entry != null) { shown.add(id); Button symbol = symbol(entry); cell.addView(symbol, new ViewGroup.LayoutParams(UI.dp(this, 31), UI.dp(this, 36))); } }
-                        tableRow.addView(cell, new TableRow.LayoutParams(UI.dp(this, 68), -1));
-                    }
-                    table.addView(tableRow);
-                }
-                HorizontalScrollView horizontal = new HorizontalScrollView(this); horizontal.addView(table); UI.full(target, horizontal, -2);
-            }
-            Map<String, List<JSONObject>> groups = new LinkedHashMap<>();
-            for (JSONObject entry : entries.values()) if (entry.getString("system").equals(system) && !shown.contains(entry.getString("id"))) groups.computeIfAbsent(entry.getString("section"), ignored -> new ArrayList<>()).add(entry);
-            Map<String, String> titles = new HashMap<>();
-            String[] names = {"vowels", "元音", "diacritics", "附加符号", "suprasegmentals", "超音段", "other", "其他符号", "tones", "声调", "nonpulmonic", "非肺部气流辅音", "combinations", "组合符号"};
-            for (int i = 0; i < names.length; i += 2) titles.put(names[i], names[i + 1]);
-            for (Map.Entry<String, List<JSONObject>> group : groups.entrySet()) {
-                UI.full(target, cellTitle(titles.getOrDefault(group.getKey(), group.getKey()), 200), -2); GridLayout grid = new GridLayout(this); grid.setColumnCount(7);
-                for (JSONObject entry : group.getValue()) grid.addView(symbol(entry), new ViewGroup.LayoutParams(UI.dp(this, 45), UI.dp(this, 40))); UI.full(target, grid, -2);
-            }
-        } catch (Exception e) { target.addView(UI.text(this, e.getMessage(), 13)); }
-    }
-    private TextView cellTitle(String title, int width) { TextView text = UI.text(this, title, 11); text.setGravity(Gravity.CENTER); text.setPadding(2, 6, 2, 6); text.setWidth(UI.dp(this, width)); return text; }
-    private Button symbol(JSONObject entry) throws JSONException {
-        Button button = UI.button(this, entry.getString("display"), () -> {
-            if (outputs.isEmpty()) { outputs.add(""); selected = 0; }
-            String value = entry.optString("insertText"); outputs.set(selected, appendSymbol ? outputs.get(selected) + value : value); renderOutputs();
-        });
-        button.setTypeface(UI.ipa(this)); button.setTextSize(23); button.setElevation(0); button.setBackgroundColor(0x00000000); button.setTooltipText(entry.optString("nameZh")); button.setContentDescription("plus-" + entry.getString("id")); return button;
     }
 }

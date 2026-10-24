@@ -85,6 +85,7 @@ void EnqueueResetInputSessionCacheTask();
 void EnqueueExitEnglishInputModeTask();
 // from_ime_enabled: the clicked toolbar icon showed the IME open (中/日) rather than English.
 void EnqueueToolbarLanguageToggleTask(bool from_ime_enabled);
+void EnqueueIpaRuleTask(const std::string &id = {});
 // Finishes the learning writes still queued (frequency adjustments, entered English words) and
 // stops their thread. Call after the worker thread has been joined, so nothing posts new writes.
 void ShutdownDictionaryWriter();

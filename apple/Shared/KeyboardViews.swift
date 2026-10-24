@@ -12,6 +12,18 @@ extension Font {
     }
 }
 
+enum IPAVisuals {
+    static func display(_ value: String) -> String {
+        if value == " " { return "␠" }
+        guard let first = value.unicodeScalars.first else { return "" }
+        switch first.properties.generalCategory {
+        case .nonspacingMark, .spacingMark, .enclosingMark: return "◌" + value
+        default: return value
+        }
+    }
+    static func codePoints(_ value: String) -> String { value.unicodeScalars.map { String(format: "U+%04X", $0.value) }.joined(separator: " ") }
+}
+
 struct IPAFile: FileDocument {
     static var readableContentTypes: [UTType] { [.json, .plainText] }
     var data: Data
@@ -30,18 +42,22 @@ struct UsageGuideView: View {
                     section("开始使用", "在系统设置 → 通用 → 键盘 → 键盘 → 添加新键盘中，添加国际音标输入法。输入时长按地球键切换过来。")
                 }
                 #endif
-                section("汉字与音标分别上屏", "在汉字模式输入拼音。点击候选上面的汉字输入汉字，点击下面的音标输入 IPA。按中 / IPA 切换输入模式。")
-                section("多音字怎么选", "先按词语和输入拼音筛选读音。有多个带调读音时，点击音标会打开读音选择。选好后，再点击该候选的音标上屏。长按候选可重新选择读音。")
+                section("汉字与音标分别上屏", "在汉字模式输入拼音。点击候选上面的汉字输入汉字，点击下面的音标输入 IPA。默认数字键和空格选音标，键盘上方可切换为汉字输出。按拼音 / CIN 切换编码方式。")
+                section("多音字怎么选", "先按词语和输入拼音筛选读音。有多个带调读音时，点击音标会打开读音选择。选定读音后直接上屏。长按候选可重新选择读音。")
                 #if os(iOS)
                 section("数字与五度调值", "轻点数字 1–9 选择当前页的候选，没有候选时输入数字。上划数字 1–5 输入五度调值，1 最低、5 最高。依次上划 2、1、4，再点上方候选，即可输入 ˨˩˦、²¹⁴ 或 214。")
-                section("先确认当前候选", "输入声调前，先让当前汉字或音标上屏。声调输入期间轻点 1–5 可继续追加调值，点空格确认。0 在 IPA 模式保留原有映射。")
-                section("斜杠等符号键", "先切到 IPA，再点符号。点编码为 / 或 \\ 的键，从上方候选选择输出。\\ 收录原数字键上的声调音标。默认 / 输出斜杠，可以在设置中修改。长按可查看该键的候选。")
+                section("先确认当前候选", "输入声调前，先让当前汉字或音标上屏。声调输入期间轻点 1–5 可继续追加调值，点空格确认。0 在 CIN 模式保留原有映射。")
+                section("斜杠等符号键", "先切到 CIN，再点符号。点编码为 / 或 \\ 的键，在弹出的面板中点选输出。\\ 收录原数字键上的声调音标。默认 / 输出斜杠，可以在设置中修改。面板可上下滑动，关闭时不输入。键盘上方的 IPA Plus 可打开分类音标表并连续点选输入；先确认已有的拼音或声调候选。")
                 #else
                 section("数字与五度调值", "1–9 选择当前页的候选。按住 Shift，依次按 2、1、4，可得到 ˨˩˦、²¹⁴ 或 214，空格确认。0 保留原有映射。")
-                section("Mac 快捷键", "Shift＋空格切换模式。Control＋回车输入 IPA，Control＋Shift＋回车重新选择读音。Page Up / Page Down 翻页。")
-                section("斜杠等符号键", "IPA 模式直接按实体键盘的 / 或 \\，再选择候选。\\ 收录原数字键上的声调音标。默认 / 输出斜杠，可以在设置中修改。")
+                section("Mac 快捷键", "单按 Shift 或 Shift＋空格切换拼音／CIN。Caps Lock 切换音标／汉字输出。Control＋回车输入 IPA，Control＋Shift＋回车重新选择读音。Page Up / Page Down 翻页。")
+                section("斜杠等符号键", "CIN 模式直接按实体键盘的 / 或 \\，再选择候选。\\ 收录原数字键上的声调音标。默认 / 输出斜杠，可以在设置中修改。")
                 #endif
-                section("音标和组合编码", "IPA 模式按 CIN 编码输入音标，例如 a。长按字母可查看这个键和以它开头的组合编码，例如 v 下的 voqs。含数字的编码可用 code: 前缀输入。")
+                #if os(iOS)
+                section("音标和组合编码", "手机首次启用使用拼音输入音标。带 ··· 的键轻点后弹出音标，点哪个就输入哪个；没有角标的单候选键直接输入。带有组合输入标记的分区收录以此键开头的编码，例如 v 下的 voqs。打开或关闭面板不会输入字母。")
+                #else
+                section("音标和组合编码", "CIN 模式按编码输入音标，例如 a。悬停键位可查看这个键和以它开头的组合编码，例如 v 下的 voqs。含数字的编码可用 code: 前缀输入。")
+                #endif
                 section("键帽上的小字", "左上角的小字表示输入编码，中央的大字表示该键的第一个音标候选。例如 g 键输出的 ɡ 是 IPA 字符 U+0261。")
                 section("修改键位", "打开设置，点击模拟键盘上的按键。候选从左到右排列，可直接编辑，也可用 IPA Plus 点选符号。保存方案后生效。每页候选可选 3–9 个，支持导入和导出 CIN / JSON。")
             }.frame(maxWidth: .infinity, alignment: .leading).padding(compact ? 12 : 22)
@@ -57,12 +73,31 @@ struct UsageGuideView: View {
 
 struct CandidateStrip: View {
     @ObservedObject var model: InputModel
+    var openPlus: (() -> Void)? = nil
+    var openRules: (() -> Void)? = nil
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
-                Text(model.raw.isEmpty ? (model.pinyin ? "拼音 → 汉字 / 音标" : "IPA · 输入编码") : model.raw)
-                    .font(.system(.body, design: .monospaced)).foregroundStyle(.secondary)
+                Text(model.raw.isEmpty ? (model.pinyin ? (model.outputIpa ? "拼音 → 音标" : "拼音 → 汉字") : "CIN · 点选音标") : model.raw)
+                    .font(.system(.body, design: .monospaced)).foregroundStyle(.secondary).lineLimit(1).truncationMode(.head)
                 Spacer()
+                if model.pinyin {
+                    Button(model.outputIpa ? "音标" : "汉字") { model.outputIpa.toggle(); model.onChange() }
+                        .font(.caption).accessibilityIdentifier("output-mode")
+                }
+                if model.pinyin, let openRules {
+                    Button("规则", action: openRules).font(.caption).accessibilityIdentifier("transcription-rules")
+                } else if model.pinyin {
+                    Menu("规则") {
+                        ForEach(model.rules) { rule in
+                            Button { model.selectRule(rule.id) } label: {
+                                if rule.id == model.ruleId { Label(rule.name, systemImage: "checkmark") }
+                                else { Text(rule.name) }
+                            }.accessibilityIdentifier("rule-" + rule.id)
+                        }
+                    }.font(.caption).accessibilityIdentifier("transcription-rules")
+                }
+                if let openPlus { Button("IPA Plus", action: openPlus).font(.caption).accessibilityIdentifier("keyboard-plus") }
                 if !model.candidates.isEmpty {
                     Button("‹") { model.turnPage(-1) }.disabled(model.page == 0)
                     Text("\(model.page + 1)").font(.caption)
@@ -197,84 +232,165 @@ struct PlusCatalog: Decodable {
 
 struct PlusPicker: View {
     let select: (String) -> Void
+    var compact = false
+    var close: (() -> Void)? = nil
     @Environment(\.dismiss) private var dismiss
     @State private var system = "ipa"
     @State private var search = ""
+    @State private var zoom: CGFloat = 1
     private let catalog = PlusCatalog.load()
-    init(initialSystem: String = "ipa", select: @escaping (String) -> Void) {
-        self.select = select
+    init(initialSystem: String = "ipa", compact: Bool = false, close: (() -> Void)? = nil, select: @escaping (String) -> Void) {
+        self.select = select; self.compact = compact; self.close = close
         _system = State(initialValue: initialSystem)
+        #if os(iOS)
+        _zoom = State(initialValue: 0.5)
+        #endif
     }
     var body: some View {
-        NavigationStack {
-            VStack(spacing: 10) {
+        Group {
+            if compact { panelContent }
+            else {
+                NavigationStack {
+                    panelContent.navigationTitle("IPA Plus")
+                        .toolbar { Button("完成") { dismiss() }.accessibilityIdentifier("plus-close") }
+                        #if os(iOS)
+                        .navigationBarTitleDisplayMode(.inline)
+                        #endif
+                }
+            }
+        }
+        #if os(macOS)
+        .frame(minWidth: 420, idealWidth: 1050, minHeight: 420, idealHeight: 680)
+        #else
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        #endif
+    }
+    private var panelContent: some View {
+            VStack(spacing: 5) {
+                if compact {
+                    HStack { Text("IPA Plus").font(.headline); Spacer(); Button("返回键盘") { close?() }.accessibilityIdentifier("plus-close") }
+                }
                 Picker("音标表", selection: $system) { Text("IPA").tag("ipa"); Text("extIPA").tag("extipa"); Text("VoQS").tag("voqs") }.pickerStyle(.segmented)
-                TextField("搜索符号或中文名称", text: $search).textFieldStyle(.roundedBorder)
-                ScrollView([.horizontal, .vertical]) {
-                    VStack(alignment: .leading, spacing: 18) {
-                        if search.isEmpty {
+                if !compact { TextField("搜索符号或中文名称", text: $search).textFieldStyle(.roundedBorder).accessibilityIdentifier("plus-search") }
+                if !compact { HStack {
+                    Button("字号 −") { zoom = max(0.4, zoom - 0.1) }
+                    Text("\(Int((zoom * 100).rounded()))%").font(.caption).monospacedDigit()
+                    Button("字号 ＋") { zoom = min(1.3, zoom + 0.1) }
+                    Spacer()
+                }.buttonStyle(.bordered) }
+                Text(compact ? "上下滑动分类 · 点选直接输入" : "表格可左右滑动 · 页面可上下滑动").font(.caption).foregroundStyle(.secondary).frame(maxWidth: .infinity, alignment: .leading)
+                ScrollView(.vertical) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        if search.isEmpty && !compact {
                             ForEach(catalog.charts[system, default: []].filter { $0.kind == "matrix" }) { chart in
                                 Text(chart.title).font(.headline)
-                                Grid(horizontalSpacing: 1, verticalSpacing: 1) {
-                                    GridRow { Text("方式 / 部位").font(.caption); ForEach(chart.columns ?? [], id: \.self) { Text($0).font(.caption).frame(minWidth: 66) } }
-                                    ForEach(Array((chart.rows ?? []).enumerated()), id: \.offset) { _, row in
-                                        GridRow {
-                                            Text(row.label).font(.caption).frame(width: 76)
-                                            ForEach(Array(row.cells.enumerated()), id: \.offset) { _, cell in
-                                                LazyVGrid(columns: [GridItem(.fixed(29)), GridItem(.fixed(29))], spacing: 4) {
-                                                    ForEach(cell.ids, id: \.self) { id in
-                                                        if let entry = catalog.entries.first(where: { $0.id == id }) { symbol(entry) }
-                                                    }
-                                                }.frame(minWidth: 65, minHeight: 38).padding(.vertical, 5).background(Color.secondary.opacity(0.05))
-                                            }
-                                        }
-                                    }
-                                }
+                                matrix(chart)
                             }
                             ForEach(catalog.charts[system, default: []].filter { $0.kind == "vowels" }) { chart in
                                 Text(chart.title).font(.headline)
-                                ZStack {
-                                    Path { path in
-                                        for y in [0.09, 0.37, 0.65, 0.91] {
-                                            let left = 0.20 + (y - 0.09) * 0.22 / 0.82
-                                            path.move(to: CGPoint(x: left * 500, y: y * 320))
-                                            path.addLine(to: CGPoint(x: 0.83 * 500, y: y * 320))
-                                        }
-                                        path.move(to: CGPoint(x: 100, y: 28.8)); path.addLine(to: CGPoint(x: 210, y: 291.2))
-                                        path.move(to: CGPoint(x: 415, y: 28.8)); path.addLine(to: CGPoint(x: 415, y: 291.2))
-                                    }.stroke(Color.secondary.opacity(0.3), lineWidth: 1)
-                                    ForEach(Array((chart.points ?? []).enumerated()), id: \.offset) { _, point in
-                                        HStack(spacing: 2) {
-                                            ForEach(point.ids, id: \.self) { id in
-                                                if let entry = catalog.entries.first(where: { $0.id == id }) { symbol(entry) }
-                                            }
-                                        }.padding(.horizontal, 3).background(.background).position(x: point.x * 5, y: point.y * 3.2)
-                                    }
-                                }.frame(width: 500, height: 320)
+                                vowels(chart)
                             }
                         }
                         ForEach(sections, id: \.self) { section in
                             Text(sectionTitle(section)).font(.headline)
-                            LazyVGrid(columns: Array(repeating: GridItem(.fixed(54)), count: 8), spacing: 7) {
-                                ForEach(entries.filter { $0.section == section }) { entry in symbol(entry).frame(width: 54, height: 40).background(Color.secondary.opacity(0.07), in: RoundedRectangle(cornerRadius: 7)) }
+                            LazyVGrid(columns: [GridItem(.adaptive(minimum: max(30, 48 * zoom), maximum: max(40, 90 * zoom)))], spacing: 3) {
+                                ForEach(entries.filter { $0.section == section }) { entry in
+                                    symbol(entry).frame(maxWidth: .infinity).padding(.vertical, 3)
+                                        .background(Color.secondary.opacity(0.07), in: RoundedRectangle(cornerRadius: 7))
+                                }
                             }
                         }
-                    }.padding(4)
+                    }.frame(maxWidth: .infinity, alignment: .leading).padding(.bottom, 12)
+                }.accessibilityIdentifier("plus-page")
+            }.font(.system(size: 13)).padding(compact ? 6 : 8)
+    }
+    private var unit: CGFloat { 36 * zoom }
+    private var symbolHeight: CGFloat { max(24, 48 * zoom) }
+    private var labelWidth: CGFloat {
+        #if os(iOS)
+        return 56
+        #else
+        return 78
+        #endif
+    }
+    private var headerHeight: CGFloat { 24 }
+    private func rowHeight(_ row: PlusRow) -> CGFloat {
+        CGFloat(max(1, row.cells.map { ($0.ids.count + 1) / 2 }.max() ?? 1)) * symbolHeight + 4
+    }
+    private func matrix(_ chart: PlusChart) -> some View {
+        let rows = chart.rows ?? []
+        let height = rows.reduce(headerHeight) { $0 + rowHeight($1) + 1 }
+        return ScrollView(.horizontal) {
+            Grid(horizontalSpacing: 1, verticalSpacing: 1) {
+                GridRow {
+                    Text("方式 / 部位").font(.system(size: 10)).frame(width: labelWidth, height: headerHeight)
+                    ForEach(chart.columns ?? [], id: \.self) { Text($0).font(.system(size: 10)).frame(width: unit * 2 + 6, height: headerHeight) }
                 }
-            }.padding().navigationTitle("IPA Plus")
-                .toolbar { Button("完成") { dismiss() } }
-        }.frame(minWidth: 320, idealWidth: 1050, minHeight: 420, idealHeight: 680)
+                ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
+                    GridRow {
+                        Text(row.label).font(.system(size: 10)).frame(width: labelWidth, height: rowHeight(row))
+                        ForEach(Array(row.cells.enumerated()), id: \.offset) { _, cell in
+                            VStack(spacing: 0) {
+                                ForEach(0..<max(1, (cell.ids.count + 1) / 2), id: \.self) { line in
+                                    HStack(spacing: 2) {
+                                        ForEach(0..<2, id: \.self) { column in
+                                            let index = line * 2 + column
+                                            if index < cell.ids.count, let entry = catalog.entries.first(where: { $0.id == cell.ids[index] }) {
+                                                symbol(entry).frame(width: unit, height: symbolHeight)
+                                            } else { Color.clear.frame(width: unit, height: symbolHeight) }
+                                        }
+                                    }
+                                }
+                                Spacer(minLength: 0)
+                            }.padding(.top, 2).frame(width: unit * 2 + 6, height: rowHeight(row))
+                                .background(Color.secondary.opacity(0.06))
+                        }
+                    }
+                }
+            }
+        }.frame(height: height).accessibilityIdentifier("plus-matrix-" + chart.id)
+    }
+    private func vowels(_ chart: PlusChart) -> some View {
+        let factor = max(0.5, zoom)
+        return ScrollView(.horizontal) {
+            ZStack {
+                Path { path in
+                    for y in [0.09, 0.37, 0.65, 0.91] {
+                        let left = 0.20 + (y - 0.09) * 0.22 / 0.82
+                        path.move(to: CGPoint(x: left * 500 * factor, y: y * 320 * factor)); path.addLine(to: CGPoint(x: 415 * factor, y: y * 320 * factor))
+                    }
+                    path.move(to: CGPoint(x: 100 * factor, y: 28.8 * factor)); path.addLine(to: CGPoint(x: 210 * factor, y: 291.2 * factor))
+                    path.move(to: CGPoint(x: 415 * factor, y: 28.8 * factor)); path.addLine(to: CGPoint(x: 415 * factor, y: 291.2 * factor))
+                }.stroke(Color.secondary.opacity(0.3), lineWidth: 1)
+                ForEach(Array((chart.points ?? []).enumerated()), id: \.offset) { _, point in
+                    HStack(spacing: 2) {
+                        ForEach(point.ids, id: \.self) { id in
+                            if let entry = catalog.entries.first(where: { $0.id == id }) { symbol(entry) }
+                        }
+                    }.padding(.horizontal, 2).background(.background).position(x: point.x * 5 * factor, y: point.y * 3.2 * factor)
+                }
+            }.frame(width: 500 * factor, height: 320 * factor)
+        }.frame(height: 320 * factor)
     }
     var entries: [PlusEntry] {
         let matrixIDs = Set(catalog.charts[system, default: []].flatMap { chart in
             (chart.rows ?? []).flatMap { $0.cells.flatMap(\.ids) } + (chart.points ?? []).flatMap(\.ids)
         })
-        return catalog.entries.filter { $0.system == system && (search.isEmpty ? !matrixIDs.contains($0.id) : ($0.display.contains(search) || $0.nameZh.contains(search))) }
+        return catalog.entries.filter { $0.system == system && (search.isEmpty ? (compact || !matrixIDs.contains($0.id)) : ($0.display.contains(search) || $0.nameZh.contains(search))) }
     }
-    var sections: [String] { Array(Set(entries.map(\.section))).sorted() }
+    var sections: [String] {
+        let order = ["pulmonic", "consonants", "nonpulmonic", "vowels", "diacritics", "suprasegmentals", "tones", "other", "combinations"]
+        return Array(Set(entries.map(\.section))).sorted { a, b in
+            let x = order.firstIndex(of: a) ?? 99, y = order.firstIndex(of: b) ?? 99
+            return x == y ? a < b : x < y
+        }
+    }
     func symbol(_ entry: PlusEntry) -> some View {
-        Button { select(entry.insertText) } label: { Text(entry.display).font(.ipa(23)).frame(minWidth: 27, minHeight: 30) }
-            .buttonStyle(.plain).help(entry.nameZh).accessibilityLabel(entry.nameZh)
+        Button { select(entry.insertText) } label: {
+            Text(entry.display).font(.ipa(23 * zoom)).fixedSize(horizontal: false, vertical: true)
+                .frame(minWidth: 28 * zoom, minHeight: symbolHeight)
+        }.buttonStyle(.plain).help(entry.nameZh).accessibilityLabel(entry.nameZh)
+            .accessibilityIdentifier("plus-" + entry.id)
     }
     func sectionTitle(_ value: String) -> String {
         if let chart = catalog.charts[system, default: []].first(where: { $0.id == value }) { return chart.title }
@@ -306,8 +422,10 @@ struct SettingsView: View {
                     Picker("每页候选", selection: $model.pageSize) { ForEach(3...9, id: \.self) { Text("\($0) 个").tag($0) } }.frame(maxWidth: 150)
                     Button("使用说明") { help = true }
                 }
+                Picker("国际音标转写规则", selection: Binding(get: { model.ruleId }, set: { model.selectRule($0) })) {
+                    ForEach(model.rules) { Text($0.name).tag($0.id) }
+                }
                 KeyboardMap(mappings: model.mappings, edit: chooseCode)
-                UpdateSettingsView()
                 GroupBox {
                     VStack(alignment: .leading, spacing: 13) {
                         HStack {
@@ -321,7 +439,10 @@ struct SettingsView: View {
                             ForEach(outputs.indices, id: \.self) { index in
                                 VStack(spacing: 5) {
                                     HStack { Text("\(index + 1)").font(.caption2); Spacer(); Button("×") { outputs.remove(at: index); selectedOutput = min(selectedOutput, max(0, outputs.count - 1)) }.buttonStyle(.plain) }
-                                    TextField("音标", text: $outputs[index]).font(.ipa(30)).textFieldStyle(.plain)
+                                    Text(IPAVisuals.display(outputs[index])).font(.ipa(32)).fixedSize(horizontal: false, vertical: true).frame(maxWidth: .infinity, minHeight: 70).padding(.vertical, 5)
+                                        .accessibilityIdentifier("output-preview-" + String(index))
+                                    Text(IPAVisuals.codePoints(outputs[index])).font(.system(size: 10, design: .monospaced)).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                                    TextField("编辑输出", text: $outputs[index]).font(.ipa(24)).textFieldStyle(.roundedBorder).frame(minHeight: 44).accessibilityIdentifier("output-" + String(index))
                                 }.padding(9).background(Color.accentColor.opacity(selectedOutput == index ? 0.16 : 0.06), in: RoundedRectangle(cornerRadius: 9)).onTapGesture { selectedOutput = index }
                             }
                             Button("＋ 添加候选") { outputs.append(""); selectedOutput = outputs.count - 1 }.frame(height: 65)
@@ -342,6 +463,7 @@ struct SettingsView: View {
                     Button("导出 JSON") { export(json: true) }
                     Button("导出 CIN") { export(json: false) }
                 }
+                UpdateSettingsView()
                 Text(model.status).font(.caption).foregroundStyle(.secondary)
                 Text("五度调值：上划数字 1–5，或在 Mac 按 Shift＋1–5。普通候选用 1–9 选择，0 保留映射。").font(.caption).foregroundStyle(.secondary)
             }.padding(22)

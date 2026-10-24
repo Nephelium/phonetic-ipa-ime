@@ -13,7 +13,6 @@ namespace
 constexpr char kWebsiteUrl[] = "https://www.phonetictoolbox.com/";
 constexpr char kLicenseUrl[] = "https://github.com/Nephelium/phonetic-ipa-ime/blob/ipa-prototype/LICENSE";
 constexpr char kPrivacyUrl[] = "https://github.com/Nephelium/phonetic-ipa-ime/blob/ipa-prototype/PRIVACY.md";
-constexpr char kShownVersion[] = "0.1.1";
 
 // `.about-link-row`: min-height 66px with a hairline under every row but the last.
 class AboutRow : public msimeui::Panel
@@ -248,7 +247,7 @@ VisualPtr BuildAboutPage(PageContext &context)
     {
         auto left = std::make_shared<Column>(0.0f);
         left->Add(MakeLabel(L"当前版本", DocStyle(13.0f, DWRITE_FONT_WEIGHT_MEDIUM), TextRole::Primary));
-        auto version = MakeLabel(Widen(kShownVersion), DocStyle(12.0f), TextRole::Muted);
+        auto version = MakeLabel(Widen(PhoneticIpa::Updates::kVersion), DocStyle(12.0f), TextRole::Muted);
         version->SetMargin({0.0f, 5.0f, 0.0f, 0.0f});
         left->Add(version);
         state->status = MakeLabel(L"", DocStyle(11.0f), TextRole::Muted);

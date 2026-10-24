@@ -535,10 +535,11 @@ BOOL CMetasequoiaIME::_IsKeyEaten(         //
             return TRUE;
         }
 
-        if ((GetTemporaryJapanesePolicy() & FanyImeTemporaryJapanese::EnglishCandidates) != 0 &&
-            (freshCompositionState || pCompositionProcessorEngine->GetVirtualKeyLength() == 0) &&
-            (GetAsyncKeyState(VK_LWIN) & 0x8000) == 0 && (GetAsyncKeyState(VK_RWIN) & 0x8000) == 0 &&
-            FanyUtils::HasIpaHotkey(shortcutModifiers, *pCodeOut))
+        if ((GetAsyncKeyState(VK_LWIN) & 0x8000) == 0 && (GetAsyncKeyState(VK_RWIN) & 0x8000) == 0 &&
+            (PhoneticIpaKey::IsToneShortcut(*pCodeOut, shortcutModifiers) ||
+             ((GetTemporaryJapanesePolicy() & FanyImeTemporaryJapanese::EnglishCandidates) != 0 &&
+              (freshCompositionState || pCompositionProcessorEngine->GetVirtualKeyLength() == 0) &&
+              FanyUtils::HasIpaHotkey(shortcutModifiers, *pCodeOut))))
         {
             if (pKeyState)
             {
@@ -570,11 +571,6 @@ BOOL CMetasequoiaIME::_IsKeyEaten(         //
 
         const bool isComposing = freshCompositionState ? false : _IsComposing() != FALSE;
         const CANDIDATE_MODE candidateMode = freshCompositionState ? CANDIDATE_NONE : _candidateMode;
-        const bool isCapsLockOn = (GetKeyState(VK_CAPITAL) & 0x0001) != 0;
-        const bool isInputInProgress =
-            !freshCompositionState &&
-            (isComposing || (candidateMode != CANDIDATE_NONE) ||
-             (pCompositionProcessorEngine && pCompositionProcessorEngine->GetVirtualKeyLength() > 0));
 
         const auto &ipaBuffer = pCompositionProcessorEngine->GetKeystrokeBuffer();
         const std::wstring_view ipaRaw = !freshCompositionState && ipaBuffer.Get()
@@ -590,11 +586,6 @@ BOOL CMetasequoiaIME::_IsKeyEaten(         //
                 pKeyState->Function = FUNCTION_INPUT;
             }
             return TRUE;
-        }
-        // CapsLock alphabet keys belong to the application unless input is already in progress
-        if (ShouldPassCapsLockAlphabet(isCapsLockOn, isInputInProgress, *pCodeOut, wch))
-        {
-            return isTouchKeyboardSpecialKeys;
         }
 
         //
@@ -708,6 +699,9 @@ WCHAR CMetasequoiaIME::ConvertVKey(UINT code)
     WCHAR wch = '\0';
     if (ToUnicode(code, scanCode, abKbdState, &wch, 1, 0) == 1)
     {
+        // Caps Lock controls Hanzi/IPA output, while physical Shift still
+        // selects uppercase CIN codes. Do not let Caps Lock bypass the IME.
+        wch = NormalizeIpaCapsLockCharacter((abKbdState[VK_CAPITAL] & 1) != 0, code, wch);
         return wch;
     }
 

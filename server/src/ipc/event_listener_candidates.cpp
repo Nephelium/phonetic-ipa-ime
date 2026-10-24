@@ -265,7 +265,7 @@ std::string BuildCurrentCandidatePage()
     auto &ui = Global::candidate_ui;
     ui.clear_page();
     if (!g_ipa_reading_page_active)
-        g_ipa_readings.SetContext(g_inputSession->get_pinyin_sequence_with_cases());
+        g_ipa_readings.SetContext(g_inputSession->get_pinyin_sequence_with_cases() + "\t" + PhoneticIpa::RuleId());
     const SchemeType current_scheme = g_inputSession->current_scheme_type();
     const bool uppercase_all_helpcodes = current_scheme == SchemeType::Quanpin;
     // 副候选框里装的是译文，不是这次输入的候选：助记码、云/AI 角标和「右侧译文」都不适用，
@@ -334,15 +334,8 @@ std::string BuildCurrentCandidatePage()
         {
             const auto transcription = g_ipa_readings.Resolve(PhoneticIpa::Hanzi(), word, item.canonical_pinyin);
             view.ipa = transcription.text;
-            const auto plain = [](std::string code) {
-                code.erase(std::remove(code.begin(), code.end(), '\''), code.end());
-                return code;
-            };
-            const bool complete_candidate = !GlobalIme::composition.creating_word.active &&
-                                            plain(item.pinyin) == plain(g_inputSession->get_pinyin_sequence()) &&
-                                            g_inputSession->pending_suffix().empty();
-            view.ipa_committable = complete_candidate && !transcription.text.empty();
-            view.ipa_can_choose = complete_candidate && transcription.CanChoose();
+            view.ipa_committable = !transcription.text.empty();
+            view.ipa_can_choose = transcription.CanChoose();
             view.ipa_needs_choice = transcription.ambiguous;
         }
         if (show_autocorrect_marker && !item.corrected_from.empty())

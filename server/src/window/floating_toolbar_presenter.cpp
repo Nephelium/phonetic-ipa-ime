@@ -2,6 +2,7 @@
 
 #include "config/ime_config.h"
 #include "defines/globals.h"
+#include "defines/defines.h"
 #include "global/globals.h"
 #include "ipc/event_listener.h"
 #include "ipc/ipc.h"
@@ -12,6 +13,7 @@
 #include "utils/window_utils.h"
 #include "window/small_windows.h"
 #include "window/floating_toolbar_skin.h"
+#include "ipa/ipa_runtime.h"
 
 #include "msimeui/Controls.h"
 #include "msimeui/DeviceResources.h"
@@ -119,10 +121,17 @@ class ToolbarIconButton : public msimeui::Visual
         InvalidateVisual();
     }
 
+    void SetTextLayout(float width, float fontSize)
+    {
+        textWidth_ = width;
+        textFontSize_ = fontSize;
+        SetWidth(width);
+    }
+
     SizeF Measure(const SizeF &availableSize) override
     {
         (void)availableSize;
-        return {size_, size_};
+        return {textWidth_ > 0 ? textWidth_ : size_, size_};
     }
 
     void Arrange(const msimeui::RectF &finalRect) override
@@ -158,8 +167,9 @@ class ToolbarIconButton : public msimeui::Visual
 
         const bool useGlyph = glyph_ != 0 && !glyphFamily_.empty();
         const std::wstring family = useGlyph ? glyphFamily_ : std::wstring(msimeui::UiFontFamily());
-        const float fontSize =
-            size_ * (underline_ ? kToolbarUnderlinedTextFontSizeFactor : kToolbarGlyphFontSizeFactor);
+        const float fontSize = textFontSize_ > 0 ? textFontSize_
+                                                 : size_ * (underline_ ? kToolbarUnderlinedTextFontSizeFactor
+                                                                       : kToolbarGlyphFontSizeFactor);
         IDWriteTextFormat *format =
             deviceResources.GetTextFormat(family, fontSize, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_TEXT_ALIGNMENT_CENTER,
                                           DWRITE_PARAGRAPH_ALIGNMENT_CENTER, DWRITE_WORD_WRAPPING_NO_WRAP);
@@ -240,6 +250,7 @@ class ToolbarIconButton : public msimeui::Visual
     std::wstring glyphFamily_;
     std::wstring text_;
     float size_ = 24.0f;
+    float textWidth_ = 0.0f, textFontSize_ = 0.0f;
     bool underline_ = false;
     bool hovered_ = false;
     bool pressed_ = false;
@@ -374,6 +385,7 @@ struct FloatingToolbarPresenter::Impl
     int englishInputMode = 0;
     int capsLock = 0;
     int japaneseInputMode = 0;
+    bool rulesOpen = false;
 };
 
 FloatingToolbarPresenter::FloatingToolbarPresenter() = default;
@@ -462,35 +474,28 @@ void FloatingToolbarPresenter::RebuildScene()
         return button;
     };
 
-    if (impl_->capsLock == 1)
+    auto mode = addText(impl_->englishInputMode == 1 ? L"CIN" : (impl_->capsLock == 1 ? L"汉字" : L"IPA"), false,
+                        [this]() { FanyNamedPipe::EnqueueToolbarLanguageToggleTask(impl_->cnEn == 1); });
+    mode->SetTextLayout(48.0f * s, 16.0f * s);
+    std::vector<phonetic_ipa::TranscriptionRule> rules;
+    std::string currentRule;
+    try
     {
-        addText(L"A", false, [this]() {
-            if (impl_->englishInputMode == 1)
-            {
-                FanyNamedPipe::EnqueueExitEnglishInputModeTask();
-            }
-            else
-            {
-                FanyNamedPipe::EnqueueToolbarLanguageToggleTask(impl_->cnEn == 1);
-            }
-        });
+        rules = phonetic_ipa::LoadTranscriptionRules(PhoneticIpa::ResourceRoot());
+        currentRule = PhoneticIpa::RuleId();
     }
-    else if (impl_->cnEn != 1)
+    catch (const std::exception &)
     {
-        addGlyph(kIconEn, []() { FanyNamedPipe::EnqueueToolbarLanguageToggleTask(false); });
     }
-    else if (impl_->englishInputMode == 1)
-    {
-        addText(L"IPA", true, []() { FanyNamedPipe::EnqueueExitEnglishInputModeTask(); });
-    }
-    else if (impl_->japaneseInputMode == 1)
-    {
-        addGlyph(kIconJa, []() { FanyNamedPipe::EnqueueToolbarLanguageToggleTask(true); });
-    }
-    else
-    {
-        addGlyph(kIconCn, []() { FanyNamedPipe::EnqueueToolbarLanguageToggleTask(true); });
-    }
+    std::wstring ruleLabel = L"选择转写";
+    for (const auto &rule : rules)
+        if (rule.id == currentRule)
+            ruleLabel = string_to_wstring(rule.short_name);
+    auto ruleButton = addText(ruleLabel + (impl_->rulesOpen ? L" ▴" : L" ▾"), false, [this]() {
+        impl_->rulesOpen = !impl_->rulesOpen;
+        PostMessage(hwnd_, UPDATE_FTB_IPA_RULE, 0, 0);
+    });
+    ruleButton->SetTextLayout(132.0f * s, 14.0f * s);
 
     const FloatingToolbarItemsConfig &items = GetConfiguredFloatingToolbarItems();
     if (items.fullwidth)
@@ -561,7 +566,31 @@ void FloatingToolbarPresenter::RebuildScene()
             {4.0f, impl_->light ? 0.10f : 0.22f, 2.0f, 3.0f},
         });
     }
-    impl_->card->AddChild(row);
+    auto content = std::make_shared<msimeui::StackPanel>(2.0f * s);
+    content->AddChild(row);
+    if (impl_->rulesOpen)
+    {
+        for (size_t offset = 0; offset < rules.size(); offset += 2)
+        {
+            auto choices = std::make_shared<msimeui::HorizontalStackPanel>(4.0f * s);
+            for (size_t i = offset; i < std::min(offset + 2, rules.size()); ++i)
+            {
+                const auto &rule = rules[i];
+                auto choice = std::make_shared<ToolbarIconButton>(
+                    0, L"", (rule.id == currentRule ? L"✓ " : L"  ") + string_to_wstring(rule.short_name), 28.0f * s);
+                choice->SetTextLayout(188.0f * s, 14.0f * s);
+                choice->SetColors(impl_->glyph, impl_->hover, iconRadius);
+                choice->SetOnClick([this, id = rule.id]() {
+                    impl_->rulesOpen = false;
+                    FanyNamedPipe::EnqueueIpaRuleTask(id);
+                    PostMessage(hwnd_, UPDATE_FTB_IPA_RULE, 0, 0);
+                });
+                choices->AddChild(choice);
+            }
+            content->AddChild(choices);
+        }
+    }
+    impl_->card->AddChild(content);
     impl_->frame = std::make_shared<msimeui::Container>();
     if (shadow)
     {
@@ -672,7 +701,7 @@ void FloatingToolbarPresenter::RelayoutHost(FLOAT scaleOverride, const RECT *sug
     {
         const RectF card = impl_->card->GetBounds();
         const RectF limit = impl_->dragLimit->GetBounds();
-        impl_->captionRect = {0.0f, card.y, limit.x + limit.width, card.height};
+        impl_->captionRect = {0.0f, card.y, limit.x + limit.width, limit.height};
     }
     Present();
 }

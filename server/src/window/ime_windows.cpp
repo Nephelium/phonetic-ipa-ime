@@ -460,6 +460,11 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
         }
     }
 
+    if (message == WM_IPA_RULE_CHANGED && hwnd == ::global_hwnd)
+    {
+        FanyNamedPipe::EnqueueIpaRuleTask();
+        return 0;
+    }
     /* 候选窗口 */
     if (hwnd == ::global_hwnd)
     {

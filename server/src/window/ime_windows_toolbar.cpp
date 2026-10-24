@@ -609,6 +609,10 @@ LRESULT CALLBACK WndProcFtbWindow(HWND hwnd, UINT message, WPARAM wParam, LPARAM
         UpdateFtbInputModeState(wParam != 0 ? 1 : 0);
         break;
 
+    case UPDATE_FTB_IPA_RULE:
+        FloatingToolbarPresenter::Instance().ApplyAppearance();
+        break;
+
     case UPDATE_FTB_CAPS_LOCK:
         UpdateFtbCapsLockState(wParam != 0 ? 1 : 0);
         BroadcastToTsfWorkerThreadViaNamedpipe(Global::DataFromServerMsgTypeToTsfWorkerThread::CapsLockChanged,

@@ -1,0 +1,97 @@
+{
+  "source": "PhoneticToolbox v3 frontend/src/modules/mandarin-ipa/ipa-data.json",
+  "sha256": "0213de35105d0251a4776f60461fee73b52a415620b711be1a69c1ac9343773f",
+  "schema": "m13-ipa-data/1",
+  "source_sha256": "11a5c8cc7315d04bc2beece64519247ab86f80e7e9fb37510704b8d1e4ec6451",
+  "unt_revision": {
+    "version": "unt-author-site/2026-10-11",
+    "url": "https://phesoca.com/aws/268/",
+    "accessDate": "2026-10-11",
+    "revisionHistoryThrough": "2024-10-11",
+    "articleTextSha256": "075c54091ce145180f5dee974f4d8013578436514881b74d98d4dfce307b0eb6",
+    "selection": "作者现行正文的中派基准，自由变体取正文第一项。宽式上声214，严式中派上声213。轻声无上下文时不添加调符。儿化a/ia/ua按正文并入anr/ianr/uanr。"
+  },
+  "changes": "Extracted each transcription column with Hanzi, pinyin and tone; original IPA strings retained.",
+  "rules": [
+    {
+      "id": "beijing",
+      "name": "Standard Chinese (Beijing)",
+      "column": 3,
+      "file": "hanzi-rule-beijing.tsv",
+      "rows": 21571,
+      "sha256": "3a4ff935a6923605cba632c0f3657b7a4e9acd086ecadd2bc059d38570efb509"
+    },
+    {
+      "id": "beijing-narrow",
+      "name": "Standard Chinese (Beijing)严",
+      "column": 4,
+      "file": "hanzi-rule-beijing-narrow.tsv",
+      "rows": 21571,
+      "sha256": "156bb75efda2e00b2ae46fcda287a5567c6fc937ba090361a59d998405ac86a0"
+    },
+    {
+      "id": "hu-yushu",
+      "name": "胡裕树《现代汉语》",
+      "column": 5,
+      "file": "hanzi-rule-hu-yushu.tsv",
+      "rows": 21571,
+      "sha256": "8c45e33d1b9c83482b3b2fa57ab1e4f1ad615dc46af7d29f15674c9c7fca4846"
+    },
+    {
+      "id": "huang-liao",
+      "name": "黄伯荣、廖序东《现代汉语》",
+      "column": 6,
+      "file": "hanzi-rule-huang-liao.tsv",
+      "rows": 21571,
+      "sha256": "aea02f6b3a35c8355185dccce9d62c0a765399f208b826482b719805f5b099b3"
+    },
+    {
+      "id": "qian-nairong",
+      "name": "钱乃荣《现代汉语》",
+      "column": 7,
+      "file": "hanzi-rule-qian-nairong.tsv",
+      "rows": 21570,
+      "sha256": "5cdc90d848eda19df9a99daea358d8c715e32a86da8a5a84f1ddb25f40725734"
+    },
+    {
+      "id": "wu-zongji",
+      "name": "吴宗济",
+      "column": 8,
+      "file": "hanzi-rule-wu-zongji.tsv",
+      "rows": 21570,
+      "sha256": "1341071bf611523b7489fd7be1963b436142bfe083d35f99e63be9d3575d7740"
+    },
+    {
+      "id": "chao-yuen-ren",
+      "name": "赵元任《汉语口语语法》",
+      "column": 9,
+      "file": "hanzi-rule-chao-yuen-ren.tsv",
+      "rows": 21571,
+      "sha256": "1354be318b0d4b4de80308dad3410b3c95a77b67d32797622c24872ee90e6e40"
+    },
+    {
+      "id": "fangyin-zihui",
+      "name": "《汉语方音字汇》",
+      "column": 10,
+      "file": "hanzi-rule-fangyin-zihui.tsv",
+      "rows": 21570,
+      "sha256": "2b867695655cd77dd0c9329ec791c5945819185f29190a1fb851e3c2e65e29f2"
+    },
+    {
+      "id": "unt-broad",
+      "name": "UntPhesoca宽",
+      "column": 11,
+      "file": "hanzi-rule-unt-broad.tsv",
+      "rows": 21571,
+      "sha256": "38d0350f0b930d4028bf8b44a8ed05b11f3e3259e61d2734cbbb90f653b0af99"
+    },
+    {
+      "id": "unt-narrow",
+      "name": "UntPhesoca严",
+      "column": 12,
+      "file": "hanzi-rule-unt-narrow.tsv",
+      "rows": 21571,
+      "sha256": "2c93aa0524bc017d257ae3e5cfdf1b1df437066ea5919fd3ea4718ba7db3396d"
+    }
+  ]
+}

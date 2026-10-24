@@ -25,6 +25,7 @@
 #include "log/candidate_diag_log.h"
 #include "log/ftb_diag_log.h"
 #include "voice-input/voice_input_service.h"
+#include "ipa/ipa_runtime.h"
 
 using namespace event_listener_detail;
 
@@ -160,6 +161,7 @@ struct Task
     int fixed_position = 0;
     int page_steps = 0;
     bool toolbar_from_ime_enabled = false;
+    std::string ipa_rule_id;
 };
 
 std::queue<Task> taskQueue;
@@ -606,6 +608,27 @@ void WorkerThread()
             break;
         }
 
+        case TaskType::IpaRule: {
+            try
+            {
+                if (!task.ipa_rule_id.empty())
+                    PhoneticIpa::SetRuleId(task.ipa_rule_id);
+                if (g_ipa_reading_page_active)
+                    ExitCandidateSubPage();
+                if (g_inputSession && !g_inputSession->get_pinyin_sequence_with_cases().empty())
+                {
+                    const auto active = GetActivePipeClient();
+                    PrepareCandidateList(active.client_id, active.epoch);
+                    RequestShowCandidateWindow();
+                }
+            }
+            catch (const std::exception &)
+            {
+                // Preserve the previous valid choice when a table/save fails.
+            }
+            PostMessage(::global_hwnd_ftb, UPDATE_FTB_IPA_RULE, 0, 0);
+            break;
+        }
         case TaskType::UiChooseIpaReading:
         case TaskType::UiCommitIpa: {
             auto &ui = Global::candidate_ui;
@@ -613,22 +636,10 @@ void WorkerThread()
             if (task.candidate_page_generation != Global::candidate_page_generation.load(std::memory_order_acquire) ||
                 index < 0 || static_cast<size_t>(index) >= ui.page_views.size())
                 break;
-            if (g_ipa_reading_page_active)
-            {
-                SelectIpaReading(index);
-                break;
-            }
-            if (task.type == TaskType::UiChooseIpaReading || ui.page_views[index].ipa_needs_choice)
-            {
+            if (task.type == TaskType::UiChooseIpaReading && !g_ipa_reading_page_active)
                 EnterIpaReadingPage(index);
-                break;
-            }
-            if (ui.page_views[index].ipa.empty() || !ui.page_views[index].ipa_committable)
-                break;
-            if (SendToTsfWorkerThreadClientViaNamedpipe(task.client_id, task.activation_epoch,
-                                                        Global::DataFromServerMsgTypeToTsfWorkerThread::CommitCandidate,
-                                                        string_to_wstring(ui.page_views[index].ipa)))
-                ClearState();
+            else
+                ProcessIpaSelection(index, task.client_id, task.activation_epoch);
             break;
         }
         case TaskType::UiCommitCandidate:
@@ -1444,6 +1455,19 @@ void EnqueueToolbarLanguageToggleTask(bool from_ime_enabled)
         Task task;
         task.type = TaskType::ToolbarLanguageToggle;
         task.toolbar_from_ime_enabled = from_ime_enabled;
+        taskQueue.push(std::move(task));
+    }
+    pipe_queueCv.notify_one();
+}
+void EnqueueIpaRuleTask(const std::string &id)
+{
+    if (!pipe_running)
+        return;
+    {
+        std::lock_guard lock(queueMutex);
+        Task task;
+        task.type = TaskType::IpaRule;
+        task.ipa_rule_id = id;
         taskQueue.push(std::move(task));
     }
     pipe_queueCv.notify_one();

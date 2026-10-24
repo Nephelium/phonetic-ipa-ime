@@ -62,6 +62,7 @@ int main(int argc, char **argv)
         original.EntriesForEdit()["#"] = {u8"ʕ"};
         original.EntriesForEdit()["test"] = {u8"ã", u8" ɐ ", u8"ã"};
         original.HotkeysForEdit()[{6, 'A'}] = u8"ɐ";
+        original.HotkeysForEdit()[{1, '2'}] = u8"˨";
         PhoneticIpa::WriteProfileFile(scratch / "roundtrip.json", PhoneticIpa::ProfileJson(original));
         const auto json = PhoneticIpa::ImportProfile(scratch / "roundtrip.json");
         Require(json.AllEntries() == original.AllEntries() && json.AllHotkeys() == original.AllHotkeys() &&

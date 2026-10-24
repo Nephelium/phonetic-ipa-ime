@@ -32,6 +32,10 @@ final class Engine implements AutoCloseable {
     private static native String nativeReading(long handle, String word, String canonical, String[] readings);
     private static native void nativeLoadCIN(long handle, String path);
     private static native String nativeReadCIN(String path);
+    private static native String nativeRules(long handle);
+    private static native void nativeSetRule(long handle, String id);
+    private final android.content.SharedPreferences preferences;
+    private String ruleId = "beijing", ruleError = "";
     private long handle;
     private final SQLiteDatabase db;
     final File directory, profileFile;
@@ -39,14 +43,17 @@ final class Engine implements AutoCloseable {
     String profileError = "";
 
     Engine(Context context) throws Exception {
+        preferences = context.getSharedPreferences("input-rules", Context.MODE_PRIVATE);
         directory = prepareResources(context);
         profileFile = new File(context.getFilesDir(), "profile.json");
         handle = nativeOpen(directory.getPath());
+        try { String wanted = preferences.getString("rule", "beijing"); nativeSetRule(handle, wanted); ruleId = wanted; }
+        catch (RuntimeException e) { ruleError = "转写规则读取失败，请重新选择规则"; }
         try { db = SQLiteDatabase.openDatabase(new File(directory, "lookup.sqlite").getPath(), null, SQLiteDatabase.OPEN_READONLY); }
         catch (RuntimeException e) { nativeClose(handle); handle = 0; throw e; }
         profile = normalize(new JSONObject(nativeProfile(handle)));
         if (profileFile.exists()) {
-            try { loadProfile(new JSONObject(new String(Files.readAllBytes(profileFile.toPath()), StandardCharsets.UTF_8)), false); }
+            try (InputStream input = new FileInputStream(profileFile)) { loadProfile(new JSONObject(new String(SettingsActivity.readLimited(input, 8 * 1024 * 1024), StandardCharsets.UTF_8)), false); }
             catch (Exception e) { profileError = "方案读取失败：" + e.getMessage(); }
         }
     }
@@ -77,6 +84,13 @@ final class Engine implements AutoCloseable {
     private static String hex(byte[] bytes) {
         StringBuilder result = new StringBuilder(); for (byte b : bytes) result.append(String.format(Locale.ROOT, "%02x", b & 255)); return result.toString();
     }
+    synchronized JSONArray rules() throws JSONException { return new JSONArray(nativeRules(handle)); }
+    synchronized String ruleId() { return ruleId; }
+    synchronized void selectRule(String id) throws Exception {
+        nativeSetRule(handle, id);
+        if (!preferences.edit().putString("rule", id).commit()) { nativeSetRule(handle, ruleId); throw new IOException("无法保存转写规则"); }
+        ruleId = id; ruleError = "";
+    }
     synchronized JSONObject profile() throws JSONException { return new JSONObject(profile.toString()); }
     synchronized JSONArray symbols(String code) throws JSONException { return new JSONArray(nativeSymbols(handle, code)); }
     synchronized JSONObject reading(String word, String canonical) throws JSONException {
@@ -87,6 +101,7 @@ final class Engine implements AutoCloseable {
         return new JSONObject(nativeReading(handle, word, canonical, variants.toArray(new String[0])));
     }
     synchronized List<Session.Candidate> candidates(String code, boolean pinyin) throws JSONException {
+        if (pinyin && !ruleError.isEmpty()) throw new JSONException(ruleError);
         List<Session.Candidate> result = new ArrayList<>();
         if (!pinyin || code.startsWith("tone:") || code.startsWith("code:")) {
             JSONArray symbols = symbols(code);
@@ -123,6 +138,7 @@ final class Engine implements AutoCloseable {
                 entries.put("\\", moved); entries.remove("" + i);
             }
         }
+        if (entries.optJSONArray("\\") != null && entries.getJSONArray("\\").length() > 200) throw new JSONException("整理数字键后候选超过 200 项，请先拆分编码");
         JSONArray hotkeys = result.optJSONArray("hotkeys"); if (hotkeys == null) hotkeys = new JSONArray();
         if (hotkeys.length() > 1000) throw new JSONException("组合键过多");
         Set<String> seen = new HashSet<>();
@@ -148,12 +164,14 @@ final class Engine implements AutoCloseable {
     }
     synchronized void loadProfile(JSONObject next, boolean persist) throws Exception {
         JSONObject validated = normalize(next);
+        byte[] serialized = validated.toString(2).getBytes(StandardCharsets.UTF_8);
+        if (serialized.length > 8 * 1024 * 1024) throw new IOException("方案不能超过 8 MB");
         File temporary = new File(profileFile.getParentFile(), "validated.cin");
         Files.write(temporary.toPath(), cin(validated).getBytes(StandardCharsets.UTF_8));
         nativeReadCIN(temporary.getPath()); // Validate before publishing or changing the active engine.
         if (persist) {
             AtomicFile file = new AtomicFile(profileFile); FileOutputStream out = null;
-            try { out = file.startWrite(); out.write(validated.toString(2).getBytes(StandardCharsets.UTF_8)); file.finishWrite(out); }
+            try { out = file.startWrite(); out.write(serialized); file.finishWrite(out); }
             catch (IOException e) { file.failWrite(out); throw e; }
         }
         nativeLoadCIN(handle, temporary.getPath()); profile = validated; profileError = "";

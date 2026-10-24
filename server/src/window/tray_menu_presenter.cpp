@@ -281,12 +281,6 @@ void TrayMenuPresenter::RebuildScene()
         };
     };
     addItem(L"表情/符号面板", kSvgEmoji, false)->SetOnClick(launch(OpenEmojiPanelApplication));
-    addItem(L"手写识别板", kSvgHandwriting, false)->SetOnClick(launch(OpenHandwritingPanelApplication));
-    addItem(L"屏幕键盘", kSvgKeyboard, false)->SetOnClick(launch(OpenKeyboardPanelApplication));
-    addItem(L"语音输入", kSvgVoice, false)->SetOnClick([this]() {
-        Hide();
-        VoiceInput::ToggleRecording();
-    });
     addItem(L"设置", kSvgSettings, false)->SetOnClick(launch(OpenSettingsApplication));
     addItem(L"关于", kSvgAbout, false)->SetOnClick(launch(OpenSettingsAboutApplication));
 

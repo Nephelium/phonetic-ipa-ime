@@ -76,7 +76,7 @@ def main():
             'SWIFT_OBJC_BRIDGING_HEADER':'$(SRCROOT)/Shared/IPAEngine.h',
             'HEADER_SEARCH_PATHS':['$(inherited)','$(IPA_SOURCE_ROOT)'],
             'IPA_SOURCE_ROOT':('$(SRCROOT)/..' if (ROOT.parent/'engine/ipa').is_dir() else '$(SRCROOT)/../msime-windows'),'OTHER_LDFLAGS':['$(inherited)','-lsqlite3'],
-            'CODE_SIGN_STYLE':'Automatic','CURRENT_PROJECT_VERSION':'2','MARKETING_VERSION':'0.1.1',
+            'CODE_SIGN_STYLE':'Automatic','CURRENT_PROJECT_VERSION':'4','MARKETING_VERSION':'0.1.3',
             'GENERATE_INFOPLIST_FILE':'NO','ENABLE_USER_SCRIPT_SANDBOXING':'YES',
         }
         if spec['sdk']=='macosx':
@@ -107,7 +107,7 @@ def main():
 <TestAction buildConfiguration="Debug" selectedDebuggerIdentifier="Xcode.DebuggerFoundation.Debugger.LLDB" selectedLauncherIdentifier="Xcode.IDEFoundation.Launcher.LLDB" shouldUseLaunchSchemeArgsEnv="YES"><Testables>{testable}</Testables></TestAction>
 <LaunchAction buildConfiguration="Debug" selectedDebuggerIdentifier="Xcode.DebuggerFoundation.Debugger.LLDB" selectedLauncherIdentifier="Xcode.IDEFoundation.Launcher.LLDB"><BuildableProductRunnable runnableDebuggingMode="0">{buildable(name)}</BuildableProductRunnable></LaunchAction>
 <ProfileAction buildConfiguration="Release"/><AnalyzeAction buildConfiguration="Debug"/><ArchiveAction buildConfiguration="Release" revealArchiveInOrganizer="YES"/></Scheme>''',encoding='utf-8')
-    base={'CFBundleDevelopmentRegion':'zh-Hans','CFBundleExecutable':'$(EXECUTABLE_NAME)','CFBundleIdentifier':'$(PRODUCT_BUNDLE_IDENTIFIER)','CFBundleInfoDictionaryVersion':'6.0','CFBundleName':'国际音标输入法','CFBundleShortVersionString':'0.1.1','CFBundleVersion':'2','CFBundlePackageType':'APPL'}
+    base={'CFBundleDevelopmentRegion':'zh-Hans','CFBundleExecutable':'$(EXECUTABLE_NAME)','CFBundleIdentifier':'$(PRODUCT_BUNDLE_IDENTIFIER)','CFBundleInfoDictionaryVersion':'6.0','CFBundleName':'国际音标输入法','CFBundleShortVersionString':'$(MARKETING_VERSION)','CFBundleVersion':'$(CURRENT_PROJECT_VERSION)','CFBundlePackageType':'APPL'}
     mac_id='org.nephelium.inputmethod.PhoneticIPA'
     mode_id=mac_id+'.Hans'
     mode={'TISInputSourceID':mode_id,'TISIntendedLanguage':'zh-Hans','tsInputModeCharacterRepertoireKey':['Hans','Latn'],

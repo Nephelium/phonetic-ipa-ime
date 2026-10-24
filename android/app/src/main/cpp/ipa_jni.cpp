@@ -4,6 +4,7 @@
 #include <memory>
 #include "engine/ipa/ipa_composer.h"
 #include "engine/ipa/ipa_readings.h"
+#include "engine/ipa/ipa_rules.h"
 
 namespace {
 std::string utf8(JNIEnv* env, jstring value) {
@@ -33,7 +34,7 @@ std::string array(const std::vector<std::string>& values) {
     for (size_t i = 0; i < values.size(); ++i) { if (i) out += ','; out += quote(values[i]); }
     return out + ']';
 }
-struct Engine { phonetic_ipa::CinTable cin; phonetic_ipa::HanziTable table; };
+struct Engine { phonetic_ipa::CinTable cin; phonetic_ipa::HanziTable table; std::filesystem::path root; };
 Engine& engine(jlong handle) {
     if (!handle) throw std::runtime_error("Engine closed");
     return *reinterpret_cast<Engine*>(handle);
@@ -61,7 +62,8 @@ extern "C" JNIEXPORT jlong JNICALL Java_org_nephelium_phoneticipa_Engine_nativeO
         auto result = std::make_unique<Engine>();
         const auto root = std::filesystem::u8path(utf8(env, directory));
         result->cin.Load(root / "default.cin");
-        result->table.Load(root / "beijing-toned.tsv", false);
+        result->root = root;
+        result->table = phonetic_ipa::LoadTranscriptionRule(root, "beijing", false);
         return reinterpret_cast<jlong>(result.release());
     } catch (const std::exception& e) { fail(env, e); return 0; }
 }
@@ -110,4 +112,19 @@ extern "C" JNIEXPORT jstring JNICALL Java_org_nephelium_phoneticipa_Engine_nativ
         }
         return javaText(env, out + "]}");
     } catch (const std::exception& e) { fail(env, e); return nullptr; }
+}
+
+extern "C" JNIEXPORT jstring JNICALL Java_org_nephelium_phoneticipa_Engine_nativeRules(JNIEnv* env, jclass, jlong handle) {
+    try {
+        std::string result = "["; bool first = true;
+        for (const auto& rule : phonetic_ipa::LoadTranscriptionRules(engine(handle).root)) {
+            if (!first) result += ','; first = false;
+            result += "{\"id\":" + quote(rule.id) + ",\"name\":" + quote(rule.name) + ",\"shortName\":" + quote(rule.short_name) + '}';
+        }
+        return javaText(env, result + ']');
+    } catch (const std::exception& e) { fail(env, e); return nullptr; }
+}
+extern "C" JNIEXPORT void JNICALL Java_org_nephelium_phoneticipa_Engine_nativeSetRule(JNIEnv* env, jclass, jlong handle, jstring id) {
+    try { auto next = phonetic_ipa::LoadTranscriptionRule(engine(handle).root, utf8(env,id), false); engine(handle).table = std::move(next); }
+    catch (const std::exception& e) { fail(env,e); }
 }

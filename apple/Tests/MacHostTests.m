@@ -46,10 +46,16 @@ static void Key(NSString *text, unsigned short code, NSEventModifierFlags flags)
         CGEventRef down=CGEventCreateKeyboardEvent(NULL,code,true);
         CGEventRef up=CGEventCreateKeyboardEvent(NULL,code,false);
         CGEventSetFlags(down,(CGEventFlags)flags); CGEventSetFlags(up,(CGEventFlags)flags);
+        if (code==56 || code==60) { CGEventSetType(down,kCGEventFlagsChanged); CGEventSetType(up,kCGEventFlagsChanged); CGEventSetFlags(up,0); }
         // Keep the Quartz event backing needed by the system text input context.
         // Deliver only to our own window, without global event injection.
-        [Window sendEvent:[NSEvent eventWithCGEvent:down]];
-        [Window sendEvent:[NSEvent eventWithCGEvent:up]];
+        if (code==56 || code==60) {
+            [View.inputContext handleEvent:[NSEvent eventWithCGEvent:down]];
+            [View.inputContext handleEvent:[NSEvent eventWithCGEvent:up]];
+        } else {
+            [Window sendEvent:[NSEvent eventWithCGEvent:down]];
+            [Window sendEvent:[NSEvent eventWithCGEvent:up]];
+        }
         CFRelease(down); CFRelease(up);
         printf("queued-key=%u\n", code);
     }];
@@ -105,11 +111,13 @@ int main(int argc, const char **argv) {
                 if(![Target containsString:@"PhoneticIPA"]) {
                     [Steps addObject:^{ [View.inputContext discardMarkedText]; }];
                 } else {
-                    Key(@"1",18,0);
+                    Key(@"1",18,NSEventModifierFlagCapsLock);
                     Check(^BOOL{ return [View.string isEqualToString:@"厌恶"] && !View.hasMarkedText; },@"Hanzi commit equals 厌恶");
                     Word(); Key(@"\r",36,NSEventModifierFlagControl);
                     Check(^BOOL{ return [View.string hasSuffix:@"wu˥˩"] && !View.hasMarkedText && ![View.string containsString:@"\n"]; },@"IPA commit has word-level reading and no leaked newline");
-                    Key(@" ",49,NSEventModifierFlagShift); Key(@"a",0,0); Key(@"1",18,0);
+                    Word(); Key(@"1",18,0);
+                    Check(^BOOL{ return [View.string hasSuffix:@"jan˥˩ wu˥˩"] && !View.hasMarkedText; },@"Default numeric selection commits IPA");
+                    Key(@"",56,NSEventModifierFlagShift); Key(@"a",0,0); Key(@"1",18,0);
                     Check(^BOOL{ return [View.string hasSuffix:@"wu˥˩a"] && !View.hasMarkedText; },@"CIN a commit");
                     Key(@"@",19,NSEventModifierFlagShift); Key(@"!",18,NSEventModifierFlagShift); Key(@"$",21,NSEventModifierFlagShift); Key(@" ",49,0);
                     Check(^BOOL{ return [View.string hasSuffix:@"a˨˩˦"] && !View.hasMarkedText; },@"Shift 214 tone commit");
@@ -122,8 +130,6 @@ int main(int argc, const char **argv) {
                     Key(@"\r",36,NSEventModifierFlagControl);
                     Check(^BOOL{ return View.hasMarkedText && [View.string hasSuffix:@"haoxue"]; },@"Ambiguous word waits for explicit reading");
                     Key(@"2",19,0);
-                    Check(^BOOL{ return View.hasMarkedText && [View.string hasSuffix:@"haoxue"]; },@"Choosing a reading does not commit prematurely");
-                    Key(@"\r",36,NSEventModifierFlagControl);
                     Check(^BOOL{ return [View.string hasSuffix:@"xau˥˩ ɕye˧˥"] && !View.hasMarkedText; },@"Explicit second word reading committed");
                     [Steps addObject:^{
                         if(Screenshot) { NSBitmapImageRep *rep=[View bitmapImageRepForCachingDisplayInRect:View.bounds]; [View cacheDisplayInRect:View.bounds toBitmapImageRep:rep]; [[rep representationUsingType:NSBitmapImageFileTypePNG properties:@{}] writeToFile:Screenshot atomically:YES]; }

@@ -25,7 +25,10 @@ for executable in "$app/PhoneticIPA-iOS" "$extension/PhoneticIPA-Keyboard"; do
 done
 mkdir "$destination/Payload"
 ditto "$app" "$destination/Payload/PhoneticIPA-iOS.app"
-(cd "$destination" && /usr/bin/zip -qry "PhoneticIPA-iOS-0.1.1-unsigned.ipa" Payload)
+version=$(/usr/libexec/PlistBuddy -c 'Print CFBundleShortVersionString' "$app/Info.plist")
+[[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo 'Invalid application version' >&2; exit 1; }
+package="PhoneticIPA-iOS-$version-unsigned.ipa"
+(cd "$destination" && /usr/bin/zip -qry "$package" Payload)
 cp iOS/Shared.entitlements "$destination/Required-App-Group.entitlements"
-shasum -a 256 "$destination/PhoneticIPA-iOS-0.1.1-unsigned.ipa" | tee "$destination/SHA256.txt"
+shasum -a 256 "$destination/$package" | tee "$destination/SHA256.txt"
 printf 'Unsigned device package: %s\n' "$destination"

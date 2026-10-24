@@ -15,14 +15,15 @@ final class Session {
     }
     final Engine engine;
     String raw = "", status = "";
-    boolean pinyin = true;
+    boolean pinyin = true, outputIpa = true;
+    private boolean commitAfterReading;
     int page = 0, pageSize = 6;
     List<Candidate> candidates = new ArrayList<>();
     Candidate pending;
     Consumer<String> commit = value -> {};
     Runnable changed = () -> {};
     Session(Engine engine) { this.engine = engine; reload(); }
-    void reload() { try { pageSize = engine.profile().getInt("pageSize"); status = engine.profileError; } catch (Exception e) { status = e.getMessage(); } clear(); }
+    void reload() { clear(); try { pageSize = engine.profile().getInt("pageSize"); status = engine.profileError; } catch (Exception e) { status = e.getMessage(); } changed.run(); }
     List<Candidate> visible() { int start = Math.min(page * pageSize, candidates.size()); return candidates.subList(start, Math.min(start + pageSize, candidates.size())); }
     void refresh() {
         pending = null; page = 0;
@@ -39,7 +40,7 @@ final class Session {
         if (raw.startsWith("tone:")) { tone(digit); return; }
         if (raw.startsWith("code:")) { append(digit); return; }
         if (digit.equals("0")) { if (pinyin && raw.isEmpty()) commit.accept(digit); else append(digit); }
-        else if (!raw.isEmpty()) choose(Integer.parseInt(digit) - 1, false);
+        else if (!raw.isEmpty()) chooseDefault(Integer.parseInt(digit) - 1);
         else commit.accept(digit);
     }
     void clear() { raw = ""; page = 0; candidates = new ArrayList<>(); pending = null; status = ""; changed.run(); }
@@ -55,12 +56,13 @@ final class Session {
         for (int i = 0; i < parts.length(); i++) { JSONObject part = parts.getJSONObject(i); if (part.getInt("selected") < 0) return part.getJSONArray("options"); }
         return new JSONArray();
     }
+    void chooseDefault(int index) { choose(index, outputIpa); }
     void choose(int index, boolean ipa) {
         if (pending != null) { chooseReading(index); return; }
         if (index < 0 || index >= visible().size()) return;
         Candidate item = visible().get(index);
         if (ipa && !item.symbol()) {
-            if (item.reading.optBoolean("ambiguous")) { pending = item; changed.run(); return; }
+            if (item.reading.optBoolean("ambiguous")) { pending = item; commitAfterReading = true; changed.run(); return; }
             if (item.ipa().isEmpty()) { status = "当前字表没有完整读音"; changed.run(); return; }
         }
         commit.accept(ipa && !item.symbol() ? item.ipa() : item.word); clear();
@@ -76,6 +78,7 @@ final class Session {
                 text.add(part.getJSONArray("options").getJSONObject(part.getInt("selected")).getString("ipa"));
             }
             pending.reading.put("text", text.toString()).put("ambiguous", false); pending = null;
+            if (commitAfterReading) { commit.accept(text.toString()); clear(); return; }
             status = "读音已选择，点击音标上屏"; changed.run();
         } catch (JSONException e) { status = e.getMessage(); changed.run(); }
     }
@@ -85,7 +88,7 @@ final class Session {
             Candidate item = visible().get(index); JSONObject reading = engine.reading(item.word, item.canonical);
             JSONArray parts = reading.getJSONArray("parts"); boolean hasChoice = false;
             for (int i = 0; i < parts.length(); i++) if (parts.getJSONObject(i).getJSONArray("options").length() > 1) { parts.getJSONObject(i).put("selected", -1); hasChoice = true; }
-            if (hasChoice) { item.reading = reading; pending = item; changed.run(); }
+            if (hasChoice) { commitAfterReading = false; item.reading = reading; pending = item; changed.run(); }
         } catch (Exception e) { status = e.getMessage(); changed.run(); }
     }
 }

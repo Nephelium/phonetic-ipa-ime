@@ -404,6 +404,21 @@ CandidateSkinScene::CandidateSkinScene(Callbacks callbacks) : callbacks_(std::mo
 {
 }
 
+CandidateViewport::CandidateViewport(std::shared_ptr<msimeui::Visual> content)
+    : msimeui::ScrollViewer(content), content_(content.get())
+{
+}
+
+msimeui::SizeF CandidateViewport::Measure(const msimeui::SizeF &availableSize)
+{
+    const auto natural = content_->MeasureInLayout({availableSize.width, 1000000.0f});
+    const bool overflow = natural.height > availableSize.height + 0.5f;
+    const msimeui::SizeF viewport{(std::min)(availableSize.width, natural.width + (overflow ? 20.0f : 0.0f)),
+                                  (std::min)(availableSize.height, natural.height)};
+    msimeui::ScrollViewer::Measure(viewport);
+    return viewport;
+}
+
 void CandidateSkinScene::Build(bool horizontal, bool pageArrows, bool expandPanel)
 {
     built_ = true;
@@ -490,7 +505,14 @@ void CandidateSkinScene::Build(bool horizontal, bool pageArrows, bool expandPane
     brush.radiusY = 6.0f;
     card_ = std::make_shared<msimeui::Card>(brush, 5.0f);
     card_->SetHorizontalAlignment(msimeui::HorizontalAlignment::Leading);
-    card_->AddChild(body_);
+    bodyScroller_.reset();
+    if (!expandPanel)
+    {
+        bodyScroller_ = std::make_shared<CandidateViewport>(body_);
+        card_->AddChild(bodyScroller_);
+    }
+    else
+        card_->AddChild(body_);
     root_->SetHorizontalContentAlignment(msimeui::HorizontalAlignment::Leading);
     overlayGrid_ = std::make_shared<msimeui::Grid>();
     overlayGrid_->AddRow(msimeui::GridLength{msimeui::GridUnitType::Auto, 1.0f});

@@ -1,41 +1,42 @@
-# 国际音标输入法 · Phonetic IPA IME
+# 国际音标输入法
 
-## 0.1.1 测试版
+默认输入拼音，按数字或空格选择候选时输入国际音标与声调。点击汉字行仍可直接输入汉字。多音字先按数字选字，再按数字选择读音，确认后输入音标。词语优先使用匹配的带调读音，输入 wu 时不会混入恶的 e 读音。
 
-[四平台安装与使用](docs/INSTALL.md) · [GitHub 下载](https://github.com/Nephelium/phonetic-ipa-ime/releases/tag/v0.1.1) · [官网下载](https://www.phonetictoolbox.com/#ipa-ime-download)
+| 操作 | Windows | macOS | Android / iOS |
+|---|---|---|---|
+| 音标／汉字输出 | Caps Lock | Caps Lock 或候选栏按钮 | 候选栏输出按钮 |
+| 拼音／CIN 编码 | 单按 Shift | 单按 Shift，也支持 Shift＋空格 | 底部 中／CIN |
+| 五度声调 | 按住 Shift 按 1–5，连续输入 ˩˨˧˦˥ | 同左 | 上划数字 1–5，点选声调候选 |
+| 转写规则 | 悬浮工具栏的规则名称，或设置 → 输入与转写 | 候选栏规则菜单 | 候选栏规则按钮 |
+| 全部音标表 | 设置 → IPA Plus | 设置 → IPA Plus | 键盘顶部 IPA Plus |
 
-Windows、macOS、iOS 和 Android 已加入官网与 GitHub 双来源更新检测。默认每天自动检查，也可在设置页手动检查或关闭。iOS 只在配套 App 前台检查，键盘扩展不联网。下载后的升级由用户确认并安装。
+CIN 模式按字母查看对应音标。手机短按有多个输出的键会弹出选择窗，点哪个输入哪个。键帽的 ··· 表示有多个输出或组合输入。单项输出直接输入。长按也能查看。g 键保留主要音标，左上角不再显示另一个小 g。
 
-Windows 请使用 r2 修复包，已下载初版可用约 4 KB 安装补丁覆盖。Windows ZIP 含注册脚本，macOS ZIP 需要命令行工具，iOS 为待签名 IPA，Android 为测试签名 APK。Mac 专用宿主、iOS/Android 模拟器真实键盘和 Windows 后台控件检查分别通过，实体手机与更多桌面宿主仍待验证。见[本次验证记录](docs/testing/2026-10-23-四平台更新与官网发布.md)。
+符号页包含反斜杠、斜杠等编码。反斜杠的首项是 ˥。数字 1–9 用来选候选，不放置音标，原先数字 1 的输出移到反斜杠。0 保留原方案。含数字的组合编码可用 code: 入口。
 
-<img src="assets/icons/ipa-bird-concept-v1.png" alt="抱着音标键帽的小鸟" width="128">
+设置可调整每页 3–9 个候选，横向编辑候选并导入／导出 CIN、JSON。手机 IPA Plus 默认字号 50%，支持缩放、检索和上下滑动，辅音矩阵也可左右滑动。附加符号使用虚线圆圈和码位辅助辨认，实际输入不包含辅助圆圈。
 
-汉字候选下方显示国际音标，汉字与 IPA 分别输入，支持词语读音、手动多音字选择与可编辑 CIN 音标键盘。现有 Windows 原型，并新增 macOS、iOS/iPadOS 和 Android 平台实现。
+十套转写分别保留来源表的符号和声调，不把各套差异统一改写。列表包括北京宽式、北京严式、胡裕树、黄廖、钱乃荣、吴宗济、赵元任、方音字汇、Unt 宽式和 Unt 严式。来源、原始列名和文件 SHA-256 保存在 Rules-SOURCES.json。无确定读音时要求选择，缺少转写时不伪造输出。
 
-本项目由 [Nephelium](https://github.com/Nephelium) 基于 [水杉输入法 msime-windows](https://github.com/metasequoiaime/msime-windows) 开发，固定基线为 **v0.11.1 / dd018f79858314ed542a47c528608752b13bd261**，改动日期 2026-10-23。保留上游历史、GPLv3 许可和第三方声明。本仓为独立衍生原型，问题反馈请提交到本仓。
+## 安装
 
-## 各平台状态
+- Windows 10 / 11 x64：完整解压 ZIP，双击 安装.cmd，按系统提示允许注册独立输入法。窗口保留结果，失败日志位于 install-logs。可先运行 scripts/Install-Windows.ps1 -CheckOnly 检查包内容。
+- macOS 13+，Intel / Apple 芯片：完整解压，在终端进入目录后运行 bash 安装.command。更新已有本输入法用 bash 安装.command --update。只安装到当前用户的 ~/Library/Input Methods/PhoneticIPA.app，需要 Xcode 命令行工具。保留旧版本备份。应用使用本地签名，未进行 Developer ID 公证。
+- Android 10+，arm64 / x86_64：安装 APK，在 App 试打页启用键盘并切换。当前包使用测试签名，更新时保留相同签名。不要卸载旧版来解决更新问题，以免丢失方案。
+- iOS 16+：交付 unsigned.ipa，需自行签名 App 和键盘扩展后安装。安装后在系统键盘设置中添加。签名与 App Group 说明见 apple/INSTALL-unsigned.md。
 
-| 平台 | 当前状态 | 构建与试用 |
-|---|---|---|
-| Windows | TSF / Server / 设置程序已构建，后台控件、IPC、读音检查通过。真实 TSF 宿主仍待验收。 | [Windows 说明](prototype/README.md) |
-| iOS / iPadOS | App 与系统键盘扩展。模拟器真实上屏通过，已生成真机待签名 IPA。实体 iPhone 签名、安装与设置共享待验收。 | [Apple 构建](apple/README.md) · [签名与安装](apple/INSTALL-unsigned.md) |
-| Android | 系统输入法和设置 App。打包 JNI 与无窗口模拟器真实上屏通过，提供本地测试 APK。实体手机待验收。 | [Android 说明](android/README.md) |
-| macOS | 输入源选择已修复。专用 NSTextView 真实宿主通过汉字、IPA、CIN、Shift 声调、标点和手动读音上屏。 | [Apple 构建](apple/README.md) |
+## 更新
 
-[Mac 输入源与真实宿主验证](docs/testing/2026-10-23-Mac输入源修复与真实输入验证.md) · [本次跨平台验证](docs/testing/2026-10-23-Apple与Android原型验证.md) · [来源、引用与许可](prototype/THIRD_PARTY.md) · [修改清单](MODIFICATIONS.md) · [水杉原始 README](README.upstream.md)
+默认每天检查官网和 GitHub 的公开版本 JSON，任一来源有新版就提示下载。设置可手动检查或关闭。不会自动覆盖安装包或中断当前输入。iOS 只在配套 App 前台检查。检查请求不包含按键、宿主文本、词库或个人方案。
 
-## 输入与编辑
+## 验证与来源
 
-- 完整词语优先匹配带调读音，歧义由用户选择。输入 `wu` 时“恶”不会混入 `e` 的读音，选好读音后再提交 IPA。
-- 点候选汉字或下方音标分别输入。每页候选可设 3–9 个。
-- 模拟键盘、首键与组合编码预览、横向候选编辑、CIN/JSON 导入导出。
-- IPA / extIPA / VoQS 分区表，Doulos SIL 7.000 主字体，扩展字形回退 PTB IPA Plus。
-- 手机保留 1–0 数字行，上划 1–5 输入五度调值，Shift/退格位于 zxc 行两端。键盘“说明”可随时查看操作方法。
-- 手机 IPA 模式点“符号”可输入 `/`、`\` 等编码。原数字键音标移至 `\`，0 保留原映射。
+0.1.3 已通过 Windows 专用 Win32 编辑框实际按键、macOS 专用 NSTextView 跨进程输入、Android 模拟器真实系统键盘触摸，以及 iOS 模拟器真实键盘扩展 UI 测试。iOS 浅色和深色、手机横屏与大字号也有定向验证。实机 iPhone 签名和 App Group 共享、Android 各厂商实体设备尚未逐一验证。Windows 提权安装确认需用户操作，自动验证检查了完整包及缺失文件时的错误日志。
 
-Apple/Android 当前使用固定全拼词语索引与北京音规则，尚未移植整句解码、简拼、模糊音、学习调频、自定义汉字转换字表和物理热键执行。平台验证分别记录，不用模拟器通过替代实体设备验收。
+音标使用 Doulos SIL，扩展缺字使用 PTB IPA Plus。接收文字的软件决定上屏后的字体。GPLv3 源码、水杉原作者、CC-CEDICT、字体 OFL、IPA/extIPA/VoQS 等来源见 prototype/THIRD_PARTY.md 与上游 THIRD_PARTY_NOTICES.txt。
 
-本仓公开源码、固定资料、来源记录和复现脚本，未发布商店版本。大型词库索引由固定出厂资料生成，个人学习库、用户配置、签名凭据和工具链缓存不进入仓库。
+源码：https://github.com/Nephelium/phonetic-ipa-ime/tree/ipa-prototype
 
-代码遵循 [GPLv3](LICENSE)。CIN 码表由 Nephelium 自编；北京音字表和 IPA Plus 目录取自作者的 PhoneticToolbox v3。CC-CEDICT、字体及图表衍生数据分别保留其许可，完整作者、版本、修改说明、参考文献和 SHA-256 见来源清单。该声明仅涉及本仓收录部分，不改变 PhoneticToolbox 其他部分的许可。新图标的原图与生成提示词见 [图标记录](assets/icons/README.md)。
+## 构建与代码
+
+保留水杉 v0.11.1 上游历史，基线 dd018f79858314ed542a47c528608752b13bd261。Windows 构建见 prototype/README.md，Apple 与 Android 构建见各目录 README.md。新界面与源码修改记录见 MODIFICATIONS.md。

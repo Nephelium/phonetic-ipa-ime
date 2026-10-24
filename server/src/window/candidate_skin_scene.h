@@ -119,6 +119,18 @@ class CandidateExpandBody : public msimeui::Panel
 // 背景图或九宫格面板图，下层 / 上层挂件）→ 预编辑行与候选列表（翻页箭头或卷轴展开区）。
 // 候选窗（CandidatePresenter）与设置页的皮肤预览共用它，所以两边画出来的一模一样；
 // 这里不碰窗口、配置与全局主题，所需的一切都由 Settings 传进来。
+// Keeps the natural size for short pages and a clipped, scrollable viewport for
+// pages whose extra annotation lines exceed the candidate window height limit.
+class CandidateViewport : public msimeui::ScrollViewer
+{
+  public:
+    explicit CandidateViewport(std::shared_ptr<msimeui::Visual> content);
+    msimeui::SizeF Measure(const msimeui::SizeF &availableSize) override;
+
+  private:
+    msimeui::Visual *content_ = nullptr;
+};
+
 class CandidateSkinScene
 {
   public:
@@ -202,6 +214,10 @@ class CandidateSkinScene
     {
         return pager_;
     }
+    const std::shared_ptr<CandidateViewport> &BodyScroller() const
+    {
+        return bodyScroller_;
+    }
     const std::shared_ptr<CandidateExpandToggle> &ExpandToggle() const
     {
         return expandToggle_;
@@ -243,6 +259,7 @@ class CandidateSkinScene
     std::shared_ptr<msimeui::StackPanel> cardColumn_;
     std::shared_ptr<msimeui::Container> frame_;
     std::shared_ptr<msimeui::StackPanel> body_;
+    std::shared_ptr<CandidateViewport> bodyScroller_;
     std::shared_ptr<msimeui::TextBlock> preedit_;
     std::shared_ptr<msimeui::CandidateList> list_;
     std::shared_ptr<msimeui::PagerArrows> pager_;

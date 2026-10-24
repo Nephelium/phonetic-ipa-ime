@@ -467,9 +467,11 @@ bool CMetasequoiaIME::_ClassifyDeferredKeyDown(_In_ ITfContext *pContext, WPARAM
 
     const auto ipaPolicy =
         _deferredKeyProjectionValid ? _deferredProjectedTemporaryJapanesePolicy : GetTemporaryJapanesePolicy();
-    if (projectedImeOpen && !projectedInputActive && !_IsKeyboardDisabled() &&
-        (ipaPolicy & FanyImeTemporaryJapanese::EnglishCandidates) != 0 && (GetAsyncKeyState(VK_LWIN) & 0x8000) == 0 &&
-        (GetAsyncKeyState(VK_RWIN) & 0x8000) == 0 && FanyUtils::HasIpaHotkey(capturedModifiers, *classifiedCode))
+    if (projectedImeOpen && !_IsKeyboardDisabled() && (GetAsyncKeyState(VK_LWIN) & 0x8000) == 0 &&
+        (GetAsyncKeyState(VK_RWIN) & 0x8000) == 0 &&
+        (PhoneticIpaKey::IsToneShortcut(*classifiedCode, capturedModifiers) ||
+         (!projectedInputActive && (ipaPolicy & FanyImeTemporaryJapanese::EnglishCandidates) != 0 &&
+          FanyUtils::HasIpaHotkey(capturedModifiers, *classifiedCode))))
     {
         keyState->Category = CATEGORY_CANDIDATE;
         keyState->Function = FUNCTION_SERVER_CANDIDATE_KEY;
@@ -627,18 +629,6 @@ bool CMetasequoiaIME::_ClassifyDeferredKeyDown(_In_ ITfContext *pContext, WPARAM
         {
             isInputKey = CCompositionProcessorEngine::IsVModeInputKey(*classifiedWch, shadow.rawInput.data(),
                                                                       shadow.rawInput.size(), shadow.caret);
-        }
-        // Same "input in progress" as _IsKeyEaten: a live candidate list or the
-        // #35 retraction window keeps the key IME-owned even with an empty
-        // projected buffer, and without a projection the real state decides.
-        const bool inputInProgress =
-            shadow.inputLength != 0 || shadow.candidateActive || !GlobalIme::word_for_creating_word.empty() ||
-            (!_deferredKeyProjectionValid && (_IsComposing() != FALSE || _candidateMode != CANDIDATE_NONE));
-        if (ShouldPassCapsLockAlphabet((GetKeyState(VK_CAPITAL) & 0x0001) != 0, inputInProgress, *classifiedCode,
-                                       *classifiedWch))
-        {
-            // Match the normal fresh-composition path for CapsLock with or without Shift
-            isInputKey = false;
         }
     }
 

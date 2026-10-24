@@ -6,6 +6,7 @@
 #include "ipa/ipa_keyboard_layout.h"
 #include "ipa/ipa_runtime.h"
 #include "msimeui/Window.h"
+#include "defines/defines.h"
 #include <commdlg.h>
 #include <iomanip>
 #include <cmath>
@@ -190,7 +191,7 @@ struct Editor
     {
         if (!Stash())
             return;
-        if (modifiers < 2)
+        if (modifiers < 2 && !PhoneticIpaKey::IsToneShortcut(vk, modifiers))
         {
             const auto key = KeyCode(vk, modifiers == 1);
             if (key.empty())
@@ -202,17 +203,20 @@ struct Editor
         }
         else
         {
-            if (!PhoneticIpaKey::EditableChord(modifiers, vk))
+            if (!PhoneticIpaKey::EditableChord(modifiers, vk) && !PhoneticIpaKey::IsToneShortcut(vk, modifiers))
             {
                 Status(L"此组合保留给输入法或系统，请换一个键。");
                 return;
             }
             chordKey = vk;
             code->SetDisabled(true);
-            code->SetText(L"组合键 · VK " + std::to_wstring(vk));
+            code->SetText(PhoneticIpaKey::IsToneShortcut(vk, modifiers) ? L"Shift + " + std::to_wstring(vk - '0')
+                                                                        : L"组合键 · VK " + std::to_wstring(vk));
             output->SetSingle(true);
             output->SetDisabled(false);
-            output->SetText(Widen(table.Hotkey(modifiers, vk)));
+            output->SetText(Widen(PhoneticIpaKey::IsToneShortcut(vk, modifiers)
+                                      ? phonetic_ipa::ToneShortcutOutput(table, vk)
+                                      : table.Hotkey(modifiers, vk)));
             detail->SetText(CodePoints(Narrow(output->SelectedOutput())));
             UpdatePickerTarget();
             editing = false;
@@ -276,6 +280,8 @@ struct Editor
     std::vector<std::pair<std::wstring, std::wstring>> PreviewOutputs(unsigned vk) const
     {
         std::vector<std::pair<std::wstring, std::wstring>> result;
+        if (PhoneticIpaKey::IsToneShortcut(vk, modifiers))
+            return {{Widen(phonetic_ipa::ToneShortcutOutput(table, vk)), L"Shift 声调"}};
         if (modifiers >= 2)
         {
             const auto value = table.Hotkey(modifiers, vk);
@@ -371,13 +377,15 @@ VisualPtr BuildIpaKeyboardPage(PageContext &context)
     keyboard->summary = [state](unsigned vk) {
         if (state->modifiers == 0 && vk >= '1' && vk <= '9')
             return std::wstring{};
+        if (PhoneticIpaKey::IsToneShortcut(vk, state->modifiers))
+            return Widen(phonetic_ipa::ToneShortcutOutput(state->table, vk));
         if (state->modifiers >= 2)
             return Widen(state->table.Hotkey(state->modifiers, vk));
         const auto &values = state->table.Lookup(KeyCode(vk, state->modifiers == 1));
         return values.empty() ? L"" : Widen(values.front());
     };
     top->Add(keyboard);
-    auto hoverInfo = MakeDescription(L"Ctrl+Shift+I 切换中文 / IPA；Shift 切换普通英文。");
+    auto hoverInfo = MakeDescription(L"单按 Shift 切换拼音／CIN；Caps Lock 切换音标／汉字输出。");
     hoverInfo->SetMinHeight(36);
     hoverInfo->SetMaxHeight(36);
     keyboard->outputs = [state](unsigned vk) {
@@ -405,8 +413,8 @@ VisualPtr BuildIpaKeyboardPage(PageContext &context)
         }
     };
     top->Add(hoverInfo);
-    top->Add(MakeDescription(
-        L"IPA 模式按住 Shift 输入 1–5，默认得到 ¹²³⁴⁵。Shift 层可改成调形符号；普通 1–9 选候选，0 保留原映射。"));
+    top->Add(MakeDescription(L"按住 Shift 输入 1–5，默认得到 ˩、˨、˧、˦、˥，可连续输入调型。Shift "
+                             L"层可编辑这些快捷键；普通 1–9 选候选，0 保留原映射。"));
     top->Add(MakeRow(L"每页候选数", L"3–9 项，选择后自动保存",
                      BindDropdown(context, "appearance.page_size", NumberOptions(3, 9, L" 项"), Dropdown::Options{},
                                   ValueKind::Integer)));
@@ -708,6 +716,78 @@ VisualPtr BuildIpaKeyboardPage(PageContext &context)
     page.AddSection(edit);
     page.AddSection(picker);
     state->SelectCode("a");
+    return page.Build();
+}
+VisualPtr BuildIpaInputPage(PageContext &context)
+{
+    PageBuilder page(L"输入与转写");
+    auto input = std::make_shared<Column>(12.0f);
+    input->Add(MakeTitle(L"默认用拼音输入国际音标"));
+    input->Add(
+        MakeDescription(L"输入拼音后，按数字键或空格上屏对应音标及声调。遇到多音字，先选字，再按数字选择带调读音。"));
+    input->Add(MakeDescription(
+        L"Caps Lock：切换音标／汉字输出。单按 Shift：切换拼音／CIN 音标编码。Shift＋1–5：输入五度调值。"));
+    input->Add(MakeRow(L"每页候选", L"可选 3–9 项。",
+                       BindDropdown(context, "appearance.page_size", NumberOptions(3, 9, L" 项"), Dropdown::Options{},
+                                    ValueKind::Integer)));
+    page.AddSection(input);
+    auto rules = std::make_shared<Column>(12.0f);
+    rules->Add(MakeTitle(L"国际音标转写规则"));
+    try
+    {
+        std::vector<DropdownOption> options;
+        for (const auto &rule : phonetic_ipa::LoadTranscriptionRules(PhoneticIpa::ResourceRoot()))
+            options.push_back({Widen(rule.name), rule.id});
+        auto selector = std::make_shared<Dropdown>(options);
+        selector->SetValue(PhoneticIpa::RuleId());
+        auto status = MakeDescription(L"也可点击悬浮工具栏上的规则名称快捷切换。切换后重新计算当前候选。");
+        selector->SetOnChanged([status](size_t, const DropdownOption &option) {
+            try
+            {
+                PhoneticIpa::SetRuleId(option.value);
+                PostMessageW(HWND_BROADCAST, WM_IPA_RULE_CHANGED, 0, 0);
+                status->SetText(L"已选择：" + option.label);
+            }
+            catch (const std::exception &e)
+            {
+                status->SetText(Widen(e.what()));
+            }
+        });
+        rules->Add(selector);
+        rules->Add(status);
+    }
+    catch (const std::exception &e)
+    {
+        rules->Add(MakeDescription(Widen(e.what())));
+    }
+    rules->Add(MakeDescription(L"各规则保留原字表的符号与声调。来源和列名随资源包保存于 Rules-SOURCES.json。"));
+    page.AddSection(rules);
+    return page.Build();
+}
+
+VisualPtr BuildIpaHelpPage(PageContext &context)
+{
+    (void)context;
+    PageBuilder page(L"使用说明");
+    auto guide = std::make_shared<Column>(14.0f);
+    guide->Add(MakeTitle(L"拼音 → 音标／汉字"));
+    guide->Add(MakeDescription(L"默认输出音标。输入拼音，数字 1–9 或空格选择候选。Caps Lock "
+                               L"亮起时，改为输出汉字。点击候选的汉字或下方音标，也可分别上屏。"));
+    guide->Add(MakeDescription(L"例如输入 h，按 1 选择“好”，再按 1 或 2 选择 "
+                               L"hao3／hao4。上下键移动候选，翻页键浏览更多读音。Ctrl＋Shift＋Enter 返回选字。"));
+    guide->Add(MakeTitle(L"CIN 编码与声调"));
+    guide->Add(MakeDescription(L"单按 Shift 切到 CIN，按键按自己的映射显示音标候选。数字 1–9 选音标，0 "
+                               L"保留映射。含数字的连续编码可使用 code: 前缀，例如 code:a1。"));
+    guide->Add(MakeDescription(L"Shift＋1–5 输入 ˩、˨、˧、˦、˥，连按可组成调型。也可输入 "
+                               L"tone:214，再从调型、上标数字和普通数字中选择。先完成当前编码选字，再输入声调。"));
+    guide->Add(MakeTitle(L"自定义与快速切换"));
+    guide->Add(MakeDescription(
+        L"在音标键盘页点击键位，按从左到右的顺序编辑候选，再应用方案。IPA Plus "
+        L"可替换或追加音标，组合编码也会显示在首字母的预览里。反斜杠及斜杠等标点位可在 CIN 模式直接作为编码输入。"));
+    guide->Add(MakeDescription(L"悬浮工具栏左侧显示 IPA／汉字／CIN。先确认当前拼音或按 Esc "
+                               L"取消，再点击工具栏切换模式。旁边是当前转写规则，点击后选择标准。Ctrl＋Enter 或 "
+                               L"Ctrl＋数字可明确选择候选音标。"));
+    page.AddSection(guide);
     return page.Build();
 }
 } // namespace native_settings

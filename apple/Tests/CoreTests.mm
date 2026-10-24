@@ -34,6 +34,12 @@ int main(int argc, const char **argv) {
             }
             NSDictionary *study = [engine transcription:@"好学" canonical:@"hao'xue"];
             Require([study[@"ambiguous"] boolValue] && [study[@"parts"][0][@"options"] count] == 2, "Polyphone alternatives collapsed");
+            Require(engine.transcriptionRules.count == 10, "Ten transcription standards missing");
+            Require([engine selectRule:@"unt-narrow" error:&error], "Cannot select narrow rule");
+            Require([[engine transcription:@"厌恶" canonical:@"yan'wu"][@"text"] containsString:@"jɛ̠n̚"], "Rule selection did not alter IPA");
+            Require(![engine selectRule:@"../beijing" error:&error], "Invalid rule was accepted");
+            Require([[engine transcription:@"厌恶" canonical:@"yan'wu"][@"text"] containsString:@"jɛ̠n̚"], "Failed rule selection changed active table");
+            Require([engine selectRule:@"beijing" error:&error], "Cannot restore Beijing rule");
             NSDictionary *before = [engine mappings];
             Require(![engine loadCIN:@"/nonexistent/phonetic-ipa-missing.cin" error:&error], "Invalid import accepted");
             Require([[engine mappings] isEqual:before], "Failed import changed active map");

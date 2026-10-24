@@ -41,6 +41,8 @@ inline const UINT WM_COMMIT_CANDIDATE_AT = WM_USER + 126;
 inline const UINT WM_EXPAND_CANDIDATES = WM_USER + 127;
 // 候选窗自己投递给自己：切换卷轴展开面板。放到消息队列里做，免得在鼠标分发途中改场景。
 inline const UINT WM_TOGGLE_CANDIDATE_EXPAND = WM_USER + 128;
+inline const UINT UPDATE_FTB_IPA_RULE = WM_USER + 129;
+inline const UINT WM_IPA_RULE_CHANGED = RegisterWindowMessageW(L"PhoneticIPA.RuleChanged.v1");
 
 // wParam of WM_PAGE_CANDIDATE / WM_PAGE_CANDIDATE_ARROW; lParam carries how many pages to move.
 inline constexpr WPARAM CANDIDATE_PAGE_PREVIOUS = 0;

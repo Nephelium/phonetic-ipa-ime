@@ -16,6 +16,7 @@ final class KeyboardChecks {
     final UiAutomation ui;
     KeyboardChecks(Instrumentation test) { this.test = test; ui = test.getUiAutomation(); }
     AccessibilityNodeInfo find(String value, boolean description) {
+        ui.clearCache();
         for (AccessibilityWindowInfo window : ui.getWindows()) {
             AccessibilityNodeInfo result = search(window.getRoot(), value, description);
             if (result != null) return result;
@@ -34,11 +35,17 @@ final class KeyboardChecks {
         throw new AssertionError("Missing UI: " + value);
     }
     void tap(String value, boolean description) {
-        AccessibilityNodeInfo node = waitFor(value, description);
-        if (!node.performAction(AccessibilityNodeInfo.ACTION_CLICK)) {
-            Rect bounds = new Rect(); node.getBoundsInScreen(bounds); touch(bounds.centerX(), bounds.centerY(), bounds.centerY());
+        int screenHeight = ui.takeScreenshot().getHeight();
+        Rect bounds = new Rect(), previous = new Rect(); boolean stable = false;
+        for (int retry = 0; retry < 40; retry++) {
+            AccessibilityNodeInfo node = waitFor(value, description); node.refresh(); node.getBoundsInScreen(bounds);
+            if (!bounds.isEmpty() && bounds.top >= 0 && bounds.bottom <= screenHeight && bounds.equals(previous)) { stable = true; break; }
+            previous.set(bounds); SystemClock.sleep(100);
         }
-        SystemClock.sleep(180);
+        if (!stable) throw new AssertionError("UI is not touchable on screen: " + value + " " + bounds);
+        android.util.Log.i("IPATouchQA", value + " " + bounds);
+        touch(bounds.centerX(), bounds.centerY(), bounds.centerY());
+        try { ui.waitForIdle(150, 3000); } catch (java.util.concurrent.TimeoutException e) { throw new AssertionError("UI did not settle", e); } SystemClock.sleep(180);
     }
     void touch(float x, float y, float endY) {
         long start = SystemClock.uptimeMillis();
@@ -48,8 +55,46 @@ final class KeyboardChecks {
             event.setSource(InputDevice.SOURCE_TOUCHSCREEN); ui.injectInputEvent(event, true); event.recycle(); SystemClock.sleep(25);
         }
     }
+    void swipe(float x, float y, float endX, float endY) {
+        long start = SystemClock.uptimeMillis();
+        for (int step = 0; step <= 12; step++) {
+            int action = step == 0 ? MotionEvent.ACTION_DOWN : step == 12 ? MotionEvent.ACTION_UP : MotionEvent.ACTION_MOVE;
+            MotionEvent event = MotionEvent.obtain(start, SystemClock.uptimeMillis(), action, x + (endX-x)*step/12, y + (endY-y)*step/12, 0);
+            event.setSource(InputDevice.SOURCE_TOUCHSCREEN); ui.injectInputEvent(event, true); event.recycle(); SystemClock.sleep(25);
+        }
+        SystemClock.sleep(250);
+    }
+    void scrollChoice(String label) {
+        for (int i = 0; i < 18; i++) {
+            if (find(label, true) != null) return;
+            Rect panel = new Rect(); waitFor("symbol-picker-list", true).getBoundsInScreen(panel);
+            swipe(panel.centerX(), panel.bottom - 20, panel.centerX(), panel.top + 90);
+        }
+        throw new AssertionError("Unreachable symbol: " + label);
+    }
     String hostText() { CharSequence value = waitFor("typing-area", true).getText(); return value == null ? "" : value.toString(); }
+    void visibleGlyphs(String... descriptions) {
+        Bitmap screen = ui.takeScreenshot();
+        for (String description : descriptions) {
+            Rect bounds = new Rect(); waitFor(description, true).getBoundsInScreen(bounds);
+            int ink = 0;
+            for (int y = Math.max(0, bounds.top + 5); y < Math.min(screen.getHeight(), bounds.bottom - 5); y++)
+                for (int x = Math.max(0, bounds.left + 5); x < Math.min(screen.getWidth(), bounds.right - 5); x++)
+                    if ((screen.getPixel(x, y) & 0xffffff) == (UI.INK & 0xffffff)) ink++;
+            if (ink < 6) throw new AssertionError("Key is present but its glyph is invisible: " + description + " pixels=" + ink);
+        }
+        screen.recycle();
+    }
     void expect(String expected) { String actual = hostText(); if (!expected.equals(actual)) throw new AssertionError("Host text: " + actual + " expected: " + expected); }
+    void visibleChoiceBadge(String description, boolean expected) {
+        Bitmap screen = ui.takeScreenshot(); Rect bounds = new Rect(); waitFor(description, true).getBoundsInScreen(bounds);
+        int accent = 0;
+        for (int y = bounds.centerY(); y < Math.min(screen.getHeight(), bounds.bottom); y++)
+            for (int x = bounds.centerX(); x < Math.min(screen.getWidth(), bounds.right); x++)
+                if ((screen.getPixel(x, y) & 0xffffff) == (UI.ACCENT & 0xffffff)) accent++;
+        screen.recycle();
+        if ((accent > 2) != expected) throw new AssertionError("Multiple-choice badge visibility: " + description + " pixels=" + accent);
+    }
     void code(String code) { for (char c : code.toCharArray()) tap("key-" + c, true); }
     void candidate(String value) {
         for (int i = 0; i < 30; i++) { if (find(value, true) != null) { tap(value, true); return; } tap("›", false); }
@@ -60,14 +105,21 @@ final class KeyboardChecks {
         try (FileOutputStream out = new FileOutputStream(new File(folder, name + ".png"))) { ui.takeScreenshot().compress(Bitmap.CompressFormat.PNG, 100, out); }
     }
     void run() throws Exception {
+        try { runChecks(); } catch (Throwable error) { screenshot("android-failure"); throw error; }
+    }
+    void runChecks() throws Exception {
         AccessibilityServiceInfo info = ui.getServiceInfo(); info.flags |= AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS | AccessibilityServiceInfo.FLAG_REPORT_VIEW_IDS; ui.setServiceInfo(info);
         Intent launch = new Intent(test.getTargetContext(), SettingsActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-        test.startActivitySync(launch); tap("试打", false); tap("typing-area", true); waitFor("key-y", true);
-        code("yanwu"); candidate("hanzi-厌恶-yan'wu"); expect("厌恶");
+        test.startActivitySync(launch); tap("试打", false); tap("typing-area", true); waitFor("key-y", true); if (find("CIN", false) != null) tap("CIN", false); screenshot("android-initial-mode"); waitFor("拼音", false);
+        java.util.List<String> labels = new java.util.ArrayList<>();
+        for (char key : "qwertyuiopasdfghjklzxcvbnm".toCharArray()) labels.add("key-" + key);
+        for (char digit : "1234567890".toCharArray()) labels.add("digit-" + digit);
+        visibleGlyphs(labels.toArray(new String[0]));
+        code("yanwu"); screenshot("android-pinyin-composing"); candidate("hanzi-厌恶-yan'wu"); expect("厌恶");
         code("wu"); candidate("ipa-恶-wu");
         if (find("reading-e3", true) != null) throw new AssertionError("e reading leaked into wu");
-        String before = hostText(); tap("reading-wu4", true); expect(before); candidate("ipa-恶-wu"); expect("厌恶wu˥˩");
-        tap("中", false); code("a"); candidate("hanzi-a-"); expect("厌恶wu˥˩a");
+        tap("reading-wu4", true); expect("厌恶wu˥˩");
+        tap("拼音", false); visibleChoiceBadge("key-a", true); code("a"); expect("厌恶wu˥˩"); screenshot("android-short-tap-picker"); tap("symbol-choice-a-0", true); expect("厌恶wu˥˩a");
         String tone = "";
         for (char digit : "214".toCharArray()) {
             Rect bounds = new Rect(); waitFor("digit-" + digit, true).getBoundsInScreen(bounds);
@@ -84,9 +136,52 @@ final class KeyboardChecks {
             AccessibilityNodeInfo help = search(window.getRoot(), "说明", false); if (help != null) help.performAction(AccessibilityNodeInfo.ACTION_CLICK);
         }
         waitFor("键盘使用说明", false); screenshot("android-keyboard-help"); tap("返回键盘", false); expect("厌恶wu˥˩a˨˩˦6");
-        tap("符号", false); tap("key-\\", true); candidate("hanzi-˥-"); tap("key-/", true); candidate("hanzi-/-");
+        tap("符号", false); visibleChoiceBadge("key-\\", true); visibleChoiceBadge("key-/", false); tap("key-\\", true); tap("symbol-choice-\\-0", true); tap("key-/", true);
         expect("厌恶wu˥˩a˨˩˦6˥/"); screenshot("android-symbol-keys");
+        tap("ABC", false);
+        tap("key-g", true); expect("厌恶wu˥˩a˨˩˦6˥/");
+        screenshot("android-g-picker"); tap("symbol-picker-close", true); expect("厌恶wu˥˩a˨˩˦6˥/");
+        Rect g = new Rect(); waitFor("key-g", true).getBoundsInScreen(g);
+        long hold = SystemClock.uptimeMillis(); MotionEvent down = MotionEvent.obtain(hold, hold, MotionEvent.ACTION_DOWN, g.centerX(), g.centerY(), 0); down.setSource(InputDevice.SOURCE_TOUCHSCREEN); ui.injectInputEvent(down, true); down.recycle(); SystemClock.sleep(650);
+        MotionEvent up = MotionEvent.obtain(hold, SystemClock.uptimeMillis(), MotionEvent.ACTION_UP, g.centerX(), g.centerY(), 0); up.setSource(InputDevice.SOURCE_TOUCHSCREEN); ui.injectInputEvent(up, true); up.recycle();
+        tap("symbol-choice-g-1", true); expect("厌恶wu˥˩a˨˩˦6˥/ɠ");
+        tap("key-v", true); expect("厌恶wu˥˩a˨˩˦6˥/ɠ");
+        tap("symbol-code", true); tap("组合输入 · voqs", false); scrollChoice("symbol-choice-voqs-57"); screenshot("android-combination-picker"); tap("symbol-choice-voqs-57", true);
+        expect("厌恶wu˥˩a˨˩˦6˥/ɠΘ");
+        tap("digit-0", true); expect("厌恶wu˥˩a˨˩˦6˥/ɠΘ∅");
+        screenshot("android-picked-symbols");
+        tap("keyboard-plus", true); tap("plus-ipa-pulmonic-001", true);
+        expect("厌恶wu˥˩a˨˩˦6˥/ɠΘ∅p");
+        tap("extIPA", false); tap("plus-extipa-consonants-001", true);
+        expect("厌恶wu˥˩a˨˩˦6˥/ɠΘ∅pp̪"); screenshot("android-keyboard-plus-extipa");
+        tap("VoQS", false); screenshot("android-keyboard-plus-voqs"); tap("plus-close", true);
+        expect("厌恶wu˥˩a˨˩˦6˥/ɠΘ∅pp̪");
+        tap("CIN", false); String base = hostText();
+        code("yanwu"); tap("digit-1", true); expect(base + "jan˥˩ wu˥˩");
+        tap("output-mode", true); code("yanwu"); tap("digit-1", true); expect(base + "jan˥˩ wu˥˩厌恶");
+        tap("output-mode", true); tap("transcription-rules", true); tap("UntPhesoca严", false);
+        code("yanwu"); tap("digit-1", true); expect(base + "jan˥˩ wu˥˩厌恶jɛ̠n̚˥˩ uᵝ˥˩");
+        tap("transcription-rules", true); tap("Standard Chinese (Beijing)", false);
+        screenshot("android-default-ipa-rules");
         long now = SystemClock.uptimeMillis(); ui.injectInputEvent(new KeyEvent(now, now, KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_BACK, 0), true); ui.injectInputEvent(new KeyEvent(now, now, KeyEvent.ACTION_UP, KeyEvent.KEYCODE_BACK, 0), true);
-        tap("键位设置", false); screenshot("android-settings"); tap("IPA Plus", false); waitFor("IPA Plus · 点选音标", false); screenshot("android-plus-ipa"); tap("extIPA", false); screenshot("android-plus-extipa"); tap("VoQS", false); screenshot("android-plus-voqs"); tap("完成", false);
+        tap("键位设置", false); screenshot("android-settings");
+        for (int i = 0; i < 6 && find("IPA Plus", false) == null; i++) { Rect settings = new Rect(); waitFor("settings-page", true).getBoundsInScreen(settings); swipe(settings.centerX(), settings.top + settings.height() * .8f, settings.centerX(), settings.top + settings.height() * .4f); }
+        tap("IPA Plus", false); waitFor("IPA Plus · 点选音标", false); screenshot("android-plus-ipa");
+        waitFor("50%", false); visibleGlyphs("plus-ipa-pulmonic-001");
+        tap("plus-ipa-pulmonic-001", true);
+        Rect matrix = new Rect(); waitFor("plus-matrix-extended", true).getBoundsInScreen(matrix);
+        for (int i = 0; i < 14 && find("plus-ipa-pulmonic-013", true) == null; i++) swipe(matrix.left + matrix.width() * 0.8f, matrix.top + 100, matrix.left + matrix.width() * 0.25f, matrix.top + 100);
+        tap("plus-ipa-pulmonic-013", true);
+        screenshot("android-plus-ipa-scrolled");
+        tap("extIPA", false); waitFor("plus-extipa-consonants-001", true); screenshot("android-plus-extipa");
+        tap("字号 ＋", false); screenshot("android-plus-extipa-large");
+        tap("VoQS", false); screenshot("android-plus-voqs"); tap("完成", false);
+        if (!"ʔ".contentEquals(waitFor("output-0", true).getText())) throw new AssertionError("Plus selection did not reach editor");
+        for (int i = 0; i < 6 && find("output-preview-6", true) == null; i++) {
+            Rect editor = new Rect(); waitFor("output-list", true).getBoundsInScreen(editor);
+            swipe(editor.left + editor.width() * .8f, editor.top + editor.height() / 3, editor.left + editor.width() * .25f, editor.top + editor.height() / 3);
+        }
+        if (!"ᵃ".contentEquals(waitFor("output-preview-6", true).getText())) throw new AssertionError("Modifier preview disappeared");
+        screenshot("android-editor-modifiers");
     }
 }

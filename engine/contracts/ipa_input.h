@@ -5,6 +5,10 @@
 
 namespace PhoneticIpaKey
 {
+constexpr bool IsToneShortcut(unsigned key, unsigned modifiers)
+{
+    return key >= '1' && key <= '5' && (modifiers & 7u) == 1u;
+}
 constexpr bool IsReadingChoiceKey(unsigned key, unsigned modifiers)
 {
     return key == 0x0d && (modifiers & 7u) == 3u; // Ctrl+Shift+Enter

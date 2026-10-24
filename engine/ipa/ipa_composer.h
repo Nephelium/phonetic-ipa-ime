@@ -20,6 +20,14 @@ inline std::vector<std::string> ToneCandidates(std::string_view digits)
     }
     return {tone, superscript, std::string(digits)};
 }
+// Physical Shift+1..5 is independent from literal CIN codes such as code:!.
+inline std::string ToneShortcutOutput(const CinTable &table, unsigned key)
+{
+    if (key < '1' || key > '5')
+        return {};
+    const auto configured = table.Hotkey(1, key);
+    return configured.empty() ? ToneCandidates(std::string(1, static_cast<char>(key)))[0] : configured;
+}
 inline std::vector<std::string> InputCandidates(const CinTable &table, const std::string &raw)
 {
     if (PhoneticIpaKey::IsToneEntry(raw))

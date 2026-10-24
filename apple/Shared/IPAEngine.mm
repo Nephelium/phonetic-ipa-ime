@@ -1,6 +1,7 @@
 #import "IPAEngine.h"
 #include "engine/ipa/ipa_composer.h"
 #include "engine/ipa/ipa_readings.h"
+#include "engine/ipa/ipa_rules.h"
 #include <sqlite3.h>
 
 static NSString *Text(const std::string &value) {
@@ -14,6 +15,7 @@ static void SetError(NSError **error, const char *message) {
     phonetic_ipa::CinTable _cin;
     phonetic_ipa::HanziTable _table;
     sqlite3 *_database;
+    std::filesystem::path _root;
 }
 - (instancetype)initWithResourcePath:(NSString *)path error:(NSError **)error {
     self = [super init];
@@ -21,7 +23,8 @@ static void SetError(NSError **error, const char *message) {
         try {
             const auto root = std::filesystem::u8path(path.UTF8String);
             _cin.Load(root / "default.cin");
-            _table.Load(root / "beijing-toned.tsv", false);
+            _root = root;
+            _table = phonetic_ipa::LoadTranscriptionRule(root, "beijing", false);
             if (sqlite3_open_v2((root / "lookup.sqlite").c_str(), &_database, SQLITE_OPEN_READONLY, nullptr) != SQLITE_OK)
                 throw std::runtime_error("无法打开拼音和词语读音资料");
             sqlite3_exec(_database, "PRAGMA cache_size=-1024", nullptr, nullptr, nullptr);
@@ -31,6 +34,18 @@ static void SetError(NSError **error, const char *message) {
         }
     }
     return self;
+}
+- (NSArray<NSDictionary *> *)transcriptionRules {
+    NSMutableArray *result = [NSMutableArray array];
+    try { for (const auto &rule : phonetic_ipa::LoadTranscriptionRules(_root))
+        [result addObject:@{@"id": Text(rule.id), @"name": Text(rule.name), @"shortName": Text(rule.short_name)}]; }
+    catch (const std::exception &) {}
+    return result;
+}
+- (BOOL)selectRule:(NSString *)identifier error:(NSError **)error {
+    try { auto next = phonetic_ipa::LoadTranscriptionRule(_root, identifier.UTF8String, false);
+          _table = std::move(next); return YES; }
+    catch (const std::exception &exception) { SetError(error, exception.what()); return NO; }
 }
 - (void)dealloc { if (_database) sqlite3_close(_database); }
 - (NSDictionary *)transcription:(NSString *)word canonical:(NSString *)canonical {

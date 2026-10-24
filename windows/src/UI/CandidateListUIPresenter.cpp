@@ -100,7 +100,8 @@ HRESULT CMetasequoiaIME::_HandleCandidateFinalize(TfEditCookie ec, _In_ ITfConte
         {
             return hr;
         }
-        else if (serverMsgType == Global::DataFromServerMsgType::Normal) // 只有正常情况下才会上屏
+        else if (serverMsgType == Global::DataFromServerMsgType::Normal ||
+                 serverMsgType == Global::DataFromServerMsgType::CommitExactText)
         {
             GlobalIme::word_for_creating_word = L"";
             GlobalIme::pending_create_word_preedit.clear();
@@ -125,6 +126,8 @@ HRESULT CMetasequoiaIME::_HandleCandidateFinalize(TfEditCookie ec, _In_ ITfConte
             }
             return hr;
         }
+        else
+            return hr;
     }
 
     _HandleCompleteCommitFirst(ec, pContext);

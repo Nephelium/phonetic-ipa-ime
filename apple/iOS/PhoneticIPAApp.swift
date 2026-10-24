@@ -42,5 +42,11 @@ private struct InputTrialView: View {
             TextEditor(text: $text).font(.ipa(28)).accessibilityIdentifier("typing-area")
                 .padding(8).background(Color.secondary.opacity(0.06), in: RoundedRectangle(cornerRadius: 14))
         }.padding()
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button("收起键盘") { UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil) }
+                    .accessibilityIdentifier("dismiss-trial-keyboard")
+            }
+        }
     }
 }

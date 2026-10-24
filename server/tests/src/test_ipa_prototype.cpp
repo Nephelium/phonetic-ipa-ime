@@ -71,6 +71,13 @@ int main(int argc, char **argv)
             shifted += defaults.Lookup(std::string(1, key))[0];
         }
         Require(shifted == u8"²¹⁴", "Held Shift+214 output mismatch");
+        Require(phonetic_ipa::ToneShortcutOutput(defaults, '1') == u8"˩" &&
+                    phonetic_ipa::ToneShortcutOutput(defaults, '5') == u8"˥",
+                "Physical Shift tone defaults mismatch");
+        auto chordOverride = defaults;
+        chordOverride.HotkeysForEdit()[{1, '2'}] = u8"²";
+        Require(phonetic_ipa::ToneShortcutOutput(chordOverride, '2') == u8"²", "Tone editor override ignored");
+
         Require(defaults.Lookup("0") == cin.Lookup("0"), "Defaults changed zero mapping");
         for (char digit = '1'; digit <= '9'; ++digit)
             Require(defaults.Lookup(std::string(1, digit)).empty(), "Candidate selection digit has IPA mappings");

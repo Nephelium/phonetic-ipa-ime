@@ -699,26 +699,12 @@ void RebuildDateTimeCandidatePage()
 // Ctrl+Enter / Ctrl+数字提交对应候选的原始 Unicode IPA。
 void HandleIpaCommitKey(uint64_t client_id, uint64_t activation_epoch, uint64_t request_id, int forced_index_in_page)
 {
-    // 拿不到译文时回 NavigationIgnored：这颗键已经被 TSF 吃掉了，必须给一条回复，
-    // 而且这条回复既不上屏也不给 wch 补标点。
-    Global::MsgTypeToTsf = Global::DataFromServerMsgType::NavigationIgnored;
     WaitForCandidateRenderSync(Global::Keycode);
     EnsureCandidatePageReady();
-    auto &ipa_ui = Global::candidate_ui;
-    const int ipa_index = forced_index_in_page >= 0 ? forced_index_in_page : ipa_ui.selected_index_in_page;
-    if (g_ipa_reading_page_active)
-        SelectIpaReading(ipa_index);
-    else if (!g_english_input_mode && ipa_index >= 0 && static_cast<size_t>(ipa_index) < ipa_ui.page_views.size() &&
-             ipa_ui.page_views[ipa_index].ipa_needs_choice)
-        EnterIpaReadingPage(ipa_index);
-    else if (!g_english_input_mode && ipa_index >= 0 && static_cast<size_t>(ipa_index) < ipa_ui.page_views.size() &&
-             !ipa_ui.page_views[ipa_index].ipa.empty() && ipa_ui.page_views[ipa_index].ipa_committable)
-    {
-        Global::MsgTypeToTsf = Global::DataFromServerMsgType::CommitExactText;
-        ipa_ui.selected_text = string_to_wstring(ipa_ui.page_views[ipa_index].ipa);
-    }
+    const int index = forced_index_in_page >= 0 ? forced_index_in_page : Global::candidate_ui.selected_index_in_page;
+    ProcessIpaSelection(index, client_id, activation_epoch);
+    Global::MsgTypeToTsf = Global::DataFromServerMsgType::OutofRange;
     SendCurrentDataToClient(client_id, activation_epoch, request_id);
-    return;
 }
 
 // 真顶字与自动上屏的推送负载："<消费字符数>\t<上屏文本>"。TSF 拿这个数字裁自己的
@@ -918,35 +904,17 @@ void HandleTrilingualCycleKey(uint64_t client_id, uint64_t activation_epoch, uin
     SendCurrentDataToClient(client_id, activation_epoch, request_id);
 }
 
-// The toolbar has no requester state bits, so the clicked icon says whether the
-// IME was open and the native language is the Server's active one, which is what
-// that icon showed. TSF still owns OPENCLOSE: English and back go through the
-// ordinary worker switches, Chinese <-> Japanese is a Server-side change only.
+// Toolbar actions have no local edit session. Finish or cancel pending spelling before switching.
 void HandleToolbarLanguageToggle(bool from_ime_enabled)
 {
-    using FanyImeTrilingualInput::Mode;
-    const bool japanese = GetActiveInputMode() == "japanese";
-    const Mode destination = FanyImeTrilingualInput::Destination(from_ime_enabled, japanese,
-                                                                 GetConfiguredTrilingualCycleEnabled(), japanese);
-    if (destination == Mode::English)
-    {
-        SendToTsfWorkerThreadViaNamedpipe(Global::DataFromServerMsgTypeToTsfWorkerThread::SwitchToEn, L"");
+    // Keep the text service open: the alternate mode is editable CIN/IPA.
+    if (g_inputSession && !g_inputSession->get_pinyin_sequence_with_cases().empty())
         return;
-    }
-
-    const std::string wanted_mode = destination == Mode::Japanese ? "japanese" : "chinese";
-    if (wanted_mode != GetActiveInputMode() && SetActiveInputMode(wanted_mode))
-    {
-        SetEnglishInputMode(false);
-        PostMessage(::global_hwnd, WM_HIDE_MAIN_WINDOW, 0, 0);
-        ClearState();
-        SwitchSessionForLanguageCycle();
-        PostMessage(::global_hwnd_ftb, UPDATE_FTB_INPUT_MODE, wanted_mode == "japanese" ? 1 : 0, 0);
-        // Every client, the focused one included: no key reply carries this change.
-        BroadcastConfiguredInputModeState();
-    }
     if (!from_ime_enabled)
         SendToTsfWorkerThreadViaNamedpipe(Global::DataFromServerMsgTypeToTsfWorkerThread::SwitchToCn, L"");
+    SetEnglishInputMode(!g_english_input_mode);
+    PostMessage(::global_hwnd, WM_HIDE_MAIN_WINDOW, 0, 0);
+    ClearState();
 }
 
 /**
@@ -1028,6 +996,18 @@ void HandleImeKey(uint64_t client_id, uint64_t activation_epoch, uint64_t reques
         return;
     }
 
+    if (PhoneticIpaKey::IsToneShortcut(Global::Keycode, Global::ModifiersDown))
+    {
+        Global::MsgTypeToTsf = Global::DataFromServerMsgType::OutofRange;
+        if (g_inputSession->get_pinyin_sequence().empty())
+        {
+            const auto output = phonetic_ipa::ToneShortcutOutput(PhoneticIpa::Cin(), Global::Keycode);
+            Global::candidate_ui.selected_text = string_to_wstring(output);
+            Global::MsgTypeToTsf = Global::DataFromServerMsgType::CommitExactText;
+        }
+        SendCurrentDataToClient(client_id, activation_epoch, request_id);
+        return;
+    }
     if (g_english_input_mode && PhoneticIpaKey::EditableChord(Global::ModifiersDown, Global::Keycode))
     {
         const auto output = PhoneticIpa::Cin().Hotkey(Global::ModifiersDown, Global::Keycode);

@@ -4,7 +4,7 @@ from pathlib import Path
 import subprocess
 
 root = Path(__file__).resolve().parents[2]
-source = root / 'assets/icons/ipa-bird-concept-v1.png'
+source = root / 'assets/icons/ipa-bird-v2.png'
 catalog = root / 'apple/Assets.xcassets'
 folder = catalog / 'AppIcon.appiconset'
 folder.mkdir(parents=True, exist_ok=True)

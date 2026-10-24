@@ -76,7 +76,8 @@ std::optional<Feed> Fetch(const char *endpoint)
     parts.dwUrlPathLength = 2048;
     if (!WinHttpCrackUrl(url.c_str(), 0, 0, &parts) || parts.nScheme != INTERNET_SCHEME_HTTPS)
         return {};
-    Internet session(WinHttpOpen(L"PhoneticIPA/0.1.1", WINHTTP_ACCESS_TYPE_AUTOMATIC_PROXY, nullptr, nullptr, 0));
+    const auto agent = L"PhoneticIPA/" + Wide(kVersion);
+    Internet session(WinHttpOpen(agent.c_str(), WINHTTP_ACCESS_TYPE_AUTOMATIC_PROXY, nullptr, nullptr, 0));
     if (!session.value)
         return {};
     WinHttpSetTimeouts(session.value, 5000, 5000, 8000, 8000);

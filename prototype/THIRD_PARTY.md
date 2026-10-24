@@ -60,3 +60,13 @@
 ## Windows 包的 Microsoft 运行库
 
 Windows 0.1.1 ZIP 附带未修改的 Microsoft Visual C++ Runtime 14.44.35112（x64 Microsoft.VC143.CRT），来自 Visual Studio 2022 Build Tools 的 Redist 目录，版权归 Microsoft Corporation。按 [Visual Studio 2022 可再分发代码清单](https://learn.microsoft.com/visualstudio/releases/2022/redistribution)及其原许可分发，独立于本项目 GPL。包内附 Microsoft-CRT-NOTICE.txt，不包含构建工具或开发者凭据。
+
+## 0.1.3 新增转写列与图标
+
+十套 `hanzi-rule-*.tsv` 与目录 `hanzi-rules.tsv` 是 Nephelium 在 PhoneticToolbox M13 整理的固定数据快照，按本仓 GPLv3 提供。原始 JSON SHA-256 为 `0213de35105d0251a4776f60461fee73b52a415620b711be1a69c1ac9343773f`。逐列名称、日期、行数与导出 SHA-256 见 [Rules-SOURCES.json](resources/ipa/Rules-SOURCES.json)。北京宽式、严式与胡裕树、黄廖、钱乃荣、吴宗济、赵元任、方音字汇列保留原数据的列名与转写值。此处没有擅补书籍版次，也不声称逐字值全部直接列于所引书目。
+
+Unt 宽式／严式列保留 Unt/Phesoca 的整理来源：[汉语拼音与国际音标](https://phesoca.com/aws/268/)，原资料记录修订至 2024-10-11，固定快照日期 2026-10-11。保留该方案作者归属与原列名；本包提供项目作者整理的字音映射，不打包来源网页全文。
+
+0.1.3 五度声调快捷键默认输出 ˩˨˧˦˥。字面 CIN 编码 `!` 等仍保留原始上标数字映射；物理快捷键与字面编码分开处理。
+
+应用图标 `assets/icons/ipa-bird-v2.png` 由本项目通过图像生成工具原创生成，紫色小鸟抱着 ə 键帽，无参考图片。派生 ICO、Android 图像和 Apple 图标仅调整尺寸及格式。文件 SHA-256 与制作记录见 [assets/icons/README.md](../assets/icons/README.md)。此条不改变仍保留的上游图标及资源许可。

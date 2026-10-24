@@ -415,6 +415,11 @@ LRESULT CALLBACK CMetasequoiaIME_WindowProc(HWND hWnd, UINT message, WPARAM wPar
             pIME->_focusLossDeferPending = false;
             if (Global::g_connected)
             {
+                // Server activation is global and discards the outgoing raw
+                // spelling. Do not leave that spelling alive in the old host,
+                // where returning would append new keys to a different buffer.
+                if (pIME->_IsComposing())
+                    pIME->_ResetSessionAfterFailure(DeferredKeyFailureKind::Resync);
                 // The document focus did not return within the deferral
                 // window, so this is a real focus loss (app switch), not a
                 // transient in-app route change (Excel cell-edit entry).

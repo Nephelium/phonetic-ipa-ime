@@ -9,7 +9,7 @@
 
 namespace PhoneticIpa::Updates
 {
-inline constexpr char kVersion[] = "0.1.1";
+inline constexpr char kVersion[] = "0.1.3";
 inline constexpr char kServer[] = "https://www.phonetictoolbox.com/releases/phonetic-ipa-ime/update.json";
 inline constexpr char kGithub[] =
     "https://raw.githubusercontent.com/Nephelium/phonetic-ipa-ime/ipa-prototype/updates/latest.json";

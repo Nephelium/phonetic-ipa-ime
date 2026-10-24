@@ -299,10 +299,10 @@ void CandidatePresenter::ApplySkin()
     settings.horizontal = GetConfiguredCandidateWindowLayout() == "horizontal";
     settings.fontSize = static_cast<float>((std::max)(12, GetConfiguredCandidateFontSize()));
     settings.preeditFontSize = static_cast<float>((std::max)(12, GetConfiguredCandidateWindowPreeditFontSize()));
-    settings.fontFamily = L"PTB IPA Plus";
+    settings.fontFamily = string_to_wstring(ResolveSystemFontFamilyForCss(GetConfiguredCandidateFont()));
     settings.resolveFontFamily = [](const std::string &family) {
         if (family == "Doulos SIL" || family == "PTB IPA Plus")
-            return std::wstring(L"PTB IPA Plus");
+            return string_to_wstring(family);
         return string_to_wstring(ResolveSystemFontFamilyForCss(family));
     };
     settings.fallbackFontFamilies.push_back(L"PTB IPA Plus");
@@ -373,15 +373,13 @@ std::uint64_t CandidatePresenter::FillItemsFromUi()
         item.annotation = string_to_wstring(view.annotation);
         if (view.ipa_needs_choice)
         {
-            item.translation = view.ipa_can_choose ? L"选择读音 · 点击或 Ctrl+Enter" : L"读音待选（完整词语后可选）";
+            item.translation = L"选择读音 · 数字键或点击";
             item.secondaryIsIpa = true;
         }
         else if (!view.ipa.empty())
         {
             item.translation = string_to_wstring(view.ipa);
             item.secondaryFontFamily = L"Doulos SIL";
-            if (!view.ipa_committable)
-                item.translation += L"（预览）";
             item.secondaryIsIpa = true;
         }
         else if (translationsEnabled)
@@ -1074,6 +1072,8 @@ void CandidatePresenter::ShowFromGlobalState(POINT caret)
             stickyKey += L"#expanded";
         if (stickyKey != stickyCardKey_)
         {
+            if (impl_->scene.BodyScroller())
+                impl_->scene.BodyScroller()->SetScrollOffset(0.0f);
             stickyCardKey_ = std::move(stickyKey);
             stickyCardWidthDip_ = 0.0f;
             stickyCardHeightDip_ = 0.0f;
@@ -1093,6 +1093,8 @@ void CandidatePresenter::ShowFromGlobalState(POINT caret)
         }
     }
     hoverArmed_ = false;
+    if (impl_->scene.BodyScroller())
+        impl_->scene.BodyScroller()->ScrollIntoView(impl_->list->GetItemBounds(impl_->list->GetSelectedIndex()));
     if (!GetCursorPos(&hoverBaseline_))
     {
         hoverBaseline_ = {};

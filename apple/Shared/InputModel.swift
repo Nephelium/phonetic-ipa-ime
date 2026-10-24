@@ -40,6 +40,26 @@ struct KeyboardProfile: Codable {
     enum CodingKeys: String, CodingKey { case format, version, layout, pageSize, hotkeys; case mappings = "sequences" }
 }
 extension KeyboardProfile {
+    func validated() throws -> KeyboardProfile {
+        func validOutput(_ output: String) -> Bool {
+            !output.isEmpty && output.utf8.count <= 1024 && !output.contains("\n") && !output.contains("\r") && !output.contains("\t") && !output.contains("\0")
+        }
+        guard format == "phonetic-ipa-keymap", version == 1, ["104", "87", "75", "65", "60"].contains(layout),
+              (3...9).contains(pageSize), !mappings.isEmpty, mappings.count <= 10000,
+              mappings.allSatisfy({ !$0.key.isEmpty && $0.key.utf8.count <= 128 && !$0.key.unicodeScalars.contains(where: { $0.value <= 32 || $0.value == 127 }) && !$0.value.isEmpty && $0.value.count <= 200 && $0.value.allSatisfy(validOutput) }),
+              hotkeys.count <= 1000 else { throw CocoaError(.fileReadCorruptFile) }
+        var chords = Set<String>()
+        for chord in hotkeys {
+            guard (1...7).contains(chord.modifiers), (1...255).contains(chord.virtualKey), validOutput(chord.output),
+                  chords.insert("\(chord.modifiers):\(chord.virtualKey)").inserted else { throw CocoaError(.fileReadCorruptFile) }
+        }
+        var result = self
+        for key in (1...9).map(String.init) {
+            if let values = result.mappings.removeValue(forKey: key) { result.mappings["\\", default: []] += values }
+        }
+        guard result.mappings["\\", default: []].count <= 200 else { throw CocoaError(.fileReadCorruptFile) }
+        return result
+    }
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         format = try container.decode(String.self, forKey: .format)
@@ -60,6 +80,17 @@ enum IPAResources {
             CTFontManagerRegisterFontsForURL(directory.appendingPathComponent(name) as CFURL, .process, nil)
         }
     }
+    static func readProfileData(_ url: URL) throws -> Data {
+        let limit = 8 * 1024 * 1024
+        let handle = try FileHandle(forReadingFrom: url)
+        defer { try? handle.close() }
+        var data = Data()
+        while data.count <= limit {
+            guard let chunk = try handle.read(upToCount: min(65536, limit + 1 - data.count)), !chunk.isEmpty else { return data }
+            data.append(chunk)
+        }
+        throw CocoaError(.fileReadTooLarge)
+    }
     static var profileDirectory: URL {
         #if os(iOS)
         if let shared = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: "group.org.nephelium.phonetic-ipa") {
@@ -71,9 +102,18 @@ enum IPAResources {
     }
 }
 
+struct TranscriptionRule: Identifiable {
+    let id: String, name: String, shortName: String
+}
+
 @MainActor final class InputModel: ObservableObject {
     @Published var raw = ""
     @Published var pinyin = true
+    @Published var outputIpa = true
+    private var commitAfterReading = false
+    @Published var rules: [TranscriptionRule] = []
+    @Published var ruleId = "beijing"
+    private var ruleError = ""
     @Published var candidates: [Candidate] = []
     @Published var page = 0
     @Published var pageSize = 6
@@ -107,6 +147,7 @@ enum IPAResources {
         return pending?.reading?.parts[i].options ?? []
     }
     func refresh() {
+        if pinyin && !ruleError.isEmpty { candidates = []; pending = nil; status = ruleError; onChange(); return }
         page = 0; selectedIndex = 0; pending = nil
         let records = engine?.candidates(raw, pinyin: pinyin) as? [[String: Any]] ?? []
         candidates = records.compactMap { item in
@@ -150,6 +191,7 @@ enum IPAResources {
     func move(_ delta: Int) {
         selectedIndex = min(max(0, selectedIndex + delta), max(0, visible.count - 1)); onChange()
     }
+    func chooseDefault(_ index: Int) { choose(index, ipa: outputIpa) }
     func choose(_ index: Int, ipa: Bool) {
         if pending != nil {
             chooseReading(index); return
@@ -157,7 +199,7 @@ enum IPAResources {
         guard visible.indices.contains(index) else { return }
         let item = visible[index]
         if ipa && !item.symbol {
-            if item.reading?.ambiguous == true { pending = item; onChange(); return }
+            if item.reading?.ambiguous == true { pending = item; commitAfterReading = true; onChange(); return }
             guard !item.ipa.isEmpty else { status = "当前字表没有完整读音"; return }
         }
         onCommit(ipa && !item.symbol ? item.ipa : item.word)
@@ -173,6 +215,7 @@ enum IPAResources {
             reading.ambiguous = false; item.ipa = reading.text; item.reading = reading
             if let i = candidates.firstIndex(where: { $0.id == item.id }) { candidates[i] = item }
             pending = nil
+            if commitAfterReading { onCommit(reading.text); clear(); return }
             status = "读音已选择，点击音标上屏"
         } else { item.reading = reading; pending = item }
         onChange()
@@ -185,56 +228,48 @@ enum IPAResources {
            var reading = try? JSONDecoder().decode(Reading.self, from: data) {
             for i in reading.parts.indices where reading.parts[i].options.count > 1 { reading.parts[i].selected = -1 }
             guard reading.parts.contains(where: { $0.selected < 0 }) else { return }
-            item.reading = reading; pending = item; onChange()
+            commitAfterReading = false; item.reading = reading; pending = item; onChange()
         }
     }
     func applyMappings(_ entries: [String: [String]], pageSize: Int) throws {
-        guard (3...9).contains(pageSize), !entries.isEmpty, entries.count <= 10000,
-              entries.allSatisfy({ !$0.key.isEmpty && $0.key.utf8.count <= 128 && !$0.key.unicodeScalars.contains(where: { $0.value <= 32 || $0.value == 127 }) && !$0.value.isEmpty && $0.value.count <= 200 && $0.value.allSatisfy({ !$0.isEmpty && !$0.contains("\n") && !$0.contains("\r") && !$0.contains("\t") && !$0.contains("\0") && $0.utf8.count <= 1024 }) }) else {
-            throw NSError(domain: "PhoneticIPA", code: 2, userInfo: [NSLocalizedDescriptionKey: "方案格式无效，请检查编码、候选和每页数量"])
-        }
-        var normalized = entries
-        for key in (1...9).map(String.init) {
-            if let values = normalized.removeValue(forKey: key) {
-                normalized["\\", default: []] += values
-            }
-        }
+        let snapshot = try KeyboardProfile(layout: profileLayout, pageSize: pageSize, mappings: entries, hotkeys: profileHotkeys).validated()
+        let normalized = snapshot.mappings
         let folder = IPAResources.profileDirectory
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
-        let snapshot = KeyboardProfile(layout: profileLayout, pageSize: pageSize, mappings: normalized, hotkeys: profileHotkeys)
         let encoded = try JSONEncoder().encode(snapshot)
+        guard encoded.count <= 8 * 1024 * 1024 else { throw CocoaError(.fileReadTooLarge) }
         let candidateURL = folder.appendingPathComponent("candidate-\(UUID().uuidString).cin")
         try cinText(normalized).write(to: candidateURL, atomically: true, encoding: .utf8)
         let validator = try IPAEngine(resourcePath: IPAResources.directory.path)
         _ = try validator.loadCIN(candidateURL.path)
         try encoded.write(to: folder.appendingPathComponent("profile.json"), options: .atomic)
-        _ = try engine?.loadCIN(candidateURL.path)
+        _ = try validator.selectRule(ruleId)
+        engine = validator
         mappings = normalized; self.pageSize = pageSize; status = "方案已保存"; refresh()
     }
-    func cinText(_ entries: [String: [String]]) -> String {
-        "%gen_inp\n%ename PhoneticIPA\n%selkey 123456789\n%ipa_layout \(profileLayout)\n" + profileHotkeys.map { "%ipa_hotkey \($0.modifiers) \($0.virtualKey)\t\($0.output)\n" }.joined() + "%chardef begin\n" + entries.keys.sorted().flatMap { key in
+    func cinText(_ entries: [String: [String]], layout: String? = nil, hotkeys: [KeyChord]? = nil) -> String {
+        "%gen_inp\n%ename PhoneticIPA\n%selkey 123456789\n%ipa_layout \(layout ?? profileLayout)\n" + (hotkeys ?? profileHotkeys).map { "%ipa_hotkey \($0.modifiers) \($0.virtualKey)\t\($0.output)\n" }.joined() + "%chardef begin\n" + entries.keys.sorted().flatMap { key in
             entries[key, default: []].map { key + "\t" + $0 }
         }.joined(separator: "\n") + "\n%chardef end\n"
     }
     func reloadProfile() {
+        defer { reloadRule() }
         let file = IPAResources.profileDirectory.appendingPathComponent("profile.json")
         guard FileManager.default.fileExists(atPath: file.path) else { return }
         do {
-            let data = try Data(contentsOf: file)
-            guard data.count <= 8 * 1024 * 1024 else { throw CocoaError(.fileReadTooLarge) }
-            let profile = try JSONDecoder().decode(KeyboardProfile.self, from: data)
+            let data = try IPAResources.readProfileData(file)
+            let profile = try JSONDecoder().decode(KeyboardProfile.self, from: data).validated()
             // Loading performs no shared writes. The derived CIN stays in this process's temp directory.
-            guard profile.format == "phonetic-ipa-keymap", profile.version == 1, (3...9).contains(profile.pageSize), !profile.mappings.isEmpty else { throw CocoaError(.fileReadCorruptFile) }
-            profileLayout = profile.layout; profileHotkeys = profile.hotkeys
             let temporary = FileManager.default.temporaryDirectory.appendingPathComponent("ipa-profile-\(UUID().uuidString).cin")
-            try cinText(profile.mappings).write(to: temporary, atomically: true, encoding: .utf8)
-            _ = try engine?.loadCIN(temporary.path)
+            try cinText(profile.mappings, layout: profile.layout, hotkeys: profile.hotkeys).write(to: temporary, atomically: true, encoding: .utf8)
+            let validator = try IPAEngine(resourcePath: IPAResources.directory.path)
+            _ = try validator.loadCIN(temporary.path)
+            engine = validator; profileLayout = profile.layout; profileHotkeys = profile.hotkeys
             mappings = profile.mappings; pageSize = profile.pageSize
         } catch { status = "方案读取失败：\(error.localizedDescription)" }
     }
     func importProfile(_ url: URL) throws {
-        let data = try Data(contentsOf: url)
-        guard data.count <= 8 * 1024 * 1024 else { throw CocoaError(.fileReadTooLarge) }
+        let data = try IPAResources.readProfileData(url)
         if url.pathExtension.lowercased() == "json" {
             let profile = try JSONDecoder().decode(KeyboardProfile.self, from: data)
             guard profile.format == "phonetic-ipa-keymap", profile.version == 1,
@@ -245,12 +280,44 @@ enum IPAResources {
             catch { profileLayout = previousLayout; profileHotkeys = previousChords; throw error }
         } else {
             let temporary = try IPAEngine(resourcePath: IPAResources.directory.path)
-            _ = try temporary.loadCIN(url.path)
+            let captured = FileManager.default.temporaryDirectory.appendingPathComponent("ipa-import-\(UUID().uuidString).cin")
+            try data.write(to: captured, options: .atomic)
+            _ = try temporary.loadCIN(captured.path)
             let previousLayout = profileLayout; let previousChords = profileHotkeys
             captureMetadata(temporary)
             do { try applyMappings(temporary.mappings(), pageSize: pageSize) }
             catch { profileLayout = previousLayout; profileHotkeys = previousChords; throw error }
         }
+    }
+    private func reloadRule() {
+        guard let engine else { return }
+        rules = engine.transcriptionRules().compactMap { item in
+            guard let id = item["id"] as? String, let name = item["name"] as? String,
+                  let short = item["shortName"] as? String else { return nil }
+            return TranscriptionRule(id: id, name: name, shortName: short)
+        }
+        let file = IPAResources.profileDirectory.appendingPathComponent("rule-selection.txt")
+        do {
+            var id = "beijing"
+            if FileManager.default.fileExists(atPath: file.path) {
+                let data = try IPAResources.readProfileData(file)
+                guard data.count <= 65, let text = String(data: data, encoding: .utf8) else { throw CocoaError(.fileReadCorruptFile) }
+                id = text.trimmingCharacters(in: .newlines)
+            }
+            guard id.utf8.count <= 64 else { throw CocoaError(.fileReadCorruptFile) }
+            _ = try engine.selectRule(id); ruleId = id; ruleError = ""
+        } catch { ruleError = "转写规则读取失败，请重新选择规则"; status = ruleError }
+    }
+    func selectRule(_ id: String) {
+        guard let engine else { return }
+        do {
+            _ = try engine.selectRule(id)
+            do {
+                try FileManager.default.createDirectory(at: IPAResources.profileDirectory, withIntermediateDirectories: true)
+                try (id + "\n").write(to: IPAResources.profileDirectory.appendingPathComponent("rule-selection.txt"), atomically: true, encoding: .utf8)
+            } catch { _ = try? engine.selectRule(ruleId); throw error }
+            ruleId = id; ruleError = ""; status = ""; refresh()
+        } catch { status = error.localizedDescription; onChange() }
     }
     private func captureMetadata(_ source: IPAEngine) {
         let metadata = source.profileMetadata()

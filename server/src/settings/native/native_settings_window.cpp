@@ -170,7 +170,7 @@ class TitleBar : public msimeui::Visual
         TextStyle title;
         title.size = 12.0f;
         title.letterSpacing = 0.2f;
-        DrawTextInRect(dr, L"Settings", title,
+        DrawTextInRect(dr, L"国际音标输入法 · 设置", title,
                        {bounds_.x + 12.0f, bounds_.y, std::max(0.0f, ButtonRect(HTMINBUTTON).x - bounds_.x - 20.0f),
                         bounds_.height},
                        WithAlpha(p.text, 0.92f * dim));
@@ -481,7 +481,7 @@ class SidebarHeader : public msimeui::Visual
 
   private:
     TextLayout title_;
-    BitmapImage logo_{AssetPath(L"msime.png"), 25.0f, 25.0f, 6.0f};
+    BitmapImage logo_{AssetPath(L"ipa-bird.png"), 25.0f, 25.0f, 6.0f};
 };
 
 class Sidebar : public msimeui::Panel
@@ -1238,7 +1238,7 @@ class SettingsWindowImpl : public HostServices
           }),
           context_(model_, *this)
     {
-        window_ = std::make_unique<msimeui::Window>(L"MetasequoiaImeSettingsWindow", L"Metasequoia IME Settings", 0, 0);
+        window_ = std::make_unique<msimeui::Window>(L"MetasequoiaImeSettingsWindow", L"国际音标输入法 · 设置", 0, 0);
         window_->AdoptExistingHwnd(hwnd_);
         window_->SetQuitOnDestroy(false);
         // The frame is extended into the client area for the custom caption; DWM does not

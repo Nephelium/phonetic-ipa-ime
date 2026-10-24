@@ -1,5 +1,6 @@
 #include "ipa/ipa_reading_session.h"
 #include "engine/contracts/ipa_input.h"
+#include "engine/ipa/ipa_rules.h"
 #include <chrono>
 #include <iostream>
 
@@ -86,6 +87,43 @@ int main(int argc, char **argv)
         for (unsigned modifiers = 0; modifiers < 8; ++modifiers)
             Require(PhoneticIpaKey::IsReadingChoiceKey(0x0d, modifiers) == (modifiers == 3),
                     "Shortcut modifier conflict");
+
+        const auto root = std::filesystem::u8path(argv[1]);
+        const auto rules = phonetic_ipa::LoadTranscriptionRules(root);
+        Require(rules.size() == 10, "Ten transcription standards must be packaged");
+        std::set<std::string> distinct;
+        for (const auto &rule : rules)
+        {
+            const auto alternate = phonetic_ipa::LoadTranscriptionRule(root, rule.id);
+            const auto word = alternate.Convert(u8"厌恶", "yan'wu");
+            Require(!word.text.empty() && word.word_matched, "Alternate rule lost word-level reading");
+            distinct.insert(word.text);
+            const auto evil = alternate.Convert(u8"恶", "wu");
+            Require(evil.ambiguous && evil.parts.size() == 1 && evil.parts[0].options.size() == 2,
+                    "Alternate rule guessed or leaked a different spelling");
+            for (const auto &option : evil.parts[0].options)
+                Require(option.pinyin == "wu1" || option.pinyin == "wu4", "wu leaked an e reading");
+        }
+        Require(distinct.size() >= 5, "Rule selection did not change transcription");
+        PhoneticIpa::ReadingSession ruleSession;
+        const auto broad = phonetic_ipa::LoadTranscriptionRule(root, "beijing");
+        const auto narrow = phonetic_ipa::LoadTranscriptionRule(root, "unt-narrow");
+        ruleSession.SetContext("h\tbeijing");
+        Require(ruleSession.Begin(broad, u8"好", "hao") && ruleSession.Choose(0), "h reading choice failed");
+        const auto chosen = ruleSession.Resolve(broad, u8"好", "hao");
+        Require(!chosen.text.empty(), "Reading choice not resolved");
+        ruleSession.SetContext("h\tunt-narrow");
+        Require(ruleSession.Resolve(narrow, u8"好", "hao").ambiguous, "Rule switch retained stale IPA");
+        bool rejected = false;
+        try
+        {
+            (void)phonetic_ipa::LoadTranscriptionRule(root, "../beijing");
+        }
+        catch (const std::exception &)
+        {
+            rejected = true;
+        }
+        Require(rejected, "Unknown/path-traversal rule was accepted");
 
         const auto started = std::chrono::steady_clock::now();
         for (int i = 0; i < 1000; ++i)

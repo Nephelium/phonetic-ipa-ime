@@ -101,6 +101,11 @@ STDAPI CMetasequoiaIME::OnSetThreadFocus()
     {
         return S_OK;
     }
+    if (_focusLossDeferPending && _msgWndHandle)
+    {
+        KillTimer(_msgWndHandle, TIMER_DEFERRED_FOCUS_LOSS);
+        _focusLossDeferPending = false;
+    }
     // Do not consume this marker here. TextInputHost owns a separate TSF
     // client, so the authoritative document OnSetFocus must use it to force a
     // new Server activation even when our local pipe handles still look live.
@@ -161,17 +166,26 @@ STDAPI CMetasequoiaIME::OnKillThreadFocus()
     _focusLostToWindowsTextInputHost = false;
     (void)_CaptureWindowsTextInputHostFocusLoss();
     _threadFocusLostForAnnouncement = true;
+    DWORD foregroundProcess = 0;
+    GetWindowThreadProcessId(GetForegroundWindow(), &foregroundProcess);
+    // A real app switch can omit document-focus callbacks. Fence that loss
+    // after the same short deferral as document focus, while preserving the
+    // temporary TextInputHost/emoji route and in-process editor transitions.
+    if (_msgWndHandle && foregroundProcess != 0 && foregroundProcess != GetCurrentProcessId() &&
+        !_focusLostToWindowsTextInputHost && !_focusLossDeferPending)
+    {
+        _focusLossDeferPending = true;
+        SetTimer(_msgWndHandle, TIMER_DEFERRED_FOCUS_LOSS, FOCUS_LOSS_DEFER_MS, nullptr);
+    }
     if (_msgWndHandle && IsWindow(_msgWndHandle))
     {
         KillTimer(_msgWndHandle, TIMER_FOCUS_CARET_STATE);
     }
 
-    // ITfThreadFocusSink reports temporary auxiliary UI transitions as well
-    // as real application focus changes. The known-good implementation did
-    // not use this callback as an IPC/session boundary: document/top-context
-    // changes are already handled by ITfThreadMgrEventSink, and TIP switching
-    // is handled by Deactivate. Keep the current composition and pipe epoch
-    // intact here, especially for TextInputHost.exe / Win+..
+    // Temporary auxiliary UI transitions retain the composition and pipe
+    // epoch. Only the deferred external-app case above ends the session;
+    // document/top-context changes and TIP switching retain their existing
+    // handlers. In particular, TextInputHost.exe / Win+. stays intact.
     if (_pCandidateListUIPresenter)
     {
         ITfDocumentMgr *pCandidateListDocumentMgr = nullptr;
