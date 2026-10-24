@@ -10,7 +10,10 @@ def lessons(phone, mac=False):
       dict(id='happy',name='拼音输入「快乐」',note='乐在快乐里读 lè，整词读音帮助确定多音字。',steps=[
         step('word','输入完整拼音 kuaile','依次输入 k、u、a、i、l、e，先不要确认候选。','组合区显示 kuaile 或 kuai’le，候选中出现快乐。现在还没有把音标输入正文。',list('kuaile'),['composition']),
         step('word','选快乐下方的音标','点快乐下方的音标。电脑也可按快乐前的数字，图中快乐是第 1 项。','选的是音标这一行。快乐的读音为 kuai4 le4，通常不需要再选一次。',['点下行音标'] if phone else ['1 / 空格','或点下行音标'],['word-ipa']),
-        step('word-result','看正文里的结果','确认后看输入框，音标应已进入正文。','拼音组合消失。这个结果已经带声调，不必再重复补调值。',[],['result'],'kʰuai˥˩ lɤ˥˩','本文示例使用 Standard Chinese Beijing 宽；其他规则的音标写法会不同。')]),
+        step('word-result','看正文里的结果','确认后看输入框，音标应已进入正文。','拼音组合消失。这个结果已经带声调，不必再重复补调值。',[],['result'],'kʰuai˥˩ lɤ˥˩','本文示例使用 Standard Chinese Beijing 宽；其他规则的音标写法会不同。'),
+        step('quick-word','对比：这次选快了','同样输入 kuaile，这次点快了下方的选择读音。电脑也可按快了前的数字，图中是第 2 项。','快乐和快了的拼音字母相同，先选中自己要表达的词语，再确认读音。',['点快了下行'] if phone else ['k u a i l e','2'],['quick-ipa']),
+        step('quick-readings','确认快读 kuai4','在实际出现的读音页中选择 kuai4。图中它排第 1 项。','这里待选的是快的读音。了按输入的 le 匹配为轻声，不会列出 liao 的读音。',['点 kuai4'] if phone else ['1'],['quick-reading-4']),
+        step('quick-result','对照两个词的结果','看正文中的快了音标，再和前面的快乐对照。','快乐中的乐读 lè，音标带第四声；快了中的了读轻声 le，示例写作 lɤ，不添加第四声。',[],['result'],'kʰuai˥˩ lɤ')]),
       dict(id='polyphone',name='「好」按两次数字',note='第一次选汉字，第二次选读音。每一页都重新看编号。',steps=[
         step('hao','输入 hao，先选好','输入 hao，找到好，再按它前面的数字。图中好排第 1，按 1。','这一步在选汉字。好仍有 hao3、hao4 两种读音，需要继续选择。',['h','a','o','1'],['word-ipa']),
         step('readings','再选 hao4','重新查看读音页编号。图中 hao4 排第 2，所以再按 2；手机也能直接点 hao4。','hao3 和 hao4 是两个不同读音，不要沿用上一页的编号。',['点 hao4'] if phone else ['2'],['reading-4']),

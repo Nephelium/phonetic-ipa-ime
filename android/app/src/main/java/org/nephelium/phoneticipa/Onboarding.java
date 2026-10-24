@@ -23,6 +23,13 @@ final class Onboarding {
         root.setPadding(pad, pad, pad, pad); root.setBackground(UI.background(0xfff5f8fa, UI.dp(activity, 18)));
         TextView title = UI.text(activity, "", 21); title.setTypeface(Typeface.DEFAULT_BOLD); UI.full(root, title, -2);
         TextView count = UI.text(activity, "", 12); count.setTextColor(UI.MUTED); UI.full(root, count, -2);
+        UI.full(root, UI.button(activity, "打开完整图文教程（网页） ↗", () -> {
+            try { activity.startActivity(new android.content.Intent(android.content.Intent.ACTION_VIEW,
+                android.net.Uri.parse("https://www.phonetictoolbox.com/ipa-ime-guide/?platform=android"))); }
+            catch (android.content.ActivityNotFoundException error) {
+                Toast.makeText(activity, "请先安装浏览器，再打开此链接", Toast.LENGTH_LONG).show();
+            }
+        }), 42);
         ScrollView scroll = new ScrollView(activity); LinearLayout page = UI.column(activity); page.setPadding(0, pad, 0, pad); scroll.addView(page);
         root.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1));
         LinearLayout actions = UI.row(activity); UI.full(root, actions, -2);

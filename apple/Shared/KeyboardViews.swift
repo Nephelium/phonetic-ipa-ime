@@ -32,6 +32,16 @@ struct IPAFile: FileDocument {
     func fileWrapper(configuration: WriteConfiguration) throws -> FileWrapper { FileWrapper(regularFileWithContents: data) }
 }
 
+private enum WebGuide {
+    static var url: URL {
+        #if os(iOS)
+        URL(string: "https://www.phonetictoolbox.com/ipa-ime-guide/?platform=ios")!
+        #else
+        URL(string: "https://www.phonetictoolbox.com/ipa-ime-guide/?platform=macos")!
+        #endif
+    }
+}
+
 enum FirstUseContent {
     static let titles = ["先认清当前输入状态",
 "用拼音输入音标或汉字",
@@ -69,6 +79,7 @@ struct FirstUseGuide: View {
             HStack { Text("国际音标输入法").font(.headline); Spacer(); Button("稍后") { finish() }.accessibilityIdentifier("onboarding-skip") }
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
+                    Link("打开完整图文教程（网页）", destination: WebGuide.url).font(.subheadline)
                     Text(titles[page]).font(.title2.bold()).fixedSize(horizontal: false, vertical: true)
                     Text(examples[page]).font(.ipa(28)).multilineTextAlignment(.center).frame(maxWidth: .infinity).padding(24)
                         .background(Color.accentColor.opacity(0.09), in: RoundedRectangle(cornerRadius: 16))
@@ -90,6 +101,10 @@ struct UsageGuideView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: compact ? 14 : 22) {
+                if !compact {
+                    Link("打开完整图文教程（网页）", destination: WebGuide.url)
+                        .accessibilityIdentifier("web-usage-guide")
+                }
                 #if os(iOS)
                 if !compact {
                     section("开始使用", "在系统设置 → 通用 → 键盘 → 键盘 → 添加新键盘中，添加国际音标输入法。输入时长按地球键切换过来。")

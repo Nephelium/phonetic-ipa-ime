@@ -40,6 +40,21 @@
       "w": 1400,
       "h": 960
     },
+    "quick-readings": {
+      "file": "windows-quick-readings-2fdd0a3160.png",
+      "w": 760,
+      "h": 820
+    },
+    "quick-result": {
+      "file": "windows-quick-result-e6d36b4766.png",
+      "w": 760,
+      "h": 820
+    },
+    "quick-word": {
+      "file": "windows-quick-word-ca41310405.png",
+      "w": 760,
+      "h": 820
+    },
     "reading-result": {
       "file": "windows-reading-result-2a442349da.png",
       "w": 760,
@@ -126,6 +141,21 @@
       "file": "macos-plus-chart-ccf441e23e.png",
       "w": 1160,
       "h": 820
+    },
+    "quick-readings": {
+      "file": "macos-quick-readings-71fc1b8e0e.png",
+      "w": 760,
+      "h": 540
+    },
+    "quick-result": {
+      "file": "macos-quick-result-024017f562.png",
+      "w": 760,
+      "h": 540
+    },
+    "quick-word": {
+      "file": "macos-quick-word-6fe0f89461.png",
+      "w": 760,
+      "h": 540
     },
     "reading-result": {
       "file": "macos-reading-result-2558e0f94c.png",
@@ -263,6 +293,21 @@
       "file": "android-word-365017a591.png",
       "w": 1080,
       "h": 2400
+    },
+    "quick-readings": {
+      "file": "android-quick-readings-f7df02c031.png",
+      "w": 1080,
+      "h": 2400
+    },
+    "quick-result": {
+      "file": "android-quick-result-ac98b095f1.png",
+      "w": 1080,
+      "h": 2400
+    },
+    "quick-word": {
+      "file": "android-quick-word-5c7a66853e.png",
+      "w": 1080,
+      "h": 2400
     }
   },
   "ios": {
@@ -353,6 +398,21 @@
     },
     "start": {
       "file": "ios-start-8160dfc22e.png",
+      "w": 1206,
+      "h": 2622
+    },
+    "quick-result": {
+      "file": "ios-quick-result-83ad3fec4a.png",
+      "w": 1206,
+      "h": 2622
+    },
+    "quick-readings": {
+      "file": "ios-quick-readings-c5d1a29a6f.png",
+      "w": 1206,
+      "h": 2622
+    },
+    "quick-word": {
+      "file": "ios-quick-word-ab4f759d7a.png",
       "w": 1206,
       "h": 2622
     }

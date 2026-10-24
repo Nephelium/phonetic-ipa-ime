@@ -773,6 +773,11 @@ VisualPtr BuildIpaHelpPage(PageContext &context)
     auto intro = std::make_shared<Button>(L"重新查看上手教学");
     intro->SetOnClick([host = &context.host]() { ShowIpaFirstUse(*host); });
     guide->Add(intro);
+    auto webGuide = std::make_shared<Button>(L"打开完整图文教程（网页）");
+    webGuide->SetOnClick([model = &context.model]() {
+        model->Post("openExternalUrl", Json("https://www.phonetictoolbox.com/ipa-ime-guide/?platform=windows"));
+    });
+    guide->Add(webGuide);
     for (size_t i = 0; i < IpaGuideTitles().size(); ++i)
     {
         guide->Add(MakeTitle(IpaGuideTitles()[i]));

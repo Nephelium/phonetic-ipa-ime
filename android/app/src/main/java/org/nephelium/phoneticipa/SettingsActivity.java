@@ -45,7 +45,7 @@ public final class SettingsActivity extends Activity {
             root.removeAllViews();
             if (error != null) { root.addView(UI.text(this, "资料载入失败：" + error.getMessage(), 15)); return; }
             engine = value; LinearLayout nav = UI.row(this);
-            UI.weighted(nav, UI.button(this, "键位设置", this::settings), 1, 44); UI.weighted(nav, UI.button(this, "试打", this::typing), 1, 44); UI.weighted(nav, UI.button(this, "说明", () -> { body.removeAllViews(); UI.full(body, UI.button(this, "重新查看上手教学", () -> showOnboarding(true)), 44); UI.full(body, UI.guide(this), -1); }), 1, 44); UI.full(root, nav, -2);
+            UI.weighted(nav, UI.button(this, "键位设置", this::settings), 1, 44); UI.weighted(nav, UI.button(this, "试打", this::typing), 1, 44); UI.weighted(nav, UI.button(this, "说明", () -> { body.removeAllViews(); UI.full(body, UI.button(this, "打开完整图文教程（网页） ↗", () -> download("https://www.phonetictoolbox.com/ipa-ime-guide/?platform=android")), 44); UI.full(body, UI.button(this, "重新查看上手教学", () -> showOnboarding(true)), 44); UI.full(body, UI.guide(this), -1); }), 1, 44); UI.full(root, nav, -2);
             body = UI.column(this); UI.full(root, body, -1); settings(); showOnboarding(false);
         }));
     }
@@ -103,7 +103,7 @@ public final class SettingsActivity extends Activity {
     }
     private void download(String url) {
         try { startActivity(new Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url))); }
-        catch (ActivityNotFoundException e) { Toast.makeText(this, "请先安装浏览器后再下载", Toast.LENGTH_LONG).show(); }
+        catch (ActivityNotFoundException e) { Toast.makeText(this, "请先安装浏览器，再打开此链接", Toast.LENGTH_LONG).show(); }
     }
     private void notice() {
         Updates.Feed feed = Updates.available(this);
