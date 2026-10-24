@@ -4,56 +4,43 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 source_app="${IPA_MAC_APP:-$PWD/build/products/Debug/PhoneticIPA-Mac.app}"
 target_app="$HOME/Library/Input Methods/PhoneticIPA.app"
-export DEVELOPER_DIR="${DEVELOPER_DIR:-/Applications/Xcode.app/Contents/Developer}"
+[[ ! -L "$target_app" ]] || { echo "安装目标是符号链接，请先确认原有输入法的位置。未修改任何文件。" >&2; exit 1; }
+registration_app="${IPA_REGISTRATION_APP:-$PWD/build/registration/RegisterInputSource.app}"
 update=false
 repair=false
+no_open=false
 for option in "$@"; do
     case "$option" in
         --update) update=true ;;
         --repair-enabled-list) repair=true ;;
-        *) echo "Usage: $0 [--update] [--repair-enabled-list]" >&2; exit 2 ;;
+        --no-open) no_open=true ;;
+        *) echo "Usage: $0 [--update] [--repair-enabled-list] [--no-open]" >&2; exit 2 ;;
     esac
 done
-[[ -d "$source_app" ]] || { echo "Build the Mac application first." >&2; exit 1; }
+[[ -d "$source_app" ]] || { echo "安装内容不完整：缺少输入法应用。请重新下载并完整解压安装包。" >&2; exit 1; }
+[[ -x "$registration_app/Contents/MacOS/RegisterInputSource" ]] || { echo "安装内容不完整：缺少预编译的注册助手。请重新下载并完整解压安装包，无需安装命令行工具。" >&2; exit 1; }
+helper_id=$(/usr/libexec/PlistBuddy -c 'Print CFBundleIdentifier' "$registration_app/Contents/Info.plist")
+[[ "$helper_id" == org.nephelium.phonetic-ipa.registration ]] || { echo "Unexpected registration-helper bundle ID." >&2; exit 1; }
+codesign --verify --deep --strict "$source_app"
+codesign --verify --deep --strict "$registration_app"
 if [[ -e "$target_app" && "$update" != true ]]; then
-    echo "An installation exists. Use --update to preserve it in build/install-backups and install the new build." >&2; exit 1
+    echo "已安装国际音标输入法。请使用安装器的升级按钮，旧版本会保存在当前用户的 Application Support 中。" >&2; exit 1
 fi
 actual_id=$(/usr/libexec/PlistBuddy -c 'Print CFBundleIdentifier' "$source_app/Contents/Info.plist")
 [[ "$actual_id" == org.nephelium.inputmethod.PhoneticIPA ]] || { echo "Unexpected bundle ID." >&2; exit 1; }
 if [[ -e "$target_app" ]]; then
     [[ "$('/usr/libexec/PlistBuddy' -c 'Print CFBundleIdentifier' "$target_app/Contents/Info.plist")" == "$actual_id" ]] || { echo "Unexpected installed bundle ID." >&2; exit 1; }
 fi
-run_dir="$PWD/build/install-backups/$(date +%Y%m%d-%H%M%S)-$$"
+backup_root="${IPA_INSTALL_BACKUP_ROOT:-$HOME/Library/Application Support/PhoneticIPA/Install Backups}"
+run_dir="$backup_root/$(date +%Y%m%d-%H%M%S)-$$"
 mkdir -p "$run_dir"
 staged="$run_dir/staged.bundle"
 ditto "$source_app" "$staged"
-codesign --force --deep --sign - "$staged"
 codesign --verify --deep --strict "$staged"
 
-# Source and backup copies can win LaunchServices resolution for the same ID.
-# Keep the installed copy as the only registered application for this build.
+# Register the installed path directly. Unregistering a source copy that shares
+# its bundle ID can invalidate the live catalogue during a repeated upgrade.
 lsregister=/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister
-unregister_copy() {
-    local log="$run_dir/unregister-$(basename "$1").log"
-    if "$lsregister" -u "$1" > "$log" 2>&1; then return 0; fi
-    if grep -q 'failed to scan .*: -10814' "$log"; then
-        printf 'No existing application registration: %s\n' "$1"
-        return 0
-    fi
-    cat "$log" >&2
-    return 1
-}
-unregister_copy "$source_app"
-# Xcode's scheme/UI-test builds may also leave an older application in build/Debug.
-# Unregister only known copies of this exact product, retaining every file.
-for build_copy in "$PWD/build/Debug/PhoneticIPA-Mac.app" "$PWD/build/Release/PhoneticIPA-Mac.app" \
-    "$PWD/build/products/Debug/PhoneticIPA-Mac.app" "$PWD/build/products/Release/PhoneticIPA-Mac.app"; do
-    if [[ -d "$build_copy" && "$build_copy" != "$source_app" && "$build_copy" != "$target_app" ]]; then
-        copy_id=$(/usr/libexec/PlistBuddy -c 'Print CFBundleIdentifier' "$build_copy/Contents/Info.plist")
-        [[ "$copy_id" == "$actual_id" ]] || { echo 'Unexpected build-copy bundle ID; registration left unchanged.' >&2; exit 1; }
-        unregister_copy "$build_copy"
-    fi
-done
 mkdir -p "$HOME/Library/Input Methods"
 if [[ -e "$target_app" ]]; then
     executable="$target_app/Contents/MacOS/$('/usr/libexec/PlistBuddy' -c 'Print CFBundleExecutable' "$target_app/Contents/Info.plist")"
@@ -73,11 +60,8 @@ if [[ -e "$target_app" ]]; then
     # Retain the installed bundle directory's identity while replacing its contents.
     # Unregistering it first can make independent TIS clients lose it for minutes.
     mkdir -p "$run_dir/previous.bundle"
-    mv "$target_app/Contents" "$run_dir/previous.bundle/Contents"
-    if ! mv "$staged/Contents" "$target_app/Contents"; then
-        mv "$run_dir/previous.bundle/Contents" "$target_app/Contents"
-        exit 1
-    fi
+    "$registration_app/Contents/MacOS/RegisterInputSource" --exchange-contents "$target_app/Contents" "$staged/Contents"
+    mv "$staged/Contents" "$run_dir/previous.bundle/Contents"
 else
     mv "$staged" "$target_app"
 fi
@@ -86,14 +70,14 @@ codesign --verify --deep --strict "$target_app"
 # Wake the input-source catalogue after replacing the app, including a version change.
 touch "$target_app" "$HOME/Library/Input Methods"
 "$lsregister" -f "$target_app"
+# Establish the InputMethodKit connection in the login session before asking
+# another process to inspect it. This does not open settings or select the IME.
+open -g "$target_app"
 
-# Run registration in the GUI login session without activating a window.
+# Run the precompiled helper in the GUI login session. No compiler is used here.
 helper="$run_dir/RegisterInputSource.app"
-mkdir -p "$helper/Contents/MacOS"
-xcrun clang -fobjc-arc macOS/RegisterInputSource.m -framework AppKit -framework Carbon -o "$helper/Contents/MacOS/RegisterInputSource"
-cat > "$helper/Contents/Info.plist" <<'PLIST'
-<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd"><plist version="1.0"><dict><key>CFBundleIdentifier</key><string>org.nephelium.phonetic-ipa.registration</string><key>CFBundleExecutable</key><string>RegisterInputSource</string><key>CFBundlePackageType</key><string>APPL</string><key>LSUIElement</key><true/><key>NSPrincipalClass</key><string>NSApplication</string></dict></plist>
-PLIST
+ditto "$registration_app" "$helper"
+codesign --verify --deep --strict "$helper"
 arguments=("$target_app")
 if [[ "$repair" == true ]]; then arguments+=(--repair-enabled-list "$run_dir/enabled-sources-before.plist"); fi
 open -g -W -n --stdout "$run_dir/registration.log" --stderr "$run_dir/registration-error.log" "$helper" --args "${arguments[@]}"
@@ -105,7 +89,11 @@ if ! grep -q '^registration-complete=1$' "$run_dir/registration.log"; then
 fi
 ready=false
 for attempt in {1..6}; do
-    if "$helper/Contents/MacOS/RegisterInputSource" "$target_app" --check > "$run_dir/independent-check.log"; then
+    # A fresh process must inspect the catalogue in the same GUI login session.
+    # A shell launched by SSH can have a separate, empty TIS catalogue.
+    : > "$run_dir/independent-check.log"
+    if open -g -W -n --stdout "$run_dir/independent-check.log" --stderr "$run_dir/independent-check-error.log" \
+        "$helper" --args "$target_app" --check && grep -q '^ready=1$' "$run_dir/independent-check.log"; then
         ready=true
         break
     fi
@@ -114,7 +102,9 @@ done
 cat "$run_dir/independent-check.log"
 [[ "$ready" == true ]] || { echo "Independent input-source verification failed. See $run_dir" >&2; exit 1; }
 # Start the installed server in the existing GUI session without opening a window.
-if [[ -e "$run_dir/previous.bundle" ]]; then
+if [[ "$no_open" == true ]]; then
+    : # The graphical installer offers an explicit Open Settings button.
+elif [[ -e "$run_dir/previous.bundle" ]]; then
     open -g "$target_app"
 else
     open "$target_app" --args --settings

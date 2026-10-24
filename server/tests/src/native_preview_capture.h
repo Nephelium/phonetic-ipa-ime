@@ -201,6 +201,62 @@ static void CaptureControls(msimeui::DeviceResources &dr, const std::filesystem:
     std::cout << "Rendered " << file.u8string() << '\n';
 }
 
+static void CheckFirstUsePages(TestSurface &surface, const std::filesystem::path &destination = {})
+{
+    for (float dpi : {96.f, 120.f, 144.f, 192.f})
+        for (float width : {380.f, 560.f})
+        {
+            surface.window.SetDpiOverride(dpi);
+            PreviewHost host(surface.window);
+            ShowIpaFirstUse(host);
+            host.modal->Attach(&surface.window);
+            for (int page = 0; page < 4; ++page)
+            {
+                const auto size = host.modal->MeasureInLayout({width, 1000});
+                host.modal->ArrangeInLayout({24, 24, size.width, size.height});
+                Require(size.height < 600, "Detailed guide expanded beyond its bounded modal");
+                std::set<Button *> discovered;
+                for (float y = 24 + size.height - 64; y < 24 + size.height; y += 4)
+                    for (float x = 24; x < 24 + size.width; x += 8)
+                        if (auto button = dynamic_cast<Button *>(host.modal->FindVisualAt({x, y})))
+                            discovered.insert(button);
+                Require(discovered.size() == 3, "Guide navigation buttons are clipped or missing");
+                std::vector<Button *> buttons(discovered.begin(), discovered.end());
+                std::sort(buttons.begin(), buttons.end(),
+                          [](auto a, auto b) { return a->GetBounds().x < b->GetBounds().x; });
+                Require(buttons.front()->IsDisabled() == (page == 0), "Guide back-button state is wrong");
+                msimeui::ScrollViewer *scroll = nullptr;
+                for (float y = 64; !scroll && y < 24 + size.height - 64; y += 8)
+                    for (float x = 24 + size.width - 24; !scroll && x < 24 + size.width; x += 2)
+                        scroll = dynamic_cast<msimeui::ScrollViewer *>(host.modal->FindVisualAt({x, y}));
+                Require(scroll && scroll->GetMaxScrollOffset() > 0, "Long guide has no scroll route");
+                Require(scroll->GetScrollOffset() == 0, "Changing guide page did not reset scroll position");
+                const auto capture = [&](const char *position) {
+                    if (destination.empty() || dpi != 96 || width != 380)
+                        return;
+                    CaptureControls(surface.window.GetDeviceResources(),
+                                    destination / ("guide-v2-" + std::to_string(page + 1) + "-" + position + ".png"),
+                                    static_cast<UINT>(size.width + 48), static_cast<UINT>(size.height + 48), [&] {
+                                        surface.window.GetDeviceResources().GetRenderTarget()->Clear(Hex(0xF5F8FA));
+                                        host.modal->Render(surface.window.GetDeviceResources());
+                                    });
+                };
+                capture("top");
+                scroll->SetScrollOffset(scroll->GetMaxScrollOffset());
+                Require(scroll->GetScrollOffset() > 0, "Guide cannot reach its final paragraph");
+                capture("bottom");
+                if (page < 3)
+                    Require(buttons.back()->OnKeyDown(VK_RETURN, 0), "Guide next button did not activate");
+                else
+                {
+                    Require(buttons.front()->OnKeyDown(VK_RETURN, 0), "Guide back button did not activate");
+                    Require(scroll->GetScrollOffset() == 0, "Returning to previous guide page retained the bottom");
+                }
+            }
+        }
+    surface.window.SetDpiOverride(96);
+}
+
 static int RenderPreviews(const std::filesystem::path &resources, const std::filesystem::path &destination)
 {
     CheckHr(CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED), "COM");
@@ -228,6 +284,7 @@ static int RenderPreviews(const std::filesystem::path &resources, const std::fil
         dr.GetRenderTarget()->Clear(Hex(0xF5F8FA));
         host.modal->Render(dr);
     });
+    CheckFirstUsePages(surface, destination);
     for (float dpi : {96.0f, 120.0f, 144.0f, 192.0f})
     {
         surface.window.SetDpiOverride(dpi);

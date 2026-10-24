@@ -22,10 +22,10 @@
 
 /* Floating download panel: hovering previews, clicking pins it open. */
 .ime-download{position:relative;z-index:35}
-.ime-download-body{position:absolute;top:calc(100% + 10px);left:0;width:100%;box-sizing:border-box;margin:0;z-index:40;max-height:min(520px,var(--ime-panel-height,calc(100dvh - 32px)));overflow:auto;overscroll-behavior:contain;box-shadow:0 10px 28px #39234826,0 4px 0 #eee7da;animation:ime-popover-in .16s ease-out}
-.ime-download-body::before{content:"";position:absolute;left:0;right:0;top:-12px;height:12px}
+.ime-download-body{position:absolute;top:calc(100% + 10px);left:0;width:100%;box-sizing:border-box;margin:0;z-index:40;max-height:var(--ime-panel-height,calc(100dvh - 24px));overflow:auto;overscroll-behavior:contain;box-shadow:0 10px 28px #39234826,0 4px 0 #eee7da;animation:ime-popover-in .16s ease-out}
+.ime-download[open]::after{content:"";position:absolute;left:0;right:0;top:100%;height:12px}
 .ime-download[data-placement="above"] .ime-download-body{top:auto;bottom:calc(100% + 10px)}
-.ime-download[data-placement="above"] .ime-download-body::before{top:auto;bottom:-12px}
+.ime-download[data-placement="above"][open]::after{top:auto;bottom:100%}
 .hero:has(.ime-download[open]){overflow:visible;z-index:20}
 @keyframes ime-popover-in{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
 @media(prefers-reduced-motion:reduce){.ime-download-body{animation:none}}

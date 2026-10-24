@@ -32,28 +32,36 @@ struct IPAFile: FileDocument {
     func fileWrapper(configuration: WriteConfiguration) throws -> FileWrapper { FileWrapper(regularFileWithContents: data) }
 }
 
+enum FirstUseContent {
+    static let titles = ["先认清当前输入状态",
+"用拼音输入音标或汉字",
+"切换到直接音标键盘",
+"输入声调，查找更多符号"]
+    static var details: [String] {
+        #if os(iOS)
+        ["① 启用并切换到国际音标输入法。Android 在试打页点“启用键盘”后点“切换键盘”；iPhone/iPad 在系统设置→通用→键盘中添加，输入时长按地球键选择。\n\n② 看左下角：显示“拼音”表示当前在拼音查字，点一下变成“IPA”，进入直接音标键盘；再点一次返回。按钮显示的是当前模式。\n\n③ 拼音模式下，上方“音标／汉字”是另一个开关。显示“音标”时，数字／空格默认选 IPA；点成“汉字”后默认选汉字。空闲时左侧会显示“拼音 → 音标”或“拼音 → 汉字”。新安装默认是拼音查字、输出音标，已有偏好会保留。",
+"① 先让左下角显示“拼音”，上方输出按钮显示“音标”。依次输入 hao，候选上行显示汉字，下行显示对应音标。\n\n② 选择“好”。可点下行音标，或按“好”前面的数字。出现 hao3、hao4 时，再按读音前的数字，或直接点所需读音。选 hao4 会输入 xau˥˩。候选编号以当前页为准。单一读音直接输入，有多个读音才再选一次。\n\n③ 想输入汉字：把上方按钮切成“汉字”，再输入 hao 并选“好”，结果是汉字“好”。无论默认输出是什么，点候选上行汉字都能输入汉字，点下行音标都能输入 IPA。\n\n④ 可先试完整词语 yanwu，再点“厌恶”下方音标，输入 jan˥˩ wu˥˩。候选确认后才上屏，空格先确认候选，再按一次才输入空格。",
+"① 点左下角的“拼音”，直到它显示“IPA”。此时按键用于选择音标，输入普通 a、g 等键就能查找相应符号。回到拼音查字时，再点左下角，直到显示“拼音”。\n\n② 带 ··· 的键有多个音标。短按一次即打开选择面板，再点想要的音标，例如点 g 键后选择 ɠ。打开或关闭面板本身不会输入字母。没有 ··· 的单项键直接输入。\n\n③ 也可用上方 IPA Plus：打开完整 IPA／extIPA／VoQS 音标表，搜索或滑动后点符号，可以连续输入。先确认已有候选，再打开音标表。\n\n④ 点“符号”查看 /、\\ 等标点键。\\ 的候选收录声调符号，/ 默认输入斜杠。按住退格可连续删除，松手停止。",
+"① 先确认正在输入的汉字或音标，再开始加声调。数字 1 最低、5 最高。依次在 2、1、4 三个数字键上向上划动，上方出现调值候选。\n\n② 看到 tone:214 时，表示调值还在组合。点选 ˨˩˦、²¹⁴ 或 214 中想要的一项，也可点空格确认首项。确认后声调才上屏。输入声调时轻点 1–5 可继续追加调值。\n\n③ 普通候选出现时，轻点 1–9 选当前页候选；无候选时，普通数字键输入数字。IPA 模式的 0 保留键位方案中的映射。\n\n④ “规则”按钮切换 Standard Chinese Beijing、UntPhesoca 等十套转写方案。规则决定拼音查字的转写结果，直接音标键盘按自己的键位方案输入。设置中的“说明”可随时重看教学。"]
+        #else
+        ["① 双击“安装国际音标输入法.app”，点击安装或升级。完成后从菜单栏输入法菜单选择国际音标输入法，再点进要打字的输入框。无需命令行工具。\n\n② 候选栏空闲时显示状态：“拼音 → 音标”表示拼音候选默认输入 IPA；“拼音 → 汉字”表示默认输入汉字；“IPA · 点选音标”表示直接音标键盘。\n\n③ 轻按并松开 Shift，切换拼音与直接音标；Shift＋空格也能切换。拼音模式下，Caps Lock 切换 IPA／汉字输出，也可点候选栏“音标／汉字”按钮。新安装默认拼音查字、输出音标，已有偏好会保留。",
+"① 回到“拼音 → 音标”状态，依次输入 hao。候选上行显示汉字，下行显示 IPA。\n\n② 找到“好”，按它前面的数字，或点下行音标。出现 hao3、hao4 时，再按读音前的数字。选 hao4 输入 xau˥˩。单一读音直接输入，有多个读音才再选一次，编号以当前页为准。\n\n③ 想输入汉字：在拼音模式按 Caps Lock，或把候选栏按钮切为“汉字”，再输入 hao 并选“好”，结果就是汉字“好”。点上行汉字或下行音标也能分别输入。\n\n④ 空格确认高亮候选，上下键移动，Page Up／Page Down 翻页，Esc 取消组合，Control＋Shift＋回车重新选择读音。完整词语 yanwu 可直接使用厌恶的词语读音。",
+"① 单按并松开 Shift，直到候选栏显示“IPA · 点选音标”。此时字母或符号用于查找键位音标。按 a，再按 1 或空格，确认首项 a。\n\n② 看到候选和正在组合的编码时，表示仍需选择。按候选前的数字确认后，音标才上屏。各键备选可在设置的音标键盘中查看与修改。\n\n③ 再单按 Shift 返回拼音查字，然后用 Caps Lock 或“音标／汉字”按钮决定默认输出。单按 Shift 和按住 Shift＋数字的作用不同。\n\n④ 直接音标模式中也能按 /、\\ 等符号键。\\ 收录声调符号，/ 默认输出斜杠。Esc 取消未确认的编码。",
+"① 先确认当前汉字或音标，再按住 Shift，依次按 2、1、4，随后松开 Shift。数字 1 最低、5 最高。\n\n② 看到 tone:214 时，调值还在组合。空格选首项 ˨˩˦，也可用数字选择 ²¹⁴ 或 214；再按一次空格才输入空格。\n\n③ 候选栏的规则菜单切换十套拼音转写方案。设置中的 IPA Plus 提供 IPA／extIPA／VoQS 音标表，可用于编辑键位。\n\n④ 设置→使用说明可重看教学。若切换后仍看不到音标候选，先确认已选择国际音标输入法，再查看候选栏的模式名称；在直接音标模式按 a、1 即可先试一个音标。"]
+        #endif
+    }
+}
+
 struct FirstUseGuide: View {
     var finish: () -> Void
     @State private var page = 0
-    private let titles = ["拼音，也能输入音标", "遇到多音字，再选读音", "音标与声调怎么输入", "随时打开完整音标表"]
+    private var titles: [String] { FirstUseContent.titles }
+    private var details: [String] { FirstUseContent.details }
     private var examples: [String] {
         #if os(iOS)
-        ["yanwu → 厌恶\njan˥˩ wu˥˩", "恶 · wu\n① wu3   ② wu4\nwu˥˩", "ɡ ··· → ɠ\n2 ↑   1 ↑   4 ↑ → ˨˩˦", "IPA Plus\nIPA · extIPA · VoQS\np   t   k   ʔ   ◌̃"]
+        ["左下角：拼音 ↔ IPA\n上方：音标 ↔ 汉字", "hao → 选好 → 选 hao4\nxau˥˩", "ɡ ··· → 选择 ɠ\nIPA Plus → 全部符号", "2 ↑   1 ↑   4 ↑\n˨˩˦   ²¹⁴   214"]
         #else
-        ["hao → 1 → 2\nxau˥˩", "好\n① hao3   ② hao4", "Shift + 2  1  4\n˨˩˦", "IPA Plus\nIPA · extIPA · VoQS\np   t   k   ʔ   ◌̃"]
-        #endif
-    }
-    private var details: [String] {
-        #if os(iOS)
-        ["默认输入拼音，用数字或空格选择候选音标。点击候选上面的汉字输入汉字，点击下面的音标输入 IPA。上方音标／汉字按钮切换默认输出。",
-         "优先使用词语读音。仍有歧义时，先选字，再选择带声调的读音，不会自动取第一条。长按候选音标可以重新选择。",
-         "左下角切到 IPA，按键可输入音标。带 ··· 的键短按弹出候选，点哪个输入哪个。上划数字 1–5 组合五度调值，再选择上方的声调候选。",
-         "键盘上方的 IPA Plus 可打开完整音标表，连续点选输入。规则按钮切换转写标准。先确认当前候选再打开音标表。设置中的使用说明可重新打开教学。"]
-        #else
-        ["默认输入拼音，数字键或空格选择候选音标。Caps Lock 亮起时改为输出汉字。候选中的汉字和下方音标也可以分别点击输入。",
-         "例如输入 hao，按 1 选择好，再按 1 或 2 选择带调读音。词语能确定读音时直接使用词语读音。Control＋Shift＋回车可以重新选择。",
-         "单按 Shift 切换拼音与音标编码。先确认当前候选，再按住 Shift，依次按 2、1、4 输入五度调值，空格确认。反斜杠键收录原数字键上的声调符号。",
-         "在键位设置中点击按键，可以编辑候选并用 IPA Plus 替换或追加音标。候选栏可切换转写规则。使用说明中可重新打开教学。"]
+        ["单按 Shift：拼音 ↔ IPA\nCaps Lock：音标 ↔ 汉字", "hao → 选好 → 选 hao4\nxau˥˩", "单按 Shift → IPA\na → 1 → a", "按住 Shift + 2、1、4\n空格 → ˨˩˦"]
         #endif
     }
     var body: some View {
@@ -66,7 +74,7 @@ struct FirstUseGuide: View {
                         .background(Color.accentColor.opacity(0.09), in: RoundedRectangle(cornerRadius: 16))
                     Text(details[page]).font(.body).fixedSize(horizontal: false, vertical: true)
                 }.padding(.vertical, 8)
-            }
+            }.id(page).accessibilityIdentifier("onboarding-content")
             HStack {
                 if page > 0 { Button("上一步") { page -= 1 } }
                 Spacer(); Text("\(page + 1) / 4").font(.caption).foregroundStyle(.secondary); Spacer()
@@ -87,6 +95,9 @@ struct UsageGuideView: View {
                     section("开始使用", "在系统设置 → 通用 → 键盘 → 键盘 → 添加新键盘中，添加国际音标输入法。输入时长按地球键切换过来。")
                 }
                 #endif
+                ForEach(0..<FirstUseContent.titles.count, id: \.self) { index in
+                    section(FirstUseContent.titles[index], FirstUseContent.details[index])
+                }
                 section("汉字与音标分别上屏", "在汉字模式输入拼音。点击候选上面的汉字输入汉字，点击下面的音标输入 IPA。默认数字键和空格选音标，键盘上方可切换为汉字输出。用模式按钮切换拼音与直接音标输入。")
                 section("多音字怎么选", "先按词语和输入拼音筛选读音。有多个带调读音时，点击音标会打开读音选择。选定读音后直接上屏。长按候选可重新选择读音。")
                 #if os(iOS)
@@ -95,16 +106,16 @@ struct UsageGuideView: View {
                 section("斜杠等符号键", "先切到 IPA，再点符号。点编码为 / 或 \\ 的键，在弹出的面板中点选输出。\\ 收录原数字键上的声调音标。默认 / 输出斜杠，可以在设置中修改。面板可上下滑动，关闭时不输入。键盘上方的 IPA Plus 可打开分类音标表并连续点选输入；先确认已有的拼音或声调候选。")
                 #else
                 section("数字与五度调值", "1–9 选择当前页的候选。按住 Shift，依次按 2、1、4，可得到 ˨˩˦、²¹⁴ 或 214，空格确认。0 保留原有映射。")
-                section("Mac 快捷键", "单按 Shift 或 Shift＋空格切换拼音／CIN。Caps Lock 切换音标／汉字输出。Control＋回车输入 IPA，Control＋Shift＋回车重新选择读音。Page Up / Page Down 翻页。")
-                section("斜杠等符号键", "CIN 模式直接按实体键盘的 / 或 \\，再选择候选。\\ 收录原数字键上的声调音标。默认 / 输出斜杠，可以在设置中修改。")
+                section("Mac 快捷键", "单按 Shift 或 Shift＋空格切换拼音／IPA。Caps Lock 切换音标／汉字输出。Control＋回车输入 IPA，Control＋Shift＋回车重新选择读音。Page Up / Page Down 翻页。")
+                section("斜杠等符号键", "IPA 模式直接按实体键盘的 / 或 \\，再选择候选。\\ 收录原数字键上的声调音标。默认 / 输出斜杠，可以在设置中修改。")
                 #endif
                 #if os(iOS)
                 section("音标和组合编码", "手机首次启用使用拼音输入音标。带 ··· 的键轻点后弹出音标，点哪个就输入哪个；没有角标的单候选键直接输入。带有组合输入标记的分区收录以此键开头的编码，例如 v 下的 voqs。打开或关闭面板不会输入字母。")
                 #else
-                section("音标和组合编码", "CIN 模式按编码输入音标，例如 a。悬停键位可查看这个键和以它开头的组合编码，例如 v 下的 voqs。含数字的编码可用 code: 前缀输入。")
+                section("音标和组合编码", "IPA 模式按编码输入音标，例如 a。悬停键位可查看这个键和以它开头的组合编码，例如 v 下的 voqs。含数字的编码可用 code: 前缀输入。")
                 #endif
-                section("键帽上的小字", "有些键左上角标有输入编码，中央显示音标。g 键直接显示的 ɡ 是 IPA 字符 U+0261。")
-                section("修改键位", "打开设置，点击模拟键盘上的按键。候选从左到右排列，可直接编辑，也可用 IPA Plus 点选符号。保存方案后生效。每页候选可选 3–9 个，支持导入和导出 CIN / JSON。")
+                section("音标与字母的字形", "g 键中央的 ɡ 是国际音标字符 U+0261，字形与普通拉丁字母 g 可能不同。")
+                section("修改键位", "打开设置，点击模拟键盘上的按键。候选从左到右排列，可直接编辑，也可用 IPA Plus 点选符号。保存方案后生效。每页候选可选 3–9 个，支持导入和导出 IPA / JSON。")
             }.frame(maxWidth: .infinity, alignment: .leading).padding(compact ? 12 : 22)
         }.accessibilityIdentifier("usage-guide")
     }
@@ -123,7 +134,7 @@ struct CandidateStrip: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
-                Text(model.raw.isEmpty ? (model.pinyin ? (model.outputIpa ? "拼音 → 音标" : "拼音 → 汉字") : "CIN · 点选音标") : model.raw)
+                Text(model.raw.isEmpty ? (model.pinyin ? (model.outputIpa ? "拼音 → 音标" : "拼音 → 汉字") : "IPA · 点选音标") : model.raw)
                     .font(.system(.body, design: .monospaced)).foregroundStyle(.secondary).lineLimit(1).truncationMode(.head)
                 Spacer()
                 if model.pinyin {
@@ -456,7 +467,7 @@ struct SettingsView: View {
     @State private var appendSymbol = false
     @State private var help = false
     @State private var walkthrough = false
-    @AppStorage("onboarding-v1-completed") private var introCompleted = false
+    @AppStorage("onboarding-v2-completed") private var introCompleted = false
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
@@ -506,9 +517,9 @@ struct SettingsView: View {
                     }.padding(7)
                 }
                 HStack {
-                    Button("导入 CIN / JSON") { importing = true }
+                    Button("导入 IPA / JSON") { importing = true }
                     Button("导出 JSON") { export(json: true) }
-                    Button("导出 CIN") { export(json: false) }
+                    Button("导出 IPA") { export(json: false) }
                 }
                 UpdateSettingsView()
                 Text(model.status).font(.caption).foregroundStyle(.secondary)

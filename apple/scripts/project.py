@@ -44,11 +44,12 @@ def main():
         refs[path]=add(path,'isa = PBXFileReference; lastKnownFileType = '+kind+'; path = '+quoted(path)+'; sourceTree = "<group>";')
     resource=add('IPA','isa = PBXFileReference; lastKnownFileType = folder; path = Generated/IPA; sourceTree = "<group>";')
     icons=add('Icons','isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>";')
+    localizations=[add('MacLocale'+language,'isa = PBXFileReference; lastKnownFileType = folder; path = '+quoted('macOS/'+language+'.lproj')+'; sourceTree = "<group>";') for language in ['zh-Hans','en']]
     productRefs=[]
     for name, spec in targets.items():
         productRefs.append(add(name+'product','isa = PBXFileReference; explicitFileType = '+('wrapper.cfbundle' if 'UITests' in name else 'wrapper.app-extension' if 'Keyboard' in name else 'wrapper.application')+'; path = '+quoted(spec['product'])+'; sourceTree = BUILT_PRODUCTS_DIR;'))
     products=add('products','isa = PBXGroup; name = Products; children = '+sequence(productRefs)+'; sourceTree = "<group>";')
-    group=add('group','isa = PBXGroup; children = '+sequence(list(refs.values())+[resource,icons,products])+'; sourceTree = "<group>";')
+    group=add('group','isa = PBXGroup; children = '+sequence(list(refs.values())+[resource,icons,products]+localizations)+'; sourceTree = "<group>";')
     targetIDs=[]
     for index,(name,spec) in enumerate(targets.items()):
         sourceBuilds=[add(name+path,'isa = PBXBuildFile; fileRef = '+refs[path]+';') for path in spec['sources']]
@@ -57,6 +58,8 @@ def main():
         resourceBuilds=[] if 'UITests' in name else [assets]
         if spec['type']=='com.apple.product-type.application':
             resourceBuilds.append(add(name+'icons','isa = PBXBuildFile; fileRef = '+icons+';'))
+        if spec['sdk']=='macosx':
+            resourceBuilds += [add(name+'locale'+str(i),'isa = PBXBuildFile; fileRef = '+ref+';') for i,ref in enumerate(localizations)]
         resources=add(name+'resources','isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = '+sequence(resourceBuilds)+'; runOnlyForDeploymentPostprocessing = 0;')
         frameworks=add(name+'frameworks','isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0;')
         phases=[sources,frameworks,resources]
@@ -76,7 +79,7 @@ def main():
             'SWIFT_OBJC_BRIDGING_HEADER':'$(SRCROOT)/Shared/IPAEngine.h',
             'HEADER_SEARCH_PATHS':['$(inherited)','$(IPA_SOURCE_ROOT)'],
             'IPA_SOURCE_ROOT':('$(SRCROOT)/..' if (ROOT.parent/'engine/ipa').is_dir() else '$(SRCROOT)/../msime-windows'),'OTHER_LDFLAGS':['$(inherited)','-lsqlite3'],
-            'CODE_SIGN_STYLE':'Automatic','CURRENT_PROJECT_VERSION':'6','MARKETING_VERSION':'0.1.5',
+            'CODE_SIGN_STYLE':'Automatic','CURRENT_PROJECT_VERSION':'7','MARKETING_VERSION':'0.1.6',
             'GENERATE_INFOPLIST_FILE':'NO','ENABLE_USER_SCRIPT_SANDBOXING':'YES',
         }
         if spec['sdk']=='macosx':

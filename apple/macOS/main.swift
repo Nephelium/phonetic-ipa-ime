@@ -7,10 +7,14 @@ import SwiftUI
     private var settings: NSWindow?
     private var updateNotice: NSPanel?
     private var updateTimer: Timer?
+    private var settingsObserver: NSObjectProtocol?
     private let settingsModel = InputModel()
     func applicationDidFinishLaunching(_ notification: Notification) {
         server = IMKServer(name: Bundle.main.object(forInfoDictionaryKey: "InputMethodConnectionName") as? String, bundleIdentifier: Bundle.main.bundleIdentifier)
         NSLog("PhoneticIPA InputMethodKit server initialized: %@", server == nil ? "no" : "yes")
+        settingsObserver = DistributedNotificationCenter.default().addObserver(
+            forName: Notification.Name("org.nephelium.phonetic-ipa.show-settings"), object: nil, queue: .main
+        ) { [weak self] _ in Task { @MainActor in self?.openSettings() } }
         if CommandLine.arguments.contains("--settings") { openSettings() }
         UpdateStore.shared.onAvailable = { [weak self] in self?.showUpdateNotice() }
         Task { await UpdateStore.shared.check() }
@@ -131,7 +135,7 @@ import SwiftUI
     }
     override func menu() -> NSMenu! {
         let menu = NSMenu()
-        let mode = NSMenuItem(title: "切换拼音 / CIN（Shift／Shift＋空格）", action: #selector(toggleMode), keyEquivalent: "")
+        let mode = NSMenuItem(title: "切换拼音 / IPA（Shift／Shift＋空格）", action: #selector(toggleMode), keyEquivalent: "")
         mode.target = self; menu.addItem(mode)
         let settings = NSMenuItem(title: "键位与音标设置…", action: #selector(ApplicationDelegate.openSettings), keyEquivalent: "")
         settings.target = NSApp.delegate; menu.addItem(settings)

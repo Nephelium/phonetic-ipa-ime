@@ -31,10 +31,10 @@ class IpaFirstUseFigure : public msimeui::Visual
         if (auto character = dr.GetBitmapFromFile((skin / "character.png").wstring()))
             target->DrawBitmap(character, D2D1::RectF(bounds_.x + bounds_.width - 86.0f, bounds_.y + 12.0f,
                                                       bounds_.x + bounds_.width - 10.0f, bounds_.y + 94.0f));
-        const std::array<const wchar_t *, 4> top = {L"h  →  1  →  2", L"1 好 · hao3     2 好 · hao4",
-                                                    L"Shift + 2   1   4", L"IPA Plus  ·  音标表"};
-        const std::array<const wchar_t *, 4> ipa = {L"xau˥˩", L"xau˨˩˧       xau˥˩", L"˨˩˦    ²¹⁴    214",
-                                                    L"p   t   k   ʔ   ◌̃"};
+        const std::array<const wchar_t *, 4> top = {L"拼音 ⇄ IPA · Caps Lock 切换输出", L"hao → 选好 → 选 hao4",
+                                                    L"单按 Shift → IPA · a → 1", L"按住 Shift + 2、1、4 → 空格"};
+        const std::array<const wchar_t *, 4> ipa = {L"拼音查字     直接音标", L"xau˥˩     /     好", L"a",
+                                                    L"˨˩˦    ²¹⁴    214"};
         TextStyle style = BodyStyle();
         style.size = 17.0f;
         DrawTextInRect(dr, top[page], style, {bounds_.x + 16, bounds_.y + 20, bounds_.width - 104, 44}, Hex(0xE3EAFF));
@@ -44,10 +44,47 @@ class IpaFirstUseFigure : public msimeui::Visual
     }
 };
 
+inline const std::array<const wchar_t *, 4> &IpaGuideTitles()
+{
+    static const std::array<const wchar_t *, 4> values = {L"先认清当前输入状态", L"用拼音输入音标或汉字",
+                                                          L"切换到直接音标键盘", L"输入声调，查找更多符号"};
+    return values;
+}
+
+inline const std::array<const wchar_t *, 4> &IpaGuideDetails()
+{
+    static const std::array<const wchar_t *, 4> values = {
+        L"① 安装后按 Win＋空格，从系统输入法列表选择国际音标输入法。先点进要打字的输入框，再输入。\n\n② "
+        L"悬浮工具栏左侧显示当前状态：默认输入拼音，选择候选后输出音标。按 Caps Lock 切到汉字输出，继续输入拼音即可选择汉字。单按并松开 Shift，进入 IPA 模式，用字母或符号查找音"
+        L"标。\n\n③ 轻按并松开 Shift，切换拼音查字与直接音标。按 Caps "
+        L"Lock，在拼音查字时切换 "
+        L"IPA／汉字输出。两个开关分工不同：先决定怎么输入，再决定拼音候选输出什么。新安装默认拼音查字、输出 "
+        L"IPA，已有偏好会保留。",
+        L"① 单按 Shift 返回拼音查字，Caps Lock 关闭时工具栏显示 IPA。输入 hao，候选上行是汉字，下行是音标。\n\n② "
+        L"找到“好”，按它前面的数字；若“好”标为 1，就按 1。出现 hao3、hao4 读音页后，再按所需读音前的数字。选 hao4 "
+        L"后输入 xau˥˩。单一读音直接输入，有多个读音才再选一次，编号以当前页为准。\n\n③ 想输入汉字：在拼音模式按 Caps "
+        L"Lock，让工具栏显示“汉字”，输入 hao，再选“好”，结果就是“好”。再按 Caps Lock 返回 IPA。\n\n④ "
+        L"点上行汉字或下行音标也能分别输入。空格选当前高亮项，上下键移动，Page Up／Page Down 翻页，Esc "
+        L"取消当前组合。读音页用 Ctrl＋Shift＋Enter 返回选字。完整词语 yanwu 可直接选择厌恶的词语读音。",
+        L"① 轻按并松开 Shift，直到工具栏显示 IPA，即直接音标键盘。此时字母用作音标编码。按 a 会出现 a 的音标候选，再按 "
+        L"1 或空格确认首项 a。\n\n② "
+        L"候选窗口还在、编码仍在组合时，表示尚未完成输入。按数字选所需音标后才确认上屏。每个键的备选可以在设置的“音标键"
+        L"盘”页查看和修改。\n\n③ 再单按 Shift，返回拼音查字。随后用 Caps Lock 选择默认输出 IPA 或汉字。单按 Shift "
+        L"是切换模式；按住 Shift 配合数字是输入声调。\n\n④ /、\\ 等标点也能作为音标编码。\\ 收录声调符号，/ "
+        L"默认输出斜杠。含数字的连续编码可用 code: 前缀。Esc 可取消未确认的编码。",
+        L"① 先让当前汉字或音标上屏。按住 Shift，依次按数字 2、1、4，再松开 Shift。数字 1 最低、5 "
+        L"最高，顺序组成调型。\n\n② 候选栏显示 tone:214 时，表示调值尚待确认。按空格选首项 ˨˩˦，也可按候选前的数字选择 "
+        L"²¹⁴ 或 214。这里的空格用于确认，再按一次才输入空格。\n\n③ 工具栏的规则名称可切换十套拼音转写方案。设置里的 "
+        L"IPA Plus 可浏览 IPA、extIPA、VoQS 全部符号并编辑键位。\n\n④ "
+        L"设置→使用说明可重新打开教学。升级后请保存草稿，完全退出并重开仍在运行的微信、ChatGPT "
+        L"等应用，让它们加载新版输入法。"};
+    return values;
+}
+
 inline bool IpaFirstUsePending()
 {
     std::error_code error;
-    return !std::filesystem::exists(PhoneticIpa::ResourceRoot() / "onboarding-v1.done", error);
+    return !std::filesystem::exists(PhoneticIpa::ResourceRoot() / "onboarding-v2.done", error);
 }
 
 inline void ShowIpaFirstUse(HostServices &host)
@@ -72,20 +109,11 @@ inline void ShowIpaFirstUse(HostServices &host)
     actions->Add(later);
     actions->Add(next);
     column->Add(actions);
-    const auto update = [index, title, figure, detail, weakBack = std::weak_ptr<Button>(back),
+    const auto update = [index, title, figure, detail, scroll, weakBack = std::weak_ptr<Button>(back),
                          weakNext = std::weak_ptr<Button>(next)]() {
-        const std::array<const wchar_t *, 4> titles = {L"拼音 → 音标／汉字", L"遇到多音字，再选读音", L"编码与五度调值",
-                                                       L"按自己的习惯编辑键位"};
-        const std::array<const wchar_t *, 4> texts = {
-            L"默认输出音标。输入拼音，数字键或空格选择候选。Caps Lock "
-            L"亮起时输出汉字。点击候选的汉字或下方音标也可分别输入。",
-            L"例如输入 h，按 1 选择好，再按 1 或 2 选择 hao3／hao4。词语能确定读音时使用词语读音。Ctrl＋Shift＋Enter "
-            L"返回选字。",
-            L"单按 Shift 切换拼音与音标编码。先确认当前候选，再按住 Shift，依次按 2、1、4 "
-            L"输入调值，空格确认。反斜杠键收录原数字键上的声调符号。",
-            L"点击键位编辑候选，用 IPA Plus "
-            L"替换或追加符号。悬浮工具栏可切换转写规则。升级后请保存草稿并重新打开仍在运行的应用，让它们加载新版输入法"
-            L"。使用说明中可重新打开教学。"};
+        const auto &titles = IpaGuideTitles();
+        const auto &texts = IpaGuideDetails();
+        scroll->SetScrollOffset(0.0f);
         title->SetText(std::wstring(titles[*index]) + L"   " + std::to_wstring(*index + 1) + L" / 4");
         figure->page = *index;
         figure->InvalidateVisual();
@@ -98,7 +126,7 @@ inline void ShowIpaFirstUse(HostServices &host)
     const auto close = [&host]() {
         try
         {
-            PhoneticIpa::WriteProfileFile(PhoneticIpa::ResourceRoot() / "onboarding-v1.done", "1\n");
+            PhoneticIpa::WriteProfileFile(PhoneticIpa::ResourceRoot() / "onboarding-v2.done", "1\n");
         }
         catch (const std::exception &)
         {

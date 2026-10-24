@@ -73,6 +73,10 @@ final class UI {
     static void full(LinearLayout parent, View view, int height) { parent.addView(view, new LinearLayout.LayoutParams(-1, height < 0 ? height : dp(parent.getContext(), controlHeight(view, height)))); }
     static ScrollView guide(Context c) {
         ScrollView scroll = new ScrollView(c); LinearLayout content = column(c); content.setPadding(dp(c, 14), dp(c, 10), dp(c, 14), dp(c, 16)); scroll.addView(content);
+        for (int index = 0; index < Onboarding.TITLES.length; index++) {
+            TextView heading = text(c, Onboarding.TITLES[index], 16); heading.setTypeface(Typeface.DEFAULT_BOLD); heading.setPadding(0, dp(c, 12), 0, dp(c, 4)); full(content, heading, -2);
+            TextView detail = text(c, Onboarding.DETAILS[index], 14); detail.setTextColor(MUTED); full(content, detail, -2);
+        }
         String[][] sections = {
             {"开始使用", "在设置页点启用键盘，启用国际音标输入法，再点切换键盘。输入时也可用地球键换回其他输入法。"},
             {"汉字与音标分别上屏", "拼音模式输入拼音，点击上面的汉字输入汉字，点击下面的音标输入 IPA。默认数字键和空格选音标，上方音标／汉字按钮可切换输出。点左下角的拼音／IPA 切换输入方式。"},
@@ -81,7 +85,7 @@ final class UI {
             {"先确认当前候选", "输入声调前先让当前汉字或音标上屏。声调输入期间轻点 1–5 可追加调值，空格确认。0 在 IPA 模式保留原映射。"},
             {"音标和组合编码", "首次启用用拼音输入音标，切到 IPA 可按键位点选符号。带 ··· 的键轻点后弹出音标，点哪个就输入哪个；没有角标的单候选键直接输入。带有组合输入标记的分区收录以此键开头的编码，例如 v 下的 voqs。打开或关闭面板不会输入字母。"},
             {"斜杠等符号键", "先切到 IPA，再点符号。点编码为 / 或 \\ 的键，在弹出的面板中点选输出。\\ 收录原数字键上的声调音标。默认 / 输出斜杠，可以在设置中修改。面板可上下滑动，关闭时不输入。键盘上方的 IPA Plus 可随时打开分类音标表并连续点选输入；先确认已有的拼音或声调候选。"},
-            {"修改键位", "在设置页点击按键，候选从左到右排列。可以直接编辑或用 IPA Plus 点选符号，然后保存方案。每页候选可设 3–9 个，支持导入和导出 CIN / JSON。"}
+            {"修改键位", "在设置页点击按键，候选从左到右排列。可以直接编辑或用 IPA Plus 点选符号，然后保存方案。每页候选可设 3–9 个，支持导入和导出 IPA / JSON。"}
         };
         for (String[] section : sections) { TextView title = text(c, section[0], 16); title.setTypeface(Typeface.DEFAULT_BOLD); title.setPadding(0, dp(c, 12), 0, dp(c, 4)); full(content, title, -2); TextView detail = text(c, section[1], 14); detail.setTextColor(MUTED); full(content, detail, -2); }
         scroll.setContentDescription("usage-guide"); return scroll;

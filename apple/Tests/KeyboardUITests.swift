@@ -8,7 +8,11 @@ final class KeyboardUITests: XCTestCase {
         app.launch()
         if app.buttons["onboarding-next"].waitForExistence(timeout: 10) {
             for page in 1...4 {
+                let title = ["先认清当前输入状态", "用拼音输入音标或汉字", "切换到直接音标键盘", "输入声调，查找更多符号"][page - 1]
+                XCTAssertTrue(app.staticTexts[title].exists)
                 let shot = XCTAttachment(screenshot: app.screenshot()); shot.name = "First use guide \(page)"; shot.lifetime = .keepAlways; add(shot)
+                app.scrollViews["onboarding-content"].swipeUp()
+                let bottom = XCTAttachment(screenshot: app.screenshot()); bottom.name = "First use guide bottom \(page)"; bottom.lifetime = .keepAlways; add(bottom)
                 app.buttons["onboarding-next"].tap()
             }
         }

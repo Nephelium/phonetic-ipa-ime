@@ -477,7 +477,7 @@ void FloatingToolbarPresenter::RebuildScene()
         return button;
     };
 
-    auto mode = addText(impl_->englishInputMode == 1 ? L"CIN" : (impl_->capsLock == 1 ? L"汉字" : L"IPA"), false,
+    auto mode = addText(impl_->englishInputMode == 1 ? L"IPA" : (impl_->capsLock == 1 ? L"汉字" : L"IPA"), false,
                         [this]() { FanyNamedPipe::EnqueueToolbarLanguageToggleTask(impl_->cnEn == 1); });
     mode->SetTextLayout(48.0f * s, 16.0f * s);
     std::vector<phonetic_ipa::TranscriptionRule> rules;

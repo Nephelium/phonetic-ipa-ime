@@ -63,7 +63,7 @@ private final class UpdateRedirectPolicy: NSObject, URLSessionTaskDelegate {
 
 @MainActor final class UpdateStore: ObservableObject {
     static let shared = UpdateStore()
-    static let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.1.5"
+    static let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.1.6"
     static let sources = [
         "https://www.phonetictoolbox.com/releases/phonetic-ipa-ime/update.json",
         "https://raw.githubusercontent.com/Nephelium/phonetic-ipa-ime/ipa-prototype/updates/latest.json"

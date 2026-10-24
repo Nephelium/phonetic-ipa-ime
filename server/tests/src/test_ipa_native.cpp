@@ -551,6 +551,10 @@ int main(int argc, char **argv)
             Require(CandidateSkinCatalog::Supports(*skin, "vertical", "dark"), "Bigfish IPA layout unsupported");
         }
     });
+    run("Detailed first-use guide scrolls and keeps all navigation visible at four DPIs", [&] {
+        TestSurface surface;
+        CheckFirstUsePages(surface);
+    });
     POINT pointerAfter{};
     GetCursorPos(&pointerAfter);
     std::cout << "Desktop foreground unchanged: " << (foreground == GetForegroundWindow())

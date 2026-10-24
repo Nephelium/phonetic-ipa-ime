@@ -74,7 +74,7 @@ public final class SettingsActivity extends Activity {
         UI.weighted(editActions, UI.button(this, "移除", () -> { if (!outputs.isEmpty()) { outputs.remove(selected); selected = Math.max(0, Math.min(selected, outputs.size() - 1)); renderOutputs(); } }), 1, 40); UI.full(content, editActions, -2);
         CheckBox append = new CheckBox(this); append.setText("追加到当前候选"); append.setChecked(appendSymbol); append.setOnCheckedChangeListener((button, checked) -> appendSymbol = checked); UI.full(content, append, -2);
         LinearLayout saveRow = UI.row(this); UI.weighted(saveRow, UI.button(this, "保存方案", this::save), 1, 44); UI.weighted(saveRow, UI.button(this, "撤销编辑", () -> choose(code.getText().toString())), 1, 44); UI.full(content, saveRow, -2);
-        LinearLayout files = UI.row(this); UI.weighted(files, UI.button(this, "导入", this::importFile), 1, 42); UI.weighted(files, UI.button(this, "导出 JSON", () -> exportFile(true)), 1, 42); UI.weighted(files, UI.button(this, "导出 CIN", () -> exportFile(false)), 1, 42); UI.full(content, files, -2);
+        LinearLayout files = UI.row(this); UI.weighted(files, UI.button(this, "导入", this::importFile), 1, 42); UI.weighted(files, UI.button(this, "导出 JSON", () -> exportFile(true)), 1, 42); UI.weighted(files, UI.button(this, "导出 IPA", () -> exportFile(false)), 1, 42); UI.full(content, files, -2);
         updateCard(content);
         status = UI.text(this, engine.profileError, 13); status.setPadding(0, pad, 0, 0); UI.full(content, status, -2);
         UI.full(content, UI.button(this, "来源与许可", this::licenses), 40); choose("a");

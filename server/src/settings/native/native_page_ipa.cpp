@@ -47,8 +47,8 @@ std::filesystem::path ChooseFile(HWND owner, bool save, bool cin = false)
     dialog.hwndOwner = owner;
     dialog.lpstrFile = path;
     dialog.nMaxFile = 32768;
-    dialog.lpstrFilter = save ? (cin ? L"CIN 码表\0*.cin\0\0" : L"完整键位方案\0*.json\0\0")
-                              : L"键位方案与 CIN\0*.json;*.cin\0所有文件\0*.*\0\0";
+    dialog.lpstrFilter = save ? (cin ? L"IPA 码表\0*.cin\0\0" : L"完整键位方案\0*.json\0\0")
+                              : L"键位方案与 IPA 码表\0*.json;*.cin\0所有文件\0*.*\0\0";
     dialog.lpstrDefExt = cin ? L"cin" : L"json";
     dialog.Flags = OFN_NOCHANGEDIR | OFN_PATHMUSTEXIST | (save ? OFN_OVERWRITEPROMPT : OFN_FILEMUSTEXIST);
     if (save ? GetSaveFileNameW(&dialog) : GetOpenFileNameW(&dialog))
@@ -386,7 +386,7 @@ VisualPtr BuildIpaKeyboardPage(PageContext &context)
         return values.empty() ? L"" : Widen(values.front());
     };
     top->Add(keyboard);
-    auto hoverInfo = MakeDescription(L"单按 Shift 切换拼音／CIN；Caps Lock 切换音标／汉字输出。");
+    auto hoverInfo = MakeDescription(L"单按 Shift 切换拼音／IPA；Caps Lock 切换音标／汉字输出。");
     hoverInfo->SetMinHeight(36);
     hoverInfo->SetMaxHeight(36);
     keyboard->outputs = [state](unsigned vk) {
@@ -523,7 +523,7 @@ VisualPtr BuildIpaKeyboardPage(PageContext &context)
             },
             L"移除映射", L"移除", L"取消");
     });
-    addAction(L"导入 CIN / JSON", [state] {
+    addAction(L"导入 IPA / JSON", [state] {
         if (!state->Stash())
             return;
         const auto file = ChooseFile(state->host->Hwnd(), false);
@@ -563,7 +563,7 @@ VisualPtr BuildIpaKeyboardPage(PageContext &context)
             state->Status(Widen(e.what()));
         }
     });
-    addAction(L"导出 CIN", [state] {
+    addAction(L"导出 IPA", [state] {
         if (!state->Stash())
             return;
         auto file = ChooseFile(state->host->Hwnd(), true, true);
@@ -572,7 +572,7 @@ VisualPtr BuildIpaKeyboardPage(PageContext &context)
         try
         {
             PhoneticIpa::WriteProfileFile(file, state->table.Serialize(false));
-            state->Status(L"CIN 已导出，包含连续编码与候选。组合键请使用 JSON 保存。");
+            state->Status(L"IPA 已导出，包含连续编码与候选。组合键请使用 JSON 保存。");
         }
         catch (const std::exception &e)
         {
@@ -727,7 +727,7 @@ VisualPtr BuildIpaInputPage(PageContext &context)
     input->Add(
         MakeDescription(L"输入拼音后，按数字键或空格上屏对应音标及声调。遇到多音字，先选字，再按数字选择带调读音。"));
     input->Add(MakeDescription(
-        L"Caps Lock：切换音标／汉字输出。单按 Shift：切换拼音／CIN 音标编码。Shift＋1–5：输入五度调值。"));
+        L"Caps Lock：切换音标／汉字输出。单按 Shift：切换拼音／IPA 音标编码。Shift＋1–5：输入五度调值。"));
     input->Add(MakeRow(L"每页候选", L"可选 3–9 项。",
                        BindDropdown(context, "appearance.page_size", NumberOptions(3, 9, L" 项"), Dropdown::Options{},
                                     ValueKind::Integer)));
@@ -773,23 +773,11 @@ VisualPtr BuildIpaHelpPage(PageContext &context)
     auto intro = std::make_shared<Button>(L"重新查看上手教学");
     intro->SetOnClick([host = &context.host]() { ShowIpaFirstUse(*host); });
     guide->Add(intro);
-    guide->Add(MakeTitle(L"拼音 → 音标／汉字"));
-    guide->Add(MakeDescription(L"默认输出音标。输入拼音，数字 1–9 或空格选择候选。Caps Lock "
-                               L"亮起时，改为输出汉字。点击候选的汉字或下方音标，也可分别上屏。"));
-    guide->Add(MakeDescription(L"例如输入 h，按 1 选择“好”，再按 1 或 2 选择 "
-                               L"hao3／hao4。上下键移动候选，翻页键浏览更多读音。Ctrl＋Shift＋Enter 返回选字。"));
-    guide->Add(MakeTitle(L"CIN 编码与声调"));
-    guide->Add(MakeDescription(L"单按 Shift 切到 CIN，按键按自己的映射显示音标候选。数字 1–9 选音标，0 "
-                               L"保留映射。含数字的连续编码可使用 code: 前缀，例如 code:a1。"));
-    guide->Add(MakeDescription(L"Shift＋1–5 输入 ˩、˨、˧、˦、˥，连按可组成调型。也可输入 "
-                               L"tone:214，再从调型、上标数字和普通数字中选择。先完成当前编码选字，再输入声调。"));
-    guide->Add(MakeTitle(L"自定义与快速切换"));
-    guide->Add(MakeDescription(
-        L"在音标键盘页点击键位，按从左到右的顺序编辑候选，再应用方案。IPA Plus "
-        L"可替换或追加音标，组合编码也会显示在首字母的预览里。反斜杠及斜杠等标点位可在 CIN 模式直接作为编码输入。"));
-    guide->Add(MakeDescription(L"悬浮工具栏左侧显示 IPA／汉字／CIN。先确认当前拼音或按 Esc "
-                               L"取消，再点击工具栏切换模式。旁边是当前转写规则，点击后选择标准。Ctrl＋Enter 或 "
-                               L"Ctrl＋数字可明确选择候选音标。"));
+    for (size_t i = 0; i < IpaGuideTitles().size(); ++i)
+    {
+        guide->Add(MakeTitle(IpaGuideTitles()[i]));
+        guide->Add(MakeDescription(IpaGuideDetails()[i]));
+    }
     page.AddSection(guide);
     return page.Build();
 }

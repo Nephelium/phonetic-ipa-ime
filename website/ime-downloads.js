@@ -13,9 +13,10 @@
     const anchor = trigger.getBoundingClientRect();
     const below = innerHeight - anchor.bottom;
     const above = anchor.top;
-    const upward = below < Math.min(panel.scrollHeight, 420) + 20 && above > below;
+    const required = panel.scrollHeight + panel.offsetHeight - panel.clientHeight;
+    const upward = below < required + 14 && above > below;
     box.dataset.placement = upward ? 'above' : 'below';
-    box.style.setProperty('--ime-panel-height', `${Math.max(150, (upward ? above : below) - 24)}px`);
+    box.style.setProperty('--ime-panel-height', `${Math.max(150, (upward ? above : below) - 14)}px`);
   }
 
   function open() {
@@ -81,4 +82,13 @@
   });
   addEventListener('resize', place, {passive: true});
   addEventListener('scroll', place, {passive: true});
+  function openFromHash() {
+    if (location.hash !== '#ipa-ime-download') return;
+    pinned = true;
+    suppressHover = false;
+    open();
+    box.scrollIntoView({block: 'start'});
+  }
+  addEventListener('hashchange', openFromHash);
+  openFromHash();
 })();

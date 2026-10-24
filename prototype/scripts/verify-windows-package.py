@@ -33,6 +33,6 @@ with zipfile.ZipFile(args.package) as archive:
     assert b'--guide' in archive.read('scripts/Start-Settings.ps1')
     for script in ['scripts/Install-Windows.ps1', 'scripts/Start-Settings.ps1']:
         assert archive.read(script).startswith(b'\xef\xbb\xbf'), script + ' must support PowerShell 5.1'
-    assert not any(name.endswith('onboarding-v1.done') for name in archive.namelist()), 'User completion marker in package'
+    assert not any((Path(name).name.startswith('onboarding-') and name.endswith('.done')) for name in archive.namelist()), 'User completion marker in package'
     assert not any(Path(name).name.startswith('custom-icon-') for name in archive.namelist()), 'Personal picture in package'
 print('Windows package verified: member hashes, three bigfish skins, tutorial launchers, clean completion state')

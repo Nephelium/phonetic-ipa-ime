@@ -1,5 +1,6 @@
 #import <AppKit/AppKit.h>
 #import <Carbon/Carbon.h>
+#include <stdio.h>
 
 static NSString *const BundleID = @"org.nephelium.inputmethod.PhoneticIPA";
 static NSString *const ModeID = @"org.nephelium.inputmethod.PhoneticIPA.Hans";
@@ -49,11 +50,8 @@ static BOOL RepairEnabledList(NSString *backup) {
     id before=CFBridgingRelease(CFPreferencesCopyAppValue(key,domain));
     NSArray *after=EnabledListWithOurs(before);
     if (!after) { fprintf(stderr,"Unexpected enabled source list; no preferences changed\n"); return NO; }
-    if ([after isEqual:before]) {
-        CFNotificationCenterPostNotification(CFNotificationCenterGetDistributedCenter(),kTISNotifyEnabledKeyboardInputSourcesChanged,NULL,NULL,true);
-        printf("enabled-list-preserved=%lu appended=0\n",(unsigned long)after.count);
-        return YES;
-    }
+    // Persist and notify even when entries already exist: a newly registered
+    // bundle can have an out-of-date catalogue despite an unchanged list.
     NSError *error=nil;
     NSData *data=[NSPropertyListSerialization dataWithPropertyList:before format:NSPropertyListXMLFormat_v1_0 options:0 error:&error];
     if (!data || ![data writeToFile:backup options:NSDataWritingWithoutOverwriting error:&error]) {
@@ -63,6 +61,23 @@ static BOOL RepairEnabledList(NSString *backup) {
     CFPreferencesAppSynchronize(domain);
     id latest=CFBridgingRelease(CFPreferencesCopyAppValue(key,domain));
     if (![latest isEqual:before]) { fprintf(stderr,"Enabled source list changed concurrently; retry installation\n"); return NO; }
+    if ([after isEqual:before]) {
+        // A same-value write may be elided by preferences and leave a replaced
+        // bundle's catalogue stale. Refresh only our entries, retaining the
+        // exact foreign entries, order and metadata, then restore the full list.
+        NSMutableArray *foreign=[NSMutableArray array];
+        for (NSDictionary *entry in after) if (![BundleID isEqual:entry[@"Bundle ID"]]) [foreign addObject:entry];
+        CFPreferencesSetAppValue(key,(__bridge CFArrayRef)foreign,domain);
+        if (!CFPreferencesAppSynchronize(domain)) return NO;
+        id interim=CFBridgingRelease(CFPreferencesCopyAppValue(key,domain));
+        if (![interim isEqual:foreign]) return NO;
+        CFNotificationCenterPostNotification(CFNotificationCenterGetDistributedCenter(),kTISNotifyEnabledKeyboardInputSourcesChanged,NULL,NULL,true);
+        CFRunLoopRunInMode(kCFRunLoopDefaultMode,0.5,false);
+        CFPreferencesAppSynchronize(domain);
+        interim=CFBridgingRelease(CFPreferencesCopyAppValue(key,domain));
+        if (![interim isEqual:foreign]) { fprintf(stderr,"Enabled source list changed during refresh; retry installation\n"); return NO; }
+        printf("refresh-own-enabled-entries=1 foreign-preserved=%lu\n",(unsigned long)foreign.count);
+    }
     CFPreferencesSetAppValue(key,(__bridge CFArrayRef)after,domain);
     if (!CFPreferencesAppSynchronize(domain)) return NO;
     id readback=CFBridgingRelease(CFPreferencesCopyAppValue(key,domain));
@@ -90,6 +105,25 @@ int main(void) { @autoreleasepool {
 #else
 int main(int argc, const char **argv) {
     @autoreleasepool {
+        if (argc == 4 && strcmp(argv[1], "--exchange-contents") == 0) {
+            NSString *target = [@(argv[2]) stringByStandardizingPath];
+            NSString *staged = [@(argv[3]) stringByStandardizingPath];
+            NSString *expected = [NSHomeDirectory() stringByAppendingPathComponent:@"Library/Input Methods/PhoneticIPA.app/Contents"];
+            NSFileManager *files = NSFileManager.defaultManager;
+            if (![target isEqualToString:expected] || ![staged.lastPathComponent isEqualToString:@"Contents"]) return 2;
+            for (NSString *path in @[target, staged]) {
+                if (![path isEqualToString:path.stringByResolvingSymlinksInPath]) return 2;
+                NSDictionary *attributes = [files attributesOfItemAtPath:path error:nil];
+                NSBundle *bundle = [NSBundle bundleWithPath:path.stringByDeletingLastPathComponent];
+                if (![attributes.fileType isEqualToString:NSFileTypeDirectory] || ![bundle.bundleIdentifier isEqualToString:BundleID]) return 2;
+            }
+            // Keep Info.plist present continuously, without changing the outer
+            // application's directory identity. No partially installed bundle.
+            if (renamex_np(target.fileSystemRepresentation, staged.fileSystemRepresentation, RENAME_SWAP) != 0) {
+                perror("Atomic input-method upgrade"); return 1;
+            }
+            printf("atomic-contents-exchange=1\n"); return 0;
+        }
         [NSApplication sharedApplication];
         [NSApp setActivationPolicy:NSApplicationActivationPolicyProhibited];
         [NSApp finishLaunching];
@@ -112,7 +146,7 @@ int main(int argc, const char **argv) {
         for (id item in sources) {
             TISInputSourceRef source = (__bridge TISInputSourceRef)item;
             printf("source=%s\n", [(__bridge id)TISGetInputSourceProperty(source, kTISPropertyInputSourceID) description].UTF8String);
-            for (id property in @[(__bridge id)kTISPropertyInputSourceType, (__bridge id)kTISPropertyInputSourceIsEnableCapable, (__bridge id)kTISPropertyBundleID]) {
+            for (id property in @[(__bridge id)kTISPropertyInputSourceType, (__bridge id)kTISPropertyInputSourceIsEnableCapable, (__bridge id)kTISPropertyBundleID, (__bridge id)kTISPropertyLocalizedName]) {
                 printf("  %s=%s\n", [property description].UTF8String, [(__bridge id)TISGetInputSourceProperty(source, (__bridge CFStringRef)property) description].UTF8String);
             }
         }
@@ -140,6 +174,8 @@ int main(int argc, const char **argv) {
         sources = Sources();
         BOOL ready = status == noErr && Enabled(Find(sources, BundleID)) && Enabled(Find(sources, ModeID));
         printf("parent-after=%d mode-after=%d\n", Enabled(Find(sources, BundleID)), Enabled(Find(sources, ModeID)));
+        // The caller verifies readiness in a separate GUI process, since this
+        // process can still hold the catalogue it loaded before registration.
         if (status == noErr) printf("registration-complete=1\n");
         // Installation enables this input source without selecting it for the current app.
         return ready ? 0 : 1;

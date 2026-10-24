@@ -30,6 +30,14 @@ final class KeyboardChecks {
         for (int i = 0; i < node.getChildCount(); i++) { AccessibilityNodeInfo result = search(node.getChild(i), value, description); if (result != null) return result; }
         return null;
     }
+    AccessibilityNodeInfo scrollable(AccessibilityNodeInfo node) {
+        if (node == null) return null;
+        if (node.isScrollable()) return node;
+        for (int index = 0; index < node.getChildCount(); index++) {
+            AccessibilityNodeInfo result = scrollable(node.getChild(index)); if (result != null) return result;
+        }
+        return null;
+    }
     AccessibilityNodeInfo waitFor(String value, boolean description) {
         for (int i = 0; i < 40; i++) { AccessibilityNodeInfo node = find(value, description); if (node != null) return node; SystemClock.sleep(150); }
         throw new AssertionError("Missing UI: " + value);
@@ -112,7 +120,17 @@ final class KeyboardChecks {
         Intent launch = new Intent(test.getTargetContext(), SettingsActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
         test.startActivitySync(launch);
         for (int i = 0; i < 40 && find("键位设置", false) == null; i++) SystemClock.sleep(150);
-        if (find("下一步", false) != null) { screenshot("android-first-launch"); for (int i = 0; i < 3; i++) tap("下一步", false); tap("开始使用", false); }
+        if (find("下一步", false) != null) {
+            screenshot("android-first-launch");
+            for (int page = 0; page < 4; page++) {
+                waitFor(Onboarding.TITLES[page], false);
+                screenshot("android-guide-page-" + (page + 1));
+                AccessibilityNodeInfo body = scrollable(ui.getRootInActiveWindow());
+                if (body != null) { body.performAction(AccessibilityNodeInfo.ACTION_SCROLL_FORWARD); SystemClock.sleep(250); }
+                screenshot("android-guide-bottom-" + (page + 1));
+                tap(page == 3 ? "开始使用" : "下一步", false);
+            }
+        }
         tap("试打", false); tap("typing-area", true); waitFor("key-y", true);
         if (!"拼音".contentEquals(waitFor("keyboard-mode", true).getText())) tap("keyboard-mode", true);
         screenshot("android-initial-mode");
