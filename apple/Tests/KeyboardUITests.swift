@@ -6,6 +6,12 @@ final class KeyboardUITests: XCTestCase {
         let app = XCUIApplication()
         app.launchEnvironment["IPA_UPDATE_DISABLE_NETWORK"] = "1"
         app.launch()
+        if app.buttons["onboarding-next"].waitForExistence(timeout: 10) {
+            for page in 1...4 {
+                let shot = XCTAttachment(screenshot: app.screenshot()); shot.name = "First use guide \(page)"; shot.lifetime = .keepAlways; add(shot)
+                app.buttons["onboarding-next"].tap()
+            }
+        }
         XCTAssertTrue(app.buttons["check-for-update"].waitForExistence(timeout: 15))
         let settings = XCUIApplication(bundleIdentifier: "com.apple.Preferences")
         settings.launch()
@@ -36,13 +42,13 @@ final class KeyboardUITests: XCTestCase {
         // A newly installed keyboard extension starts asynchronously after its host receives focus.
         _ = app.buttons["key-w"].waitForExistence(timeout: 30)
         print("INITIAL_KEYBOARD\n" + app.debugDescription)
-        if !app.buttons["function-拼音"].exists && !app.buttons["function-CIN"].exists {
+        if !app.buttons["function-拼音"].exists && !app.buttons["function-IPA"].exists {
             let globe = app.buttons.matching(NSPredicate(format: "label CONTAINS[c] 'keyboard' OR label CONTAINS '键盘'")).firstMatch
             XCTAssertTrue(globe.waitForExistence(timeout: 10)); globe.press(forDuration: 1)
             let keyboardName = app.staticTexts["国际音标输入法"].firstMatch
             XCTAssertTrue(keyboardName.waitForExistence(timeout: 10)); keyboardName.tap()
         }
-        if app.buttons["function-CIN"].exists { app.buttons["function-CIN"].tap() }
+        if app.buttons["function-IPA"].exists { app.buttons["function-IPA"].tap() }
         XCTAssertTrue(app.buttons["function-拼音"].waitForExistence(timeout: 10))
         if !app.buttons["key-w"].isHittable { area.tap() }
         let visibleKeyboard = XCTNSPredicateExpectation(predicate: NSPredicate(format: "hittable == true"), object: app.buttons["key-w"])
@@ -143,7 +149,7 @@ final class KeyboardUITests: XCTestCase {
         XCTAssertEqual(area.value as? String, "恶wu˥˩a˨˩˦6˥/ɠΘ∅pp̪")
         let keyboardPlusShot = XCTAttachment(screenshot: app.screenshot()); keyboardPlusShot.name = "Keyboard inline IPA Plus"; keyboardPlusShot.lifetime = .keepAlways; add(keyboardPlusShot)
         app.buttons["VoQS"].tap(); app.buttons["plus-close"].tap()
-        app.buttons["function-CIN"].tap()
+        app.buttons["function-IPA"].tap()
         let base = area.value as? String ?? ""
         for c in "yanwu" { app.buttons["key-" + String(c)].tap() }
         app.buttons["digit-1"].tap()
@@ -155,7 +161,7 @@ final class KeyboardUITests: XCTestCase {
         app.buttons["output-mode"].tap()
         app.buttons["transcription-rules"].tap()
         print("RULE_MENU\n" + app.debugDescription)
-        let narrow = app.descendants(matching: .any).matching(NSPredicate(format: "label == %@", "UntPhesoca严")).firstMatch
+        let narrow = app.descendants(matching: .any).matching(NSPredicate(format: "label == %@", "UntPhesoca 严")).firstMatch
         for _ in 0..<6 where !narrow.isHittable { app.scrollViews["transcription-rule-list"].swipeUp() }
         XCTAssertTrue(narrow.isHittable, "Last transcription standard must be reachable by scrolling"); narrow.tap()
         for c in "yanwu" { app.buttons["key-" + String(c)].tap() }

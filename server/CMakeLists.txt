@@ -692,6 +692,10 @@ if(BUILD_TESTING)
     # Console-only tests invoke the actual native controls in-process. They never
     # show/activate a window, inject input, or change the active user profile.
     add_executable(IpaNativeTests tests/src/test_ipa_native.cpp
+        src/settings/native/native_page_skin_common.cpp
+        src/settings/native/native_page_skin_widgets.cpp
+        src/settings/native/native_page_help_widgets.cpp
+        src/window/floating_toolbar_skin.cpp
         src/skin/candidate_skin_catalog.cpp
         src/window/candidate_skin_layers.cpp
         src/window/candidate_skin_overlay.cpp

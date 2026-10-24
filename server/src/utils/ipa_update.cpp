@@ -1,4 +1,5 @@
 #include "utils/ipa_update.h"
+#include "resource/resource.h"
 #include <shellapi.h>
 #include <winhttp.h>
 #include <chrono>
@@ -125,7 +126,7 @@ LRESULT CALLBACK MonitorProc(HWND window, UINT message, WPARAM w, LPARAM l)
             icon.uID = 1;
             icon.uFlags = NIF_MESSAGE | NIF_ICON | NIF_TIP;
             icon.uCallbackMessage = WM_APP + 1;
-            icon.hIcon = LoadIconW(nullptr, IDI_INFORMATION);
+            icon.hIcon = LoadIconW(GetModuleHandleW(nullptr), MAKEINTRESOURCEW(IDI_IME_ICON));
             wcscpy_s(icon.szTip, L"国际音标输入法 · 更新");
             if (Shell_NotifyIconW(NIM_ADD, &icon))
             {

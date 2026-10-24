@@ -76,7 +76,7 @@ def main():
             'SWIFT_OBJC_BRIDGING_HEADER':'$(SRCROOT)/Shared/IPAEngine.h',
             'HEADER_SEARCH_PATHS':['$(inherited)','$(IPA_SOURCE_ROOT)'],
             'IPA_SOURCE_ROOT':('$(SRCROOT)/..' if (ROOT.parent/'engine/ipa').is_dir() else '$(SRCROOT)/../msime-windows'),'OTHER_LDFLAGS':['$(inherited)','-lsqlite3'],
-            'CODE_SIGN_STYLE':'Automatic','CURRENT_PROJECT_VERSION':'4','MARKETING_VERSION':'0.1.3',
+            'CODE_SIGN_STYLE':'Automatic','CURRENT_PROJECT_VERSION':'5','MARKETING_VERSION':'0.1.4',
             'GENERATE_INFOPLIST_FILE':'NO','ENABLE_USER_SCRIPT_SANDBOXING':'YES',
         }
         if spec['sdk']=='macosx':

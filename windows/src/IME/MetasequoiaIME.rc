@@ -35,8 +35,8 @@ IDI_PUNCTUATION_OFF     ICON                    "..\\..\\image\\PunctuationOff.i
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 0,1,3,0
- PRODUCTVERSION 0,1,3,0
+ FILEVERSION 0,1,4,0
+ PRODUCTVERSION 0,1,4,0
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -53,12 +53,12 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "Nephelium"
             VALUE "FileDescription", "Phonetic IPA input method (derived from msime-windows)"
-            VALUE "FileVersion", "0.1.3.0"
+            VALUE "FileVersion", "0.1.4.0"
             VALUE "InternalName", "PhoneticIpaTsf.dll"
             VALUE "LegalCopyright", "Copyright (C)"
             VALUE "OriginalFilename", "PhoneticIpaTsf.dll"
             VALUE "ProductName", "Phonetic IPA IME"
-            VALUE "ProductVersion", "0.1.3.0"
+            VALUE "ProductVersion", "0.1.4.0"
         END
     END
     BLOCK "VarFileInfo"

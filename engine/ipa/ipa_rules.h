@@ -13,7 +13,7 @@ inline std::vector<TranscriptionRule> LoadTranscriptionRules(const std::filesyst
 {
     const auto catalog = root / "hanzi-rules.tsv";
     if (!std::filesystem::exists(catalog))
-        return {{"beijing", "Standard Chinese (Beijing)", "北京宽式", "beijing-toned.tsv"}};
+        return {{"beijing", "Standard Chinese Beijing 宽", "Standard Chinese Beijing 宽", "beijing-toned.tsv"}};
     if (std::filesystem::file_size(catalog) > 65536)
         throw std::runtime_error("Transcription rule catalog exceeds 64 KiB");
     std::ifstream input(catalog, std::ios::binary);

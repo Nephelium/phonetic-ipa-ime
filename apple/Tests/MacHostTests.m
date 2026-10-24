@@ -41,6 +41,7 @@ static void Check(BOOL (^condition)(void), NSString *message) {
 }
 static void Key(NSString *text, unsigned short code, NSEventModifierFlags flags) {
     [Steps addObject:^{
+        if (Foreground && !NSApp.active) fprintf(stderr, "focus-owner-bundle=%s\n", (NSWorkspace.sharedWorkspace.frontmostApplication.bundleIdentifier ?: @"unknown").UTF8String);
         Require(!Foreground || NSApp.active, @"Test host lost focus; stopping input");
         Require(!Foreground || (NSApp.keyWindow==Window && Window.firstResponder==View), @"Test window lost keyboard focus; stopping input");
         CGEventRef down=CGEventCreateKeyboardEvent(NULL,code,true);

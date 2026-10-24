@@ -32,6 +32,51 @@ struct IPAFile: FileDocument {
     func fileWrapper(configuration: WriteConfiguration) throws -> FileWrapper { FileWrapper(regularFileWithContents: data) }
 }
 
+struct FirstUseGuide: View {
+    var finish: () -> Void
+    @State private var page = 0
+    private let titles = ["拼音，也能输入音标", "遇到多音字，再选读音", "音标与声调怎么输入", "随时打开完整音标表"]
+    private var examples: [String] {
+        #if os(iOS)
+        ["yanwu → 厌恶\njan˥˩ wu˥˩", "恶 · wu\n① wu3   ② wu4\nwu˥˩", "ɡ ··· → ɠ\n2 ↑   1 ↑   4 ↑ → ˨˩˦", "IPA Plus\nIPA · extIPA · VoQS\np   t   k   ʔ   ◌̃"]
+        #else
+        ["hao → 1 → 2\nxau˥˩", "好\n① hao3   ② hao4", "Shift + 2  1  4\n˨˩˦", "IPA Plus\nIPA · extIPA · VoQS\np   t   k   ʔ   ◌̃"]
+        #endif
+    }
+    private var details: [String] {
+        #if os(iOS)
+        ["默认输入拼音，用数字或空格选择候选音标。点击候选上面的汉字输入汉字，点击下面的音标输入 IPA。上方音标／汉字按钮切换默认输出。",
+         "优先使用词语读音。仍有歧义时，先选字，再选择带声调的读音，不会自动取第一条。长按候选音标可以重新选择。",
+         "左下角切到 IPA，按键可输入音标。带 ··· 的键短按弹出候选，点哪个输入哪个。上划数字 1–5 组合五度调值，再选择上方的声调候选。",
+         "键盘上方的 IPA Plus 可打开完整音标表，连续点选输入。规则按钮切换转写标准。先确认当前候选再打开音标表。设置中的使用说明可重新打开教学。"]
+        #else
+        ["默认输入拼音，数字键或空格选择候选音标。Caps Lock 亮起时改为输出汉字。候选中的汉字和下方音标也可以分别点击输入。",
+         "例如输入 hao，按 1 选择好，再按 1 或 2 选择带调读音。词语能确定读音时直接使用词语读音。Control＋Shift＋回车可以重新选择。",
+         "单按 Shift 切换拼音与音标编码。先确认当前候选，再按住 Shift，依次按 2、1、4 输入五度调值，空格确认。反斜杠键收录原数字键上的声调符号。",
+         "在键位设置中点击按键，可以编辑候选并用 IPA Plus 替换或追加音标。候选栏可切换转写规则。使用说明中可重新打开教学。"]
+        #endif
+    }
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack { Text("国际音标输入法").font(.headline); Spacer(); Button("稍后") { finish() }.accessibilityIdentifier("onboarding-skip") }
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
+                    Text(titles[page]).font(.title2.bold()).fixedSize(horizontal: false, vertical: true)
+                    Text(examples[page]).font(.ipa(28)).multilineTextAlignment(.center).frame(maxWidth: .infinity).padding(24)
+                        .background(Color.accentColor.opacity(0.09), in: RoundedRectangle(cornerRadius: 16))
+                    Text(details[page]).font(.body).fixedSize(horizontal: false, vertical: true)
+                }.padding(.vertical, 8)
+            }
+            HStack {
+                if page > 0 { Button("上一步") { page -= 1 } }
+                Spacer(); Text("\(page + 1) / 4").font(.caption).foregroundStyle(.secondary); Spacer()
+                Button(page == 3 ? "开始使用" : "下一步") { if page < 3 { page += 1 } else { finish() } }
+                    .buttonStyle(.borderedProminent).accessibilityIdentifier("onboarding-next")
+            }
+        }.padding(24).frame(minWidth: 280, idealWidth: 540, minHeight: 340, idealHeight: 550)
+    }
+}
+
 struct UsageGuideView: View {
     var compact = false
     var body: some View {
@@ -42,12 +87,12 @@ struct UsageGuideView: View {
                     section("开始使用", "在系统设置 → 通用 → 键盘 → 键盘 → 添加新键盘中，添加国际音标输入法。输入时长按地球键切换过来。")
                 }
                 #endif
-                section("汉字与音标分别上屏", "在汉字模式输入拼音。点击候选上面的汉字输入汉字，点击下面的音标输入 IPA。默认数字键和空格选音标，键盘上方可切换为汉字输出。按拼音 / CIN 切换编码方式。")
+                section("汉字与音标分别上屏", "在汉字模式输入拼音。点击候选上面的汉字输入汉字，点击下面的音标输入 IPA。默认数字键和空格选音标，键盘上方可切换为汉字输出。用模式按钮切换拼音与直接音标输入。")
                 section("多音字怎么选", "先按词语和输入拼音筛选读音。有多个带调读音时，点击音标会打开读音选择。选定读音后直接上屏。长按候选可重新选择读音。")
                 #if os(iOS)
                 section("数字与五度调值", "轻点数字 1–9 选择当前页的候选，没有候选时输入数字。上划数字 1–5 输入五度调值，1 最低、5 最高。依次上划 2、1、4，再点上方候选，即可输入 ˨˩˦、²¹⁴ 或 214。")
-                section("先确认当前候选", "输入声调前，先让当前汉字或音标上屏。声调输入期间轻点 1–5 可继续追加调值，点空格确认。0 在 CIN 模式保留原有映射。")
-                section("斜杠等符号键", "先切到 CIN，再点符号。点编码为 / 或 \\ 的键，在弹出的面板中点选输出。\\ 收录原数字键上的声调音标。默认 / 输出斜杠，可以在设置中修改。面板可上下滑动，关闭时不输入。键盘上方的 IPA Plus 可打开分类音标表并连续点选输入；先确认已有的拼音或声调候选。")
+                section("先确认当前候选", "输入声调前，先让当前汉字或音标上屏。声调输入期间轻点 1–5 可继续追加调值，点空格确认。0 在 IPA 模式保留原有映射。")
+                section("斜杠等符号键", "先切到 IPA，再点符号。点编码为 / 或 \\ 的键，在弹出的面板中点选输出。\\ 收录原数字键上的声调音标。默认 / 输出斜杠，可以在设置中修改。面板可上下滑动，关闭时不输入。键盘上方的 IPA Plus 可打开分类音标表并连续点选输入；先确认已有的拼音或声调候选。")
                 #else
                 section("数字与五度调值", "1–9 选择当前页的候选。按住 Shift，依次按 2、1、4，可得到 ˨˩˦、²¹⁴ 或 214，空格确认。0 保留原有映射。")
                 section("Mac 快捷键", "单按 Shift 或 Shift＋空格切换拼音／CIN。Caps Lock 切换音标／汉字输出。Control＋回车输入 IPA，Control＋Shift＋回车重新选择读音。Page Up / Page Down 翻页。")
@@ -58,7 +103,7 @@ struct UsageGuideView: View {
                 #else
                 section("音标和组合编码", "CIN 模式按编码输入音标，例如 a。悬停键位可查看这个键和以它开头的组合编码，例如 v 下的 voqs。含数字的编码可用 code: 前缀输入。")
                 #endif
-                section("键帽上的小字", "左上角的小字表示输入编码，中央的大字表示该键的第一个音标候选。例如 g 键输出的 ɡ 是 IPA 字符 U+0261。")
+                section("键帽上的小字", "有些键左上角标有输入编码，中央显示音标。g 键直接显示的 ɡ 是 IPA 字符 U+0261。")
                 section("修改键位", "打开设置，点击模拟键盘上的按键。候选从左到右排列，可直接编辑，也可用 IPA Plus 点选符号。保存方案后生效。每页候选可选 3–9 个，支持导入和导出 CIN / JSON。")
             }.frame(maxWidth: .infinity, alignment: .leading).padding(compact ? 12 : 22)
         }.accessibilityIdentifier("usage-guide")
@@ -410,6 +455,8 @@ struct SettingsView: View {
     @State private var exportType = UTType.json
     @State private var appendSymbol = false
     @State private var help = false
+    @State private var walkthrough = false
+    @AppStorage("onboarding-v1-completed") private var introCompleted = false
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
@@ -420,7 +467,7 @@ struct SettingsView: View {
                     }
                     Spacer()
                     Picker("每页候选", selection: $model.pageSize) { ForEach(3...9, id: \.self) { Text("\($0) 个").tag($0) } }.frame(maxWidth: 150)
-                    Button("使用说明") { help = true }
+                    Button("使用说明") { walkthrough = false; help = true }
                 }
                 Picker("国际音标转写规则", selection: Binding(get: { model.ruleId }, set: { model.selectRule($0) })) {
                     ForEach(model.rules) { Text($0.name).tag($0.id) }
@@ -468,12 +515,15 @@ struct SettingsView: View {
                 Text("五度调值：上划数字 1–5，或在 Mac 按 Shift＋1–5。普通候选用 1–9 选择，0 保留映射。").font(.caption).foregroundStyle(.secondary)
             }.padding(22)
         }
-        .onAppear { chooseCode(code) }
+        .onAppear { chooseCode(code); if !introCompleted { walkthrough = true; help = true } }
         .sheet(isPresented: $help) {
-            VStack {
+            if walkthrough {
+                FirstUseGuide { introCompleted = true; help = false }
+            } else { VStack {
                 HStack { Text("使用说明").font(.title2.bold()); Spacer(); Button("关闭") { help = false } }.padding()
+                Button("重新查看上手教学") { walkthrough = true }
                 UsageGuideView()
-            }.frame(minWidth: 300, idealWidth: 580, minHeight: 400, idealHeight: 650)
+            }.frame(minWidth: 300, idealWidth: 580, minHeight: 400, idealHeight: 650) }
         }
         .sheet(isPresented: $plus) { PlusPicker { value in
             guard !outputs.isEmpty else { return }

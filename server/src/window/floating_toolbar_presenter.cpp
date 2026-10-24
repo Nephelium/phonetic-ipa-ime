@@ -378,6 +378,9 @@ struct FloatingToolbarPresenter::Impl
     bool light = false;
     bool shadow = false;
     float cardHeightDip = 0.0f;
+    float rowOffsetDip = 0.0f;
+    float laidOutRowOffsetDip = 0.0f;
+    float laidOutScale = 0.0f;
     float opacity = 1.0f;
     int cnEn = 1;
     int doubleSingleByte = 0;
@@ -491,11 +494,11 @@ void FloatingToolbarPresenter::RebuildScene()
     for (const auto &rule : rules)
         if (rule.id == currentRule)
             ruleLabel = string_to_wstring(rule.short_name);
-    auto ruleButton = addText(ruleLabel + (impl_->rulesOpen ? L" ▴" : L" ▾"), false, [this]() {
+    auto ruleButton = addText(ruleLabel + (impl_->rulesOpen ? L" ▾" : L" ▴"), false, [this]() {
         impl_->rulesOpen = !impl_->rulesOpen;
         PostMessage(hwnd_, UPDATE_FTB_IPA_RULE, 0, 0);
     });
-    ruleButton->SetTextLayout(132.0f * s, 14.0f * s);
+    ruleButton->SetTextLayout(232.0f * s, 14.0f * s);
 
     const FloatingToolbarItemsConfig &items = GetConfiguredFloatingToolbarItems();
     if (items.fullwidth)
@@ -567,7 +570,7 @@ void FloatingToolbarPresenter::RebuildScene()
         });
     }
     auto content = std::make_shared<msimeui::StackPanel>(2.0f * s);
-    content->AddChild(row);
+    impl_->rowOffsetDip = 0.0f;
     if (impl_->rulesOpen)
     {
         for (size_t offset = 0; offset < rules.size(); offset += 2)
@@ -578,7 +581,7 @@ void FloatingToolbarPresenter::RebuildScene()
                 const auto &rule = rules[i];
                 auto choice = std::make_shared<ToolbarIconButton>(
                     0, L"", (rule.id == currentRule ? L"✓ " : L"  ") + string_to_wstring(rule.short_name), 28.0f * s);
-                choice->SetTextLayout(188.0f * s, 14.0f * s);
+                choice->SetTextLayout(252.0f * s, 14.0f * s);
                 choice->SetColors(impl_->glyph, impl_->hover, iconRadius);
                 choice->SetOnClick([this, id = rule.id]() {
                     impl_->rulesOpen = false;
@@ -588,8 +591,11 @@ void FloatingToolbarPresenter::RebuildScene()
                 choices->AddChild(choice);
             }
             content->AddChild(choices);
+            impl_->rowOffsetDip += 30.0f * s;
         }
     }
+    // The toolbar row stays at the bottom. Opening the rule list grows upward.
+    content->AddChild(row);
     impl_->card->AddChild(content);
     impl_->frame = std::make_shared<msimeui::Container>();
     if (shadow)
@@ -658,7 +664,7 @@ void FloatingToolbarPresenter::RelayoutHost(FLOAT scaleOverride, const RECT *sug
         return;
     }
     impl_->root->InvalidateMeasure();
-    const SizeF measured = impl_->root->MeasureInLayout({2000.0f, 240.0f});
+    const SizeF measured = impl_->root->MeasureInLayout({2000.0f, 1000.0f});
     impl_->root->InvalidateArrange();
     impl_->root->ArrangeInLayout({0.0f, 0.0f, measured.width, measured.height});
     ::FTB_CONTENT_WIDTH_DIP = measured.width;
@@ -683,25 +689,37 @@ void FloatingToolbarPresenter::RelayoutHost(FLOAT scaleOverride, const RECT *sug
     {
         GetWindowRect(hwnd_, &anchor);
     }
+    // Long rule names need more than half a small/high-DPI screen. Keep the
+    // complete labels within the monitor work area instead of clipping them.
     const HalfScreenDipLimits limits = QueryHalfScreenDipLimitsForPoint({anchor.left, anchor.top});
-    const float widthDip = static_cast<float>(ClampWidthDipToHalfScreen(static_cast<double>(measured.width), limits));
+    const float widthDip =
+        (std::min)(measured.width, static_cast<float>(limits.monitor.right - limits.monitor.left) / scale);
     const float heightDip =
-        static_cast<float>(ClampHeightDipToHalfScreen(static_cast<double>(measured.height), limits));
+        (std::min)(measured.height, static_cast<float>(limits.monitor.bottom - limits.monitor.top) / scale);
     const int widthPx = (std::max)(1, static_cast<int>(std::ceil(widthDip * scale)));
     const int heightPx = (std::max)(1, static_cast<int>(std::ceil(heightDip * scale)));
     const RECT insets = ShadowInsetsPx(widthPx, heightPx, scale);
-    const POINT pos = PlaceResizedHost(hwnd_, widthPx, heightPx, suggestedRect, insets,
-                                       ::FTB_HOST_INSETS_VALID ? &::FTB_HOST_INSETS_PX : nullptr);
+    RECT rowAnchor = anchor;
+    const float oldScale = impl_->laidOutScale > 0.0f ? impl_->laidOutScale : scale;
+    rowAnchor.top +=
+        static_cast<LONG>(std::lround(impl_->laidOutRowOffsetDip * oldScale - impl_->rowOffsetDip * scale));
+    if (!suggestedRect && ::FTB_HOST_INSETS_VALID)
+    {
+        rowAnchor.left += ::FTB_HOST_INSETS_PX.left - insets.left;
+        rowAnchor.top += ::FTB_HOST_INSETS_PX.top - insets.top;
+    }
+    const POINT pos = PlaceResizedHost(hwnd_, widthPx, heightPx, &rowAnchor, insets, nullptr);
     SetWindowPos(hwnd_, nullptr, pos.x, pos.y, widthPx, heightPx, SWP_NOZORDER | SWP_NOACTIVATE);
+    impl_->laidOutRowOffsetDip = impl_->rowOffsetDip;
+    impl_->laidOutScale = scale;
     ::FTB_HOST_INSETS_PX = insets;
     ::FTB_HOST_INSETS_VALID = true;
     ClipWindowToVisibleScreens(hwnd_, ScreenArea::WorkArea);
     impl_->resources.EnsureForComposition(hwnd_);
     if (impl_->card && impl_->dragLimit)
     {
-        const RectF card = impl_->card->GetBounds();
         const RectF limit = impl_->dragLimit->GetBounds();
-        impl_->captionRect = {0.0f, card.y, limit.x + limit.width, limit.height};
+        impl_->captionRect = {0.0f, limit.y, limit.x + limit.width, limit.height};
     }
     Present();
 }

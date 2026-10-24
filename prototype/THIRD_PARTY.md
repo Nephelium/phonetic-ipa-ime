@@ -70,3 +70,7 @@ Unt 宽式／严式列保留 Unt/Phesoca 的整理来源：[汉语拼音与国�
 0.1.3 五度声调快捷键默认输出 ˩˨˧˦˥。字面 CIN 编码 `!` 等仍保留原始上标数字映射；物理快捷键与字面编码分开处理。
 
 应用图标 `assets/icons/ipa-bird-v2.png` 由本项目通过图像生成工具原创生成，紫色小鸟抱着 ə 键帽，无参考图片。派生 ICO、Android 图像和 Apple 图标仅调整尺寸及格式。文件 SHA-256 与制作记录见 [assets/icons/README.md](../assets/icons/README.md)。此条不改变仍保留的上游图标及资源许可。
+
+## 首次教学中的皮肤示意
+
+Windows 首次教学及文档示意沿用固定水杉基线 `skins/bigfish/` 的角色与背景，保留其 `Metasequoia IME contributors` 作者元数据和原始文件。图文示意与本次交互代码由本项目编写。移动端与 Mac 教学使用原生界面。规则显示名称已调整，Rules-SOURCES.json 继续保留来源中的原始列名。

@@ -190,7 +190,7 @@ struct TouchKeyboard: View {
             }
             HStack(spacing: 5) {
                 if showsGlobe { function("🌐", width: 32, action: nextKeyboard) }
-                function(model.pinyin ? "拼音" : "CIN", width: 40) { model.toggleMode() }
+                function(model.pinyin ? "拼音" : "IPA", width: 40) { model.toggleMode() }
                 function("说明", width: 42) { help = true }
                 if numbers { function("⇧", width: 32) { uppercase.toggle() } }
                 function(numbers ? "ABC" : "符号", width: 36) { numbers.toggle() }

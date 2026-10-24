@@ -58,6 +58,7 @@ import SwiftUI
         try require(rejected, "Large imports must stop at the read limit")
         print("Swift session: separate commits, explicit readings, composition isolation, CIN, tones and profile round trip passed")
         model.toggleMode(); model.status = ""
+        try render(FirstUseGuide {}, size: NSSize(width: 560, height: 570), file: output.appendingPathComponent("mac-first-use.png"))
         try render(SettingsView(model: model), size: NSSize(width: 1180, height: 880), file: output.appendingPathComponent("mac-settings.png"))
         model.append("haoxue")
         if let position = model.candidates.firstIndex(where: { $0.word == "好学" }) {

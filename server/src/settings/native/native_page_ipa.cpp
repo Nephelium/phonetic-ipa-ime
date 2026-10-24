@@ -2,6 +2,7 @@
 #include "settings/native/native_ipa_keyboard.h"
 #include "settings/native/native_ipa_plus.h"
 #include "settings/native/native_ipa_candidates.h"
+#include "settings/native/native_ipa_onboarding.h"
 #include "ipa/ipa_profile.h"
 #include "ipa/ipa_keyboard_layout.h"
 #include "ipa/ipa_runtime.h"
@@ -767,9 +768,11 @@ VisualPtr BuildIpaInputPage(PageContext &context)
 
 VisualPtr BuildIpaHelpPage(PageContext &context)
 {
-    (void)context;
     PageBuilder page(L"使用说明");
     auto guide = std::make_shared<Column>(14.0f);
+    auto intro = std::make_shared<Button>(L"重新查看上手教学");
+    intro->SetOnClick([host = &context.host]() { ShowIpaFirstUse(*host); });
+    guide->Add(intro);
     guide->Add(MakeTitle(L"拼音 → 音标／汉字"));
     guide->Add(MakeDescription(L"默认输出音标。输入拼音，数字 1–9 或空格选择候选。Caps Lock "
                                L"亮起时，改为输出汉字。点击候选的汉字或下方音标，也可分别上屏。"));

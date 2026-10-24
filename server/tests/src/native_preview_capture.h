@@ -5,6 +5,7 @@
 #include "msimeui/Fonts.h"
 #include "msimeui/Theme.h"
 #include "window/candidate_skin_scene.h"
+#include "settings/native/native_page_skin_common.h"
 
 static void CaptureControls(msimeui::DeviceResources &dr, const std::filesystem::path &file, UINT width, UINT height,
                             std::function<void()> paint);
@@ -133,8 +134,10 @@ class PreviewHost : public HostServices
     {
         throw std::runtime_error("Preview cannot confirm changes");
     }
-    void ShowModal(VisualPtr, std::function<void()>) override
+    VisualPtr modal;
+    void ShowModal(VisualPtr visual, std::function<void()>) override
     {
+        modal = std::move(visual);
     }
     void CloseModal() override
     {
@@ -215,6 +218,43 @@ static int RenderPreviews(const std::filesystem::path &resources, const std::fil
     SettingsModel model([](const std::string &) { throw std::runtime_error("Preview cannot send settings"); });
     model.Receive(R"({"type":"configSnapshot","data":{"appearance":{"page_size":9}}})");
     PageContext context(model, host);
+    // Render the actual first-use controls without opening a desktop window.
+    ShowIpaFirstUse(host);
+    Require(host.modal != nullptr, "First-use dialog must open");
+    host.modal->Attach(&surface.window);
+    const auto introSize = host.modal->Measure({380, 1000});
+    host.modal->Arrange({24, 24, introSize.width, introSize.height});
+    CaptureControls(dr, destination / "16-first-use-bigfish.png", 428, static_cast<UINT>(introSize.height + 48), [&] {
+        dr.GetRenderTarget()->Clear(Hex(0xF5F8FA));
+        host.modal->Render(dr);
+    });
+    for (float dpi : {96.0f, 120.0f, 144.0f, 192.0f})
+    {
+        surface.window.SetDpiOverride(dpi);
+        skinpreview::CandidatePreview candidate;
+        skinpreview::CandidatePreview::Options choices;
+        choices.pageSize = 6;
+        auto font = skinpreview::ReadCandidateFont(model);
+        candidate.Set(model, "bigfish", false, font, choices);
+        candidate.Attach(&surface.window);
+        const auto candidateSize = candidate.Measure({800, 1400});
+        Require(candidateSize.width > 0 && candidateSize.height > 6 * font.size,
+                "IPA candidates must occupy separate lower lines");
+        candidate.Arrange({40, 170, candidateSize.width, candidateSize.height});
+        skinpreview::ToolbarPreview toolbar;
+        toolbar.Set(skinpreview::ResolveToolbarLook(model, "bigfish", false), {});
+        toolbar.Attach(&surface.window);
+        const auto toolbarSize = toolbar.Measure({800, 400});
+        toolbar.Arrange({40, 50, toolbarSize.width, toolbarSize.height});
+        Require(toolbarSize.width > 400, "Toolbar preview must contain IPA mode and full rule name");
+        CaptureControls(dr, destination / ("17-real-product-preview-" + std::to_string(static_cast<int>(dpi)) + ".png"),
+                        560, static_cast<UINT>(candidateSize.height + 220), [&] {
+                            dr.GetRenderTarget()->Clear(Hex(0x202020));
+                            toolbar.Render(dr);
+                            candidate.Render(dr);
+                        });
+    }
+    surface.window.SetDpiOverride(96);
     auto page = BuildIpaKeyboardPage(context);
     page->Attach(&surface.window);
     const auto size = page->Measure({1400, 4096});
@@ -409,7 +449,7 @@ static int RenderPreviews(const std::filesystem::path &resources, const std::fil
         readingScene.Root()->Render(dr);
         auto note = BodyStyle();
         note.size = 15;
-        DrawTextInRect(dr, L"选定读音后返回汉字候选，再按 Ctrl+Enter 输入音标。", note,
+        DrawTextInRect(dr, L"先选字，再按数字选择带调读音，确认后直接输入音标。", note,
                        {48, static_cast<float>(readingHeight) - 50, 720, 30}, Hex(0x526259));
     });
     Require(!IsWindowVisible(surface.hwnd), "Preview window must remain invisible");

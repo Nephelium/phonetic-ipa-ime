@@ -5,6 +5,7 @@
 #include "utils/common_utils.h"
 #include "window/candidate_skin_palette.h"
 #include "window/floating_toolbar_skin.h"
+#include "ipa/ipa_runtime.h"
 
 #include "msimeui/AnimatedImage.h"
 #include "msimeui/DeviceResources.h"
@@ -385,9 +386,8 @@ SizeF ImageFileSize(const std::wstring &path)
 // ---------------------------------------------------------------------------------
 namespace
 {
-const wchar_t *kSampleWords[] = {L"你们", L"你", L"尼", L"妮", L"泥", L"逆", L"拟", L"腻", L"拧"};
-const wchar_t *kSampleCodes[] = {L"(rR)", L"(rX)", L"(uV)", L"(nV)", L"(dV)", L"(zQ)", L"(fR)", L"(oD)", L"(nG)"};
-const wchar_t kSamplePreedit[] = L"ni'mf";
+const wchar_t *kSampleWords[] = {L"你", L"泥", L"拟", L"逆", L"妮", L"腻", L"倪", L"尼", L"昵"};
+const wchar_t kSamplePreedit[] = L"ni";
 // Replaced scene roots kept alive (see CandidatePreview::retired_).
 constexpr size_t kRetiredRoots = 8;
 } // namespace
@@ -448,8 +448,10 @@ void CandidatePreview::Set(const SettingsModel &model, const std::string &skinId
         msimeui::CandidateList::Item item;
         item.label = std::to_wstring(i + 1);
         item.text = kSampleWords[i];
-        if (options.helpcode)
-            item.annotation = kSampleCodes[i];
+        const auto reading = PhoneticIpa::Hanzi().Convert(Narrow(kSampleWords[i]), "ni");
+        item.translation = reading.ambiguous ? L"选择读音 · 数字键或点击" : Widen(reading.text);
+        item.secondaryFontFamily = reading.ambiguous ? L"" : L"Doulos SIL";
+        item.secondaryIsIpa = true;
         items.push_back(std::move(item));
     }
     scene_->List()->SetItems(std::move(items));

@@ -2,6 +2,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 export DEVELOPER_DIR="${DEVELOPER_DIR:-/Applications/Xcode.app/Contents/Developer}"
+python3 scripts/verify-resources.py
 default_source="$(pwd)/../msime-windows"
 if [[ ! -d "$default_source/engine/ipa" ]]; then default_source="$(pwd)/.."; fi
 source_root="${IPA_SOURCE_ROOT:-$default_source}"

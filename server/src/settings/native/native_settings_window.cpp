@@ -5,6 +5,7 @@
 #include "settings/native/native_settings_controls.h"
 #include "settings/native/native_settings_model.h"
 #include "settings/native/native_settings_pages.h"
+#include "settings/native/native_ipa_onboarding.h"
 #include "settings/native/native_settings_theme.h"
 
 #include "utils/common_utils.h"
@@ -1282,6 +1283,8 @@ class SettingsWindowImpl : public HostServices
             splash_->Dismiss();
         else
             SetTimer(hwnd_, kSplashTimer, 1500, nullptr);
+        if (IpaFirstUsePending())
+            ShowIpaFirstUse(*this);
     }
 
     ~SettingsWindowImpl() override

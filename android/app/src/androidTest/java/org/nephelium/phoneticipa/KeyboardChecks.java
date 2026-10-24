@@ -110,7 +110,12 @@ final class KeyboardChecks {
     void runChecks() throws Exception {
         AccessibilityServiceInfo info = ui.getServiceInfo(); info.flags |= AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS | AccessibilityServiceInfo.FLAG_REPORT_VIEW_IDS; ui.setServiceInfo(info);
         Intent launch = new Intent(test.getTargetContext(), SettingsActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-        test.startActivitySync(launch); tap("试打", false); tap("typing-area", true); waitFor("key-y", true); if (find("CIN", false) != null) tap("CIN", false); screenshot("android-initial-mode"); waitFor("拼音", false);
+        test.startActivitySync(launch);
+        for (int i = 0; i < 40 && find("键位设置", false) == null; i++) SystemClock.sleep(150);
+        if (find("下一步", false) != null) { screenshot("android-first-launch"); for (int i = 0; i < 3; i++) tap("下一步", false); tap("开始使用", false); }
+        tap("试打", false); tap("typing-area", true); waitFor("key-y", true);
+        if (!"拼音".contentEquals(waitFor("keyboard-mode", true).getText())) tap("keyboard-mode", true);
+        screenshot("android-initial-mode");
         java.util.List<String> labels = new java.util.ArrayList<>();
         for (char key : "qwertyuiopasdfghjklzxcvbnm".toCharArray()) labels.add("key-" + key);
         for (char digit : "1234567890".toCharArray()) labels.add("digit-" + digit);
@@ -119,7 +124,7 @@ final class KeyboardChecks {
         code("wu"); candidate("ipa-恶-wu");
         if (find("reading-e3", true) != null) throw new AssertionError("e reading leaked into wu");
         tap("reading-wu4", true); expect("厌恶wu˥˩");
-        tap("拼音", false); visibleChoiceBadge("key-a", true); code("a"); expect("厌恶wu˥˩"); screenshot("android-short-tap-picker"); tap("symbol-choice-a-0", true); expect("厌恶wu˥˩a");
+        tap("keyboard-mode", true); waitFor("IPA", false); visibleChoiceBadge("key-a", true); code("a"); expect("厌恶wu˥˩"); screenshot("android-short-tap-picker"); tap("symbol-choice-a-0", true); expect("厌恶wu˥˩a");
         String tone = "";
         for (char digit : "214".toCharArray()) {
             Rect bounds = new Rect(); waitFor("digit-" + digit, true).getBoundsInScreen(bounds);
@@ -156,12 +161,37 @@ final class KeyboardChecks {
         expect("厌恶wu˥˩a˨˩˦6˥/ɠΘ∅pp̪"); screenshot("android-keyboard-plus-extipa");
         tap("VoQS", false); screenshot("android-keyboard-plus-voqs"); tap("plus-close", true);
         expect("厌恶wu˥˩a˨˩˦6˥/ɠΘ∅pp̪");
-        tap("CIN", false); String base = hostText();
+        // A real held key deletes repeatedly, then stops immediately on release.
+        String beforeRepeat = hostText();
+        for (int i = 0; i < 14; i++) tap("digit-6", true);
+        Rect delete = new Rect(); waitFor("backspace", true).getBoundsInScreen(delete);
+        long heldAt = SystemClock.uptimeMillis();
+        MotionEvent deleteDown = MotionEvent.obtain(heldAt, heldAt, MotionEvent.ACTION_DOWN, delete.centerX(), delete.centerY(), 0);
+        deleteDown.setSource(InputDevice.SOURCE_TOUCHSCREEN); ui.injectInputEvent(deleteDown, true); deleteDown.recycle();
+        SystemClock.sleep(900);
+        MotionEvent deleteUp = MotionEvent.obtain(heldAt, SystemClock.uptimeMillis(), MotionEvent.ACTION_UP, delete.centerX(), delete.centerY(), 0);
+        deleteUp.setSource(InputDevice.SOURCE_TOUCHSCREEN); ui.injectInputEvent(deleteUp, true); deleteUp.recycle();
+        SystemClock.sleep(180); String afterRepeat = hostText();
+        int removed = (beforeRepeat.length() + 14) - afterRepeat.length();
+        if (removed < 3 || removed > 13 || !afterRepeat.startsWith(beforeRepeat)) throw new AssertionError("Held delete count: " + removed);
+        SystemClock.sleep(500); expect(afterRepeat);
+        while (hostText().length() > beforeRepeat.length()) tap("backspace", true);
+        expect(beforeRepeat); screenshot("android-held-delete");
+        // Moving off a key cancels it; releasing must not cause a stray delete.
+        tap("digit-6", true); tap("digit-6", true);
+        waitFor("backspace", true).getBoundsInScreen(delete);
+        touch(delete.centerX(), delete.centerY(), delete.top - 50); expect(beforeRepeat + "66");
+        android.os.Bundle selection = new android.os.Bundle();
+        selection.putInt(AccessibilityNodeInfo.ACTION_ARGUMENT_SELECTION_START_INT, beforeRepeat.length());
+        selection.putInt(AccessibilityNodeInfo.ACTION_ARGUMENT_SELECTION_END_INT, beforeRepeat.length() + 2);
+        if (!waitFor("typing-area", true).performAction(AccessibilityNodeInfo.ACTION_SET_SELECTION, selection)) throw new AssertionError("Cannot select trial text");
+        tap("backspace", true); expect(beforeRepeat);
+        tap("keyboard-mode", true); String base = hostText();
         code("yanwu"); tap("digit-1", true); expect(base + "jan˥˩ wu˥˩");
         tap("output-mode", true); code("yanwu"); tap("digit-1", true); expect(base + "jan˥˩ wu˥˩厌恶");
-        tap("output-mode", true); tap("transcription-rules", true); tap("UntPhesoca严", false);
+        tap("output-mode", true); tap("transcription-rules", true); tap("UntPhesoca 严", false);
         code("yanwu"); tap("digit-1", true); expect(base + "jan˥˩ wu˥˩厌恶jɛ̠n̚˥˩ uᵝ˥˩");
-        tap("transcription-rules", true); tap("Standard Chinese (Beijing)", false);
+        tap("transcription-rules", true); tap("Standard Chinese Beijing 宽", false);
         screenshot("android-default-ipa-rules");
         long now = SystemClock.uptimeMillis(); ui.injectInputEvent(new KeyEvent(now, now, KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_BACK, 0), true); ui.injectInputEvent(new KeyEvent(now, now, KeyEvent.ACTION_UP, KeyEvent.KEYCODE_BACK, 0), true);
         tap("键位设置", false); screenshot("android-settings");

@@ -3,6 +3,7 @@
 #include "msimeui/DeviceResources.h"
 #include "msimeui/Fonts.h"
 #include "msimeui/Window.h"
+#include "ipa/ipa_runtime.h"
 
 #include <algorithm>
 #include <cmath>
@@ -61,8 +62,8 @@ struct ToolbarIcon
 
 // ftb/default.html after the preview strips #en, #fullwidth and #puncEn.
 const ToolbarIcon kToolbarIcons[] = {
-    {0xE982, L"中", -1}, {0xEC46, L"半", 0}, {0xF111, L"。", 1}, {0xE88D, L"简", 2},
-    {0xE76E, L"表", 3},  {0xE765, L"键", 4}, {0xE713, L"设", 5},
+    {0xEC46, L"半", 0}, {0xF111, L"。", 1}, {0xE88D, L"简", 2},
+    {0xE76E, L"表", 3}, {0xE765, L"键", 4}, {0xE713, L"设", 5},
 };
 } // namespace
 
@@ -73,25 +74,34 @@ void ToolbarPreview::Set(const ToolbarLook &look, const Options &options)
 {
     look_ = look;
     options_ = options;
+    ruleLabel_ = L"选择转写";
+    try
+    {
+        for (const auto &rule : phonetic_ipa::LoadTranscriptionRules(PhoneticIpa::ResourceRoot()))
+            if (rule.id == PhoneticIpa::RuleId())
+                ruleLabel_ = Widen(rule.short_name);
+    }
+    catch (const std::exception &)
+    {
+    }
     InvalidateMeasure();
     InvalidateVisual();
 }
 
 float ToolbarPreview::BarWidth() const
 {
-    const float s = options_.scale;
-    const float icon = options_.iconSize * s;
+    const float s = options_.scale * options_.iconSize / 24.0f;
+    const float icon = 26.0f * s;
     int count = 0;
     for (const auto &entry : kToolbarIcons)
         count += entry.item < 0 || options_.items[entry.item] ? 1 : 0;
     const float b = CssBorder(1.4f);
-    return b + 8.0f * s + 2.5f * s + 6.0f * s + 4.0f * s + 1.2f * s + 6.0f * s + count * icon +
-           std::max(count - 1, 0) * 6.0f * s + 4.0f * s + b;
+    return b + (18.0f + 1.2f + 2.0f + 5.0f + 48.0f + 5.0f + 232.0f + 4.0f) * s + count * (icon + 5.0f * s) + b;
 }
 
 SizeF ToolbarPreview::Measure(const SizeF &availableSize)
 {
-    const float height = 35.0f * options_.scale;
+    const float height = 35.0f * options_.scale * options_.iconSize / 24.0f;
     return {options_.centered ? availableSize.width : std::min(BarWidth(), availableSize.width), height};
 }
 
@@ -105,7 +115,7 @@ void ToolbarPreview::Render(msimeui::DeviceResources &dr)
     ID2D1RenderTarget *target = dr.GetRenderTarget();
     if (!target)
         return;
-    const float s = options_.scale;
+    const float s = options_.scale * options_.iconSize / 24.0f;
     const float width = BarWidth();
     const float height = 35.0f * s;
     const float x = options_.centered ? std::round(bounds_.x + (bounds_.width - width) * 0.5f) : bounds_.x;
@@ -128,19 +138,24 @@ void ToolbarPreview::Render(msimeui::DeviceResources &dr)
     float cx = bar.x + b + 8.0f * s;
     const float cy = bar.y + height * 0.5f;
     FillRounded(dr, {cx, cy - 7.0f * s, 2.5f * s, 14.0f * s}, 2.0f * s, look_.handle);
-    cx += 2.5f * s + 6.0f * s + 4.0f * s;
+    cx = bar.x + b + 18.0f * s;
     FillRect(dr, {cx, bar.y + b, 1.2f * s, height - b * 2.0f}, look_.divider);
-    cx += 1.2f * s + 6.0f * s;
+    cx += (1.2f + 2.0f + 5.0f) * s;
 
-    const float icon = options_.iconSize * s;
-    bool first = true;
+    TextStyle labelStyle;
+    labelStyle.size = 16.0f * s;
+    DrawCentered(dr, L"IPA", labelStyle, {cx, bar.y, 48.0f * s, height}, look_.icon);
+    cx += (48.0f + 5.0f) * s;
+    labelStyle.size = 14.0f * s;
+    DrawCentered(dr, ruleLabel_ + L" ▴", labelStyle, {cx, bar.y, 232.0f * s, height}, look_.icon);
+    cx += 232.0f * s;
+
+    const float icon = 26.0f * s;
     for (const auto &entry : kToolbarIcons)
     {
         if (entry.item >= 0 && !options_.items[entry.item])
             continue;
-        if (!first)
-            cx += 6.0f * s;
-        first = false;
+        cx += 5.0f * s;
         const RectF box = {cx, cy - icon * 0.5f, icon, icon};
         const msimeui::IconGlyph glyph = msimeui::ResolveIconGlyph(entry.codepoint);
         TextStyle style;
@@ -148,12 +163,12 @@ void ToolbarPreview::Render(msimeui::DeviceResources &dr)
         if (glyph.family)
         {
             style.family = glyph.family;
-            style.size = options_.iconSize * 0.82f * s;
+            style.size = 26.0f * 0.82f * s;
             DrawCentered(dr, std::wstring(1, glyph.codepoint), style, box, look_.icon);
         }
         else
         {
-            style.size = options_.iconSize * 0.8f * s;
+            style.size = 26.0f * 0.8f * s;
             DrawCentered(dr, entry.fallback, style, box, look_.icon);
         }
         cx += icon;

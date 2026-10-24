@@ -44,6 +44,16 @@ unregister_copy() {
     return 1
 }
 unregister_copy "$source_app"
+# Xcode's scheme/UI-test builds may also leave an older application in build/Debug.
+# Unregister only known copies of this exact product, retaining every file.
+for build_copy in "$PWD/build/Debug/PhoneticIPA-Mac.app" "$PWD/build/Release/PhoneticIPA-Mac.app" \
+    "$PWD/build/products/Debug/PhoneticIPA-Mac.app" "$PWD/build/products/Release/PhoneticIPA-Mac.app"; do
+    if [[ -d "$build_copy" && "$build_copy" != "$source_app" && "$build_copy" != "$target_app" ]]; then
+        copy_id=$(/usr/libexec/PlistBuddy -c 'Print CFBundleIdentifier' "$build_copy/Contents/Info.plist")
+        [[ "$copy_id" == "$actual_id" ]] || { echo 'Unexpected build-copy bundle ID; registration left unchanged.' >&2; exit 1; }
+        unregister_copy "$build_copy"
+    fi
+done
 mkdir -p "$HOME/Library/Input Methods"
 if [[ -e "$target_app" ]]; then
     executable="$target_app/Contents/MacOS/$('/usr/libexec/PlistBuddy' -c 'Print CFBundleExecutable' "$target_app/Contents/Info.plist")"
@@ -104,5 +114,9 @@ done
 cat "$run_dir/independent-check.log"
 [[ "$ready" == true ]] || { echo "Independent input-source verification failed. See $run_dir" >&2; exit 1; }
 # Start the installed server in the existing GUI session without opening a window.
-open -g "$target_app"
+if [[ -e "$run_dir/previous.bundle" ]]; then
+    open -g "$target_app"
+else
+    open "$target_app" --args --settings
+fi
 printf 'Installed and enabled: %s\nPrevious build and logs: %s\n' "$target_app" "$run_dir"

@@ -148,6 +148,7 @@ class ToolbarPreview : public msimeui::Visual
     float BarWidth() const;
 
     ToolbarLook look_;
+    std::wstring ruleLabel_;
     Options options_;
     msimeui::ShadowCache shadows_[2];
 };
