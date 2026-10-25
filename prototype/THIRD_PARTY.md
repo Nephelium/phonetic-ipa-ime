@@ -24,7 +24,7 @@
 | `word-readings.tsv` | [CC-CEDICT](https://www.mdbg.net/chinese/dictionary?page=cc-cedict)，MDBG 与贡献者；CEDICT 由 Paul Denisowski 于 1997 年创立 | 从 2026-10-21 导出快照提取简繁词形与带调拼音，保留歧义、去重，183,177 个词形／读音对；757 个非标准条目跳过。衍生文件继续采用 [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/)，原头部及修改说明在 `CC-CEDICT-README.txt`。 |
 | `DoulosSIL-Regular.ttf` | SIL Global，Doulos SIL 7.000，[官方项目](https://software.sil.org/doulos/) | 原字体字节不变，主音标字体，私有加载。[OFL 1.1 全文与版权](resources/ipa/Doulos-OFL.txt)；Doulos、SIL 为保留字体名。 |
 | `PTBIPAPlus-Regular.ttf` | SIL Global、Noto 作者、PhoneticToolbox 贡献者；PTB IPA Plus 1.000 | 复用 PhoneticToolbox 已更名的 Doulos SIL 7.000 派生字体，含补充组合与 Noto Sans Math 括号字形。本输入法没有再改字体字节，只用于缺字回退。[派生字体 OFL](resources/ipa/OFL-PTBIPAPlus.txt)、[Noto 原文](resources/ipa/OFL-Noto.txt)。 |
-| `plus-catalog.json`、`plus-sources.json` | PhoneticToolbox v3 M17 国际音标表 Plus，625 个条目，IPA 351 / extIPA 209 / VoQS 65 | 复用 Unicode 输入序列、短名称、分类及布局数据，在原生控件中重新实现交互。未复制原论文、扫描图或录音。不同来源部分按下表保留各自许可；这些数据不因与程序一起分发而统一改为 GPL。 |
+| `plus-catalog.json`、`plus-sources.json` | PhoneticToolbox v3 M17 国际音标表 Plus，625 个条目，IPA 351 / extIPA 209 / VoQS 65 | 复用 Unicode 输入序列、短名称、分类及布局数据，在原生控件中重新实现交互。2026-10-25 修正清腭化龈后鼻音的字符顺序为 `n̠̊ʲ`，让清化圈附着于 n，详见 provenance.json。未复制原论文、扫描图或录音。不同来源部分按下表保留各自许可；这些数据不因与程序一起分发而统一改为 GPL。 |
 
 原始 M13 数据 SHA-256：`0213de35105d0251a4776f60461fee73b52a415620b711be1a69c1ac9343773f`。原 CIN SHA-256：`291d5ab9de8f64d9d51c7c6d0d479493dcc253ac1541be75ff2d510995a7d983`。CC-CEDICT 源 gzip SHA-256：`f50281886b7cedc9be90aa923886710711c2a67853e350b848733f8a2f75db47`。原目录数据与字体版本分别固定，完整记录在 [provenance.json](resources/provenance.json)。
 

@@ -2,31 +2,31 @@
   "schema": 1,
   "product": "phonetic-ipa-ime",
   "version": "0.1.6",
-  "notes": "四端应用新增完整网页教程入口，网页增加快乐／快了对照操作；iOS 候选区按内容确定高度，汉字、音标和读音提示完整显示，音标字号与行距更紧凑；四端设置增加 PhoneticToolbox 官网入口；官网教程改为逐步截图与操作标注。",
+  "notes": "四端 IPA Plus 修正清腭化龈后鼻音的清化圈位置，显示和点选输入统一为 n̠̊ʲ。沿用 0.1.6，已安装用户请重新下载安装包。",
   "platforms": {
     "windows": {
       "url": "https://www.phonetictoolbox.com/releases/phonetic-ipa-ime/0.1.6/PhoneticIPA-Windows-0.1.6.zip",
       "githubUrl": "https://github.com/Nephelium/phonetic-ipa-ime/releases/download/ipa-v0.1.6/PhoneticIPA-Windows-0.1.6.zip",
-      "bytes": 97503348,
-      "sha256": "a950cbae52ae2588d5f6e229408d6c9395c5cf366a454180cf6650db4bcc109c"
+      "bytes": 97504797,
+      "sha256": "13590e1ab029cdc0b1abcbd9fe652952c6898753da672b6ee01221a769c11802"
     },
     "macos": {
       "url": "https://www.phonetictoolbox.com/releases/phonetic-ipa-ime/0.1.6/PhoneticIPA-macOS-0.1.6.zip",
       "githubUrl": "https://github.com/Nephelium/phonetic-ipa-ime/releases/download/ipa-v0.1.6/PhoneticIPA-macOS-0.1.6.zip",
-      "bytes": 55742544,
-      "sha256": "420f39aa77af0128cda9832fc2982bd61ee13d143865c43b2872aef17aed9f53"
+      "bytes": 55744394,
+      "sha256": "a2c2567452b93ecc469e832fa1a4fe94f14363f88dddec733dcabea8425b57ae"
     },
     "ios": {
       "url": "https://www.phonetictoolbox.com/releases/phonetic-ipa-ime/0.1.6/PhoneticIPA-iOS-0.1.6-unsigned.ipa",
       "githubUrl": "https://github.com/Nephelium/phonetic-ipa-ime/releases/download/ipa-v0.1.6/PhoneticIPA-iOS-0.1.6-unsigned.ipa",
-      "bytes": 105846606,
-      "sha256": "462801096353cc2bfe9db02b36a23665d499d99944889651bbf12472af95024c"
+      "bytes": 105783125,
+      "sha256": "bbd857a28bda8a38f2f96cfe8354da9affce0d5619fd55bae5859f41eee1a3d0"
     },
     "android": {
       "url": "https://www.phonetictoolbox.com/releases/phonetic-ipa-ime/0.1.6/PhoneticIPA-Android-0.1.6.apk",
       "githubUrl": "https://github.com/Nephelium/phonetic-ipa-ime/releases/download/ipa-v0.1.6/PhoneticIPA-Android-0.1.6.apk",
       "bytes": 122372370,
-      "sha256": "c8b2cb9afff9d5cf85bfd9d71202052431476028fa5b938b6353e6858dad21ea"
+      "sha256": "9ecaa5a16267e251b12a3224b6b54378b30f49a93b00ff57a895c7f80972fec0"
     }
   }
 }

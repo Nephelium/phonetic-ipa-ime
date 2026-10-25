@@ -16,7 +16,7 @@
     "LICENSE-GPL-3.0.txt": "8b1ba204bb69a0ade2bfcf65ef294a920f6bb361b317dba43c7ef29d96332b9b",
     "OFL-Noto.txt": "0dab92d0544f7b233403f14b84a663bdbfa746982eda629e7f4f9ffe1b036feb",
     "OFL-PTBIPAPlus.txt": "713432cfd3a6a60561d33df1f5fcfc8c158e53867af5349b3563ae4328ca7565",
-    "plus-catalog.json": "9efbae79e434b15b3d7aa07e72ad5d16585a5e7c54373686af4481aab1cc764a",
+    "plus-catalog.json": "6d4d16a18bdeaf8ee1e1e0f016c6a8ef619d26bcd693fcdc4fab1f57a6610003",
     "plus-sources.json": "1fc2f3629dc157d9dccb75df01636d3a4f1b567cd1e5edde56da54b6c0102bca",
     "PTBIPAPlus-Regular.ttf": "4219767c81bfb38e59fa1ec1fc995e40164c6896bf0eec8e9542061453ec2060",
     "word-readings.tsv": "7b1b584761ac69c48f5b00fe6a87ddad76b24df7cdd4fc20e5e18741740e7cad"
@@ -36,7 +36,18 @@
   "plus": {
     "source": "PhoneticToolbox v3/frontend/src/modules/ipa-plus/data/catalog.json",
     "entries": 625,
-    "license": "Per-section attribution in ../THIRD_PARTY.md; source metadata in ipa/plus-sources.json"
+    "license": "Per-section attribution in ../THIRD_PARTY.md; source metadata in ipa/plus-sources.json",
+    "source_sha256": "7aab3ca166ff097ae99a497b3e4f772b628288659bb4988ccb307bc82e2c44db",
+    "corrections": [
+      {
+        "date": "2026-10-25",
+        "entry": "ipa-combinations-021",
+        "reason": "Attach the voiceless ring to n before the palatalization modifier",
+        "from": "n̠ʲ̊",
+        "to": "n̠̊ʲ"
+      }
+    ],
+    "exported_snapshot_sha256": "9efbae79e434b15b3d7aa07e72ad5d16585a5e7c54373686af4481aab1cc764a"
   },
   "fonts": {
     "Doulos SIL": "7.000, unchanged, OFL-1.1",
