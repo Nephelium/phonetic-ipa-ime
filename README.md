@@ -2,7 +2,7 @@
 
 输入拼音，选择带声调的国际音标；也可以按键位直接查找和点选 IPA、extIPA、VoQS 符号。支持 Windows、macOS、Android 和 iOS。
 
-当前版本 **0.1.6 测试版**。[官网下载](https://www.phonetictoolbox.com/#ipa-ime-download) · [GitHub 下载](https://github.com/Nephelium/phonetic-ipa-ime/releases/tag/ipa-v0.1.6)。Mac 版双击安装，无需命令行工具。iOS 为待签名 IPA。
+当前版本 **0.1.7 测试版**。[官网下载](https://www.phonetictoolbox.com/#ipa-ime-download) · [GitHub 下载](https://github.com/Nephelium/phonetic-ipa-ime/releases/tag/ipa-v0.1.7)。Mac 版双击安装，无需命令行工具。iOS 为待签名 IPA。
 
 本项目基于 [水杉输入法 MSIME-Windows](https://github.com/metasequoiaime/MSIME-Windows) 开发。感谢水杉原作者及贡献者提供的输入法基础、原生界面与皮肤素材，保留上游历史、GPLv3 及原始署名。
 
@@ -70,12 +70,13 @@
 
 ## 随时查完整音标表，切换转写规则
 
-手机键盘上方的 **IPA Plus** 可随时打开完整 **IPA / extIPA / VoQS** 音标表。先确认已有候选，再打开音标表，搜索音标或中文名称后点符号，可连续输入。表格可左右滑，页面可上下滑，默认字号 50%，也能调整。电脑设置中也有 IPA Plus，可用于编辑键位。
+手机键盘上方的 **IPA Plus** 可随时打开完整 **IPA / extIPA / VoQS** 音标表。先确认已有候选，再打开音标表，搜索音标或中文名称后点符号，可连续输入。表格可左右滑，页面可上下滑，手机默认字号 50%，最低可调至 20%。电脑设置中也有 IPA Plus，可用于编辑键位。Windows 默认适合页面宽度，上限 70%，手动缩放范围为 20%–120%；可用左右移动按钮或 Shift＋滚轮查看放大的表格。声调与词重调排在右列。
 
 **规则**决定拼音查字的转写结果。Windows 点击悬浮工具栏中的规则名称，菜单向上展开；Mac 使用候选栏规则菜单；手机点上方规则按钮。共十套：
 
 - Standard Chinese Beijing 宽 / Standard Chinese Beijing 严
-- 胡裕树、黄廖、钱乃荣、吴宗济、赵元任、方音字汇
+- 胡裕树《现代汉语》、黄伯荣／廖序东《现代汉语》、钱乃荣《现代汉语》
+- 吴宗济、赵元任《汉语口语语法》、《汉语方音字汇》
 - UntPhesoca 宽 / UntPhesoca 严
 
 直接音标键盘按自己的键位方案输入。切换拼音转写规则不会替换键位方案。各套音标与声调写法、来源列及 SHA-256 见 [Rules-SOURCES.json](prototype/resources/ipa/Rules-SOURCES.json) 与 [来源与许可](prototype/THIRD_PARTY.md)。
@@ -99,6 +100,10 @@ Mac 当前为本地签名、尚未公证。如果系统阻止打开，请按 [Ap
 
 ## 常见问题与设置
 
+**Windows 升级与卸载**：0.1.7安装时会退出本输入法旧进程、解除旧版注册并安装新版，保留个人键位和配置。可从 Windows 设置的应用列表卸载，也可双击解压目录中的卸载.cmd。卸载保留个人数据和解压文件。
+
+**Windows 工具栏与候选**：工具栏保留输入模式、转写规则和设置。展开的规则菜单显示完整名称。候选中的括号字母是上游的辅助码提示，0.1.7已隐藏。
+
 **Shift＋1–5 仍输入 !@#，或 Caps Lock 没反应？** 先确认系统当前选择的是国际音标输入法，并查看上表中的状态。Windows 升级后，保存草稿，完全退出并重新打开仍在运行的应用，使它重新加载新版输入法 DLL。只关窗口可能仍留在后台，无需重启电脑。
 
 **输入字母没有预期音标？** 想拼音查字时回到拼音模式，想选单个音标时进入直接音标模式。手机左下角显示 IPA 时短按带 ··· 的键；电脑显示 IPA 时先按 a，再按 1 试输首项。候选尚未确认时不会进入正文。
@@ -120,5 +125,7 @@ Mac 当前为本地签名、尚未公证。如果系统阻止打开，请按 [Ap
 - 依赖声明见 [THIRD_PARTY_NOTICES.txt](THIRD_PARTY_NOTICES.txt)。
 
 ## 开发与验证
+
+0.1.7 修正记录：[IPA Plus、规则全称与 Windows 安装升级](docs/testing/2026-10-25-IPA-Plus与安装升级修复.md)。[更新说明](docs/releases/0.1.7.md)。
 
 构建入口：[Windows](prototype/README.md)、[Apple](apple/README.md)、[Android](android/README.md)。本版记录见 [0.1.6 安装与教学验证](docs/testing/2026-10-25-016-review.md)。分别记录原生控件、两种 TSF 架构、Mac 专用 NSTextView 实际输入和 Android / iOS 模拟器键盘测试。iPhone 实机签名、物理 Intel Mac 和各厂商 Android 实机尚未逐一验证。

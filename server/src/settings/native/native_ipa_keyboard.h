@@ -40,7 +40,7 @@ class IpaPageHero : public msimeui::Visual
                        {bounds_.x + 26, bounds_.y + 59, bounds_.width - 52, 24}, p.textSecondary);
         if (bounds_.width > 1080)
         {
-            style.family = L"Doulos SIL";
+            style.family = L"PTB IPA Plus";
             style.size = 50;
             DrawTextInRect(dr, L"a ɐ ɑ", style, {bounds_.x + bounds_.width - 240, bounds_.y + 12, 215, 70},
                            p.light ? Hex(0x667DA6) : Hex(0x99B5E0), true);
@@ -157,7 +157,7 @@ class IpaKeyboardCanvas : public msimeui::Visual
                                {rect.x + rect.width - 23, rect.y + 5, 18, 16}, p.textMuted, true);
             }
             style = BodyStyle();
-            style.family = L"Doulos SIL";
+            style.family = L"PTB IPA Plus";
             style.size = 28;
             DrawTextInRect(dr, summary ? summary(key.vk) : L"", style,
                            {rect.x + 3, rect.y + 22, rect.width - 6, rect.height - 23}, p.text, true);
@@ -276,7 +276,7 @@ class IpaKeyboardCanvas : public msimeui::Visual
         if (values.size() > g.capacity)
             heading += L"   " + std::to_wstring(start + 1) + L"–" + std::to_wstring(end) + L"  滚轮翻页";
         DrawTextInRect(dr, heading, style, {g.box.x + 16, g.box.y + 12, g.box.width - 32, 27}, p.text);
-        style.family = L"Doulos SIL";
+        style.family = L"PTB IPA Plus";
         style.size = 34;
         style.weight = DWRITE_FONT_WEIGHT_NORMAL;
         const float cell = (g.box.width - 32) / g.columns;

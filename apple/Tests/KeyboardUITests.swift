@@ -202,6 +202,15 @@ final class KeyboardUITests: XCTestCase {
         XCTAssertTrue(app.buttons["plus-extipa-consonants-001"].waitForExistence(timeout: 5))
         app.buttons["字号 ＋"].tap()
         let extShot = XCTAttachment(screenshot: app.screenshot()); extShot.name = "extIPA matrix larger text"; extShot.lifetime = .keepAlways; add(extShot)
+        for _ in 0..<5 { app.buttons["字号 −"].tap() }
+        XCTAssertTrue(app.staticTexts["20%"].exists, "Minimum IPA Plus zoom must be 20%")
+        for _ in 0..<4 { app.buttons["字号 ＋"].tap() }
+        let search = app.textFields["plus-search"]
+        search.tap(); search.typeText("C⃝")
+        let enclosed = app.buttons["plus-extipa-uncertainty-002"]
+        XCTAssertTrue(enclosed.waitForExistence(timeout: 5)); enclosed.tap()
+        let circledShot = XCTAttachment(screenshot: app.screenshot()); circledShot.name = "Enclosed C and correct Unicode selection"; circledShot.lifetime = .keepAlways; add(circledShot)
+        search.tap(); search.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: 2))
         app.buttons["VoQS"].tap()
         let voqsShot = XCTAttachment(screenshot: app.screenshot()); voqsShot.name = "VoQS adaptive phone grid"; voqsShot.lifetime = .keepAlways; add(voqsShot)
         app.buttons["plus-close"].tap()

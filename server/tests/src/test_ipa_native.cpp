@@ -71,6 +71,7 @@ static POINT Center(const msimeui::RectF &rect, float dpi)
 
 int main(int argc, char **argv)
 {
+    std::cout << std::unitbuf;
     if (argc == 3)
     {
         try
@@ -385,7 +386,7 @@ int main(int argc, char **argv)
         chart.Load(catalog);
         for (const std::string system : {"ipa", "extipa", "voqs"})
             for (const float dpi : {96.f, 120.f, 144.f, 192.f})
-                for (const float scale : {.6f, .8f, 1.2f})
+                for (const float scale : {.2f, .6f, .8f, 1.2f})
                 {
                     surface.window.SetDpiOverride(dpi);
                     chart.system = system;
@@ -419,6 +420,43 @@ int main(int argc, char **argv)
         chart.Filter();
         Require(chart.Tiles().empty(), "Search returned an unrelated symbol");
         Require(!IsWindowVisible(surface.hwnd), "Chart test displayed a desktop window");
+    });
+    run("IPA Plus fits width, balances tones and reaches the horizontal edge", [&] {
+        std::ifstream stream(root / "plus-catalog.json", std::ios::binary);
+        const auto catalog = nlohmann::json::parse(stream);
+        TestSurface surface;
+        SymbolCanvas chart;
+        chart.Attach(&surface.window);
+        chart.Load(catalog);
+        for (const float dpi : {96.f, 120.f, 144.f, 192.f})
+            for (const float width : {360.f, 640.f, 820.f, 1200.f})
+            {
+                surface.window.SetDpiOverride(dpi);
+                chart.FitWidth();
+                chart.Arrange({0, 0, width, 650});
+                Require(chart.ContentWidth() <= width, "Default chart exceeds available width");
+                Require(chart.zoom <= .7f, "Fit mode enlarged the default beyond 70%");
+                for (const auto &tile : chart.Tiles())
+                    if (chart.visible[tile.symbol].section == "tones")
+                        Require(tile.rect.x > width / 2, "Tones must occupy the right column");
+                chart.SetZoom(.1f);
+                Require(std::abs(chart.zoom - .2f) < .001f, "Minimum zoom is not 20%");
+                chart.SetZoom(1.2f);
+                size_t edge = 0;
+                for (size_t i = 1; i < chart.Tiles().size(); ++i)
+                    if (chart.Tiles()[i].rect.x > chart.Tiles()[edge].rect.x)
+                        edge = i;
+                const auto tile = chart.Tiles()[edge];
+                chart.ScrollHorizontal(chart.ContentWidth());
+                chart.ScrollTo(tile.rect.y);
+                std::string chosen;
+                chart.choose = [&](const Symbol &symbol) { chosen = symbol.output; };
+                const auto point = Center(chart.Cell(edge), dpi);
+                chart.OnMouseDown(point, 0);
+                chart.OnMouseUp(point, 0);
+                Require(chosen == chart.visible[tile.symbol].output, "Rightmost symbol cannot be selected");
+                chart.choose = {};
+            }
     });
     run("Hanzi and IPA candidate rows activate distinct callbacks", [&] {
         phonetic_ipa::HanziTable hanzi;
@@ -462,6 +500,7 @@ int main(int argc, char **argv)
                 Require(committed == L"\u014b", "Single-line CIN item was treated as secondary");
             }
     });
+    run("13 enclosed letters shape as complete ligatures", [&] { CheckEnclosedGlyphs(); });
     run("Bundled Doulos primary and IPA Plus fallback map to their actual fonts", [&] {
         Require(msimeui::PrivateIpaFontCollection(L"Doulos SIL") != nullptr, "Doulos private collection missing");
         Require(MappedIpaFamily(L"ɕ", {L"PTB IPA Plus"}) == L"Doulos SIL",

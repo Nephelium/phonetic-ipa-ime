@@ -32,7 +32,7 @@ final class PlusPanel extends LinearLayout {
         String[] system = {"ipa"}; float[] scale = {0.5f}; Runnable redraw = () -> drawCharts(charts, catalog, entries, system[0], scale[0]);
         for (String name : new String[]{"ipa", "extipa", "voqs"}) UI.weighted(tabs, control(name.equals("ipa") ? "IPA" : name.equals("extipa") ? "extIPA" : "VoQS", () -> { system[0] = name; scroll.scrollTo(0, 0); redraw.run(); }), 1, 30);
         TextView size = label("50%", 11); size.setGravity(Gravity.CENTER);
-        UI.weighted(tools, control("字号 −", () -> { scale[0] = Math.max(0.4f, scale[0] - 0.1f); size.setText(Math.round(scale[0] * 100) + "%"); redraw.run(); }), 1, 28);
+        UI.weighted(tools, control("字号 −", () -> { scale[0] = Math.max(0.2f, scale[0] - 0.1f); size.setText(Math.round(scale[0] * 100) + "%"); redraw.run(); }), 1, 28);
         UI.weighted(tools, size, 1, 28);
         UI.weighted(tools, control("字号 ＋", () -> { scale[0] = Math.min(1.3f, scale[0] + 0.1f); size.setText(Math.round(scale[0] * 100) + "%"); redraw.run(); }), 1, 28);
         search.addTextChangedListener(new TextWatcher() { public void beforeTextChanged(CharSequence s, int start, int count, int after) {} public void onTextChanged(CharSequence s, int start, int before, int count) { query = s.toString(); redraw.run(); } public void afterTextChanged(Editable e) {} });

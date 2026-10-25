@@ -661,7 +661,17 @@ VisualPtr BuildIpaKeyboardPage(PageContext &context)
                 if (auto button = weak.lock())
                     button->SetActive(key == value);
         });
-    auto zoomLabel = MakeDescription(L"80%");
+    auto zoomLabel = MakeDescription(L"适合宽度");
+    symbols->zoomChanged = [zoomLabel](float zoom, bool fit) {
+        zoomLabel->SetText((fit ? L"适合宽度 · " : L"") + std::to_wstring(static_cast<int>(std::lround(zoom * 100))) +
+                           L"%");
+    };
+    auto fitButton = std::make_shared<Button>(L"适合宽度");
+    fitButton->SetOnClick([weakSymbols] {
+        if (auto s = weakSymbols.lock())
+            s->FitWidth();
+    });
+    pickerRow->Add(fitButton);
     for (const auto &[label, delta] : std::vector<std::pair<std::wstring, float>>{{L"字号 −", -.1f}, {L"字号 +", .1f}})
     {
         auto button = std::make_shared<Button>(label);
@@ -700,6 +710,16 @@ VisualPtr BuildIpaKeyboardPage(PageContext &context)
     });
     picker->Add(symbols);
     auto paging = std::make_shared<Row>(8.0f);
+    for (const auto &[label, direction] :
+         std::vector<std::pair<std::wstring, int>>{{L"向左移动", -1}, {L"向右移动", 1}})
+    {
+        auto button = std::make_shared<Button>(label);
+        button->SetOnClick([weakSymbols, direction] {
+            if (auto s = weakSymbols.lock())
+                s->NextHorizontal(direction);
+        });
+        paging->Add(button);
+    }
     for (const auto &[label, direction] :
          std::vector<std::pair<std::wstring, int>>{{L"向上翻页", -1}, {L"向下翻页", 1}})
     {

@@ -68,7 +68,13 @@ bool SetConfiguredCaretStateIndicatorPosition(const std::string &position)
 
 const FloatingToolbarItemsConfig &GetConfiguredFloatingToolbarItems()
 {
-    return g_floating_toolbar_items;
+    // The IPA product exposes only controls supported by its packaged runtime.
+    // Keep legacy preferences readable without re-enabling upstream-only panels.
+    static thread_local FloatingToolbarItemsConfig supported;
+    supported.fullwidth = supported.punctuation = supported.character_set = false;
+    supported.emoji = supported.screen_keyboard = false;
+    supported.settings = g_floating_toolbar_items.settings;
+    return supported;
 }
 
 bool SetConfiguredFloatingToolbarItemEnabled(const std::string &item, bool enabled)

@@ -31,7 +31,7 @@ python3 - "$installer" "$helper" "$version" <<'PY'
 from pathlib import Path
 import plistlib,sys
 installer,helper=map(Path,sys.argv[1:3]);version=sys.argv[3]
-base={'CFBundleDevelopmentRegion':'zh-Hans','CFBundleInfoDictionaryVersion':'6.0','CFBundlePackageType':'APPL','CFBundleShortVersionString':version,'CFBundleVersion':'2','LSMinimumSystemVersion':'13.0','NSPrincipalClass':'NSApplication','NSHighResolutionCapable':True}
+base={'CFBundleDevelopmentRegion':'zh-Hans','CFBundleInfoDictionaryVersion':'6.0','CFBundlePackageType':'APPL','CFBundleShortVersionString':version,'CFBundleVersion':'8','LSMinimumSystemVersion':'13.0','NSPrincipalClass':'NSApplication','NSHighResolutionCapable':True}
 for path,extra in [(installer,{'CFBundleIdentifier':'org.nephelium.phonetic-ipa.installer','CFBundleExecutable':'Installer','CFBundleName':'安装国际音标输入法','CFBundleDisplayName':'安装国际音标输入法','CFBundleIconFile':'Installer.icns','NSRequiresAquaSystemAppearance':False}), (helper,{'CFBundleIdentifier':'org.nephelium.phonetic-ipa.registration','CFBundleExecutable':'RegisterInputSource','CFBundleName':'PhoneticIPA Registration','LSUIElement':True})]:
     (path/'Contents/Info.plist').write_bytes(plistlib.dumps({**base,**extra},sort_keys=False))
 PY

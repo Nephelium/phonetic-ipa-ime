@@ -271,11 +271,9 @@ std::string BuildCurrentCandidatePage()
     // 副候选框里装的是译文，不是这次输入的候选：助记码、云/AI 角标和「右侧译文」都不适用，
     // 而且 g_candidate_translation_glosses 还留着原候选的译文，照常查会把译文再标注一遍。
     const bool translation_page = g_translation_candidates_active || g_ipa_reading_page_active;
-    const bool show_helpcodes =
-        !translation_page && ((current_scheme == SchemeType::Shuangpin && GetConfiguredShuangpinHelpcodeEnabled() &&
-                               GetConfiguredShowShuangpinHelpcodeInCandidateWindow()) ||
-                              (current_scheme == SchemeType::Quanpin && GetConfiguredQuanpinHelpcodeEnabled() &&
-                               GetConfiguredShowQuanpinHelpcodeInCandidateWindow()));
+    // Auxiliary lookup remains available, but its spelling is not part of the
+    // IPA candidate presentation.
+    const bool show_helpcodes = false;
     // U 模式（部件拆字反查）：候选上反显该字的注音。annotation 在这个模式下专属注音，辅助码
     // 提示不在该模式出现（候选来源是 Generated，本来也不走辅助码的整句规则）。
     const bool radical_mode =

@@ -33,7 +33,7 @@ def lessons(phone, mac=False):
       dict(id='plus',name='打开 IPA Plus',note='手机直接向正文输入，电脑用于查看音标和编辑键位。',steps=[
         step('plus-open' if phone else 'settings','打开完整音标表','先确认已有候选，再点键盘上方的 IPA Plus。' if phone else '打开设置的音标键盘页，点要编辑的键位，选中一个候选，再打开 IPA Plus。','音标表提供 IPA、extIPA 和 VoQS 分类。',['IPA Plus'] if phone else ['设置','音标键盘','IPA Plus'],['plus']),
         step('plus-chart','点选需要的符号','切换分类，搜索或滑动查找，再点需要的符号。' if phone else '在 IPA Plus 中点一个符号，将它放入当前编辑的键位候选。','手机会把符号直接输入正文，可以连续点选。' if phone else '电脑是在编辑键位，修改后需要保存方案。',['点符号'],['plus-symbol']),
-        step('plus-result' if phone else 'settings','返回键盘继续输入' if phone else '保存键位方案','点返回键盘，再看正文中的符号。' if phone else ('完成候选编辑后点保存方案，之后使用该键位选择音标。' if mac else '完成候选编辑后点应用方案，之后使用该键位选择音标。'),'表格可以左右滑，页面可以上下滑。手机默认字号 50%，可用字号按钮调整。',[],['result'] if phone else ['save'])]),
+        step('plus-result' if phone else 'settings','返回键盘继续输入' if phone else '保存键位方案','点返回键盘，再看正文中的符号。' if phone else ('完成候选编辑后点保存方案，之后使用该键位选择音标。' if mac else '完成候选编辑后点应用方案，之后使用该键位选择音标。'),'表格可以左右滑，页面可以上下滑。手机默认字号 50%，最低可调至 20%。Windows 默认适合宽度，放大后可用左右移动按钮查看。',[],['result'] if phone else ['save'])]),
       dict(id='rules',name='快捷切换转写规则',note='先选规则，再输入拼音；正文中已经输入的音标不会被改写。',steps=[
         step('rules' if phone else 'rule-button','打开规则菜单并选择方案','点键盘上方的规则，再点需要的方案。' if phone else ('点候选栏的规则菜单，选择需要的方案。' if mac else '点悬浮工具栏的规则名称，菜单会向上展开，再选择需要的方案。'),'共有十套规则，包括 Standard Chinese Beijing 宽／严和 UntPhesoca 宽／严。',['规则'],['rule']),
         step('word','用相同的词再试一次','回到文本框，重新输入 kuaile，再选快乐的音标。','新输入使用刚选中的规则。直接音标键位方案不会随转写规则切换。',['k u a i l e','选快乐'],['word-ipa'])])

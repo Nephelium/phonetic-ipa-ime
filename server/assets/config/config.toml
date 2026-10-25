@@ -23,10 +23,10 @@ caret_state_indicator_on_focus = false
 # 光标状态提示位置：top-left / top / top-right / bottom-left / bottom / bottom-right（top、bottom 为正上方、正下方）
 caret_state_indicator_position = "top-left"
 # 悬浮工具栏组件（中英文切换始终显示）
-floating_toolbar_fullwidth = true
-floating_toolbar_punctuation = true
-floating_toolbar_character_set = true
-floating_toolbar_emoji = true
+floating_toolbar_fullwidth = false
+floating_toolbar_punctuation = false
+floating_toolbar_character_set = false
+floating_toolbar_emoji = false
 floating_toolbar_screen_keyboard = false
 floating_toolbar_settings = true
 # 悬浮工具栏用户缩放（相对系统 DPI），可选：0.75 / 1.0 / 1.25 / 1.5

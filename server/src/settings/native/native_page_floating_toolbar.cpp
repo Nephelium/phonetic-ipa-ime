@@ -56,7 +56,7 @@ class RequiredOption : public msimeui::Visual
   public:
     RequiredOption()
     {
-        text_.Set(L"中英文切换", BodyStyle());
+        text_.Set(L"输入模式与转写规则", BodyStyle());
         TextStyle note;
         note.size = kFontCaption;
         note_.Set(L"始终显示", note);
@@ -232,7 +232,7 @@ VisualPtr BuildFloatingToolbarPage(PageContext &context)
     auto list = std::make_shared<Column>(0.0f);
     list->Add(std::make_shared<RequiredOption>());
     const wchar_t *labels[6] = {L"全角 / 半角", L"中英文标点", L"简繁切换", L"表情与符号", L"屏幕键盘", L"设置"};
-    for (int i = 0; i < 6; ++i)
+    for (int i = 5; i < 6; ++i)
     {
         list->Add(std::make_shared<Divider>(Divider::Kind::Option));
         list->Add(BindCheck(context, labels[i], std::string("general.floating_toolbar_") + kToolbarItems[i]));
@@ -255,7 +255,7 @@ VisualPtr BuildFloatingToolbarPage(PageContext &context)
         options.centered = true;
         for (int i = 0; i < 6; ++i)
             options.items[i] =
-                model->GetBool(std::string("general.floating_toolbar_") + kToolbarItems[i], options.items[i]);
+                i == 5 && model->GetBool(std::string("general.floating_toolbar_") + kToolbarItems[i], options.items[i]);
         toolbar->Set(skinpreview::ResolveToolbarLook(*model, skin,
                                                      skinpreview::ResolveSurfaceLight(*model, "appearance.theme_ftb")),
                      options);

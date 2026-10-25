@@ -38,7 +38,7 @@ class IpaFirstUseFigure : public msimeui::Visual
         TextStyle style = BodyStyle();
         style.size = 17.0f;
         DrawTextInRect(dr, top[page], style, {bounds_.x + 16, bounds_.y + 20, bounds_.width - 104, 44}, Hex(0xE3EAFF));
-        style.family = L"Doulos SIL";
+        style.family = L"PTB IPA Plus";
         style.size = 27.0f;
         DrawTextInRect(dr, ipa[page], style, {bounds_.x + 16, bounds_.y + 80, bounds_.width - 32, 56}, Hex(0x5B9BFF));
     }
@@ -55,7 +55,8 @@ inline const std::array<const wchar_t *, 4> &IpaGuideDetails()
 {
     static const std::array<const wchar_t *, 4> values = {
         L"① 安装后按 Win＋空格，从系统输入法列表选择国际音标输入法。先点进要打字的输入框，再输入。\n\n② "
-        L"悬浮工具栏左侧显示当前状态：默认输入拼音，选择候选后输出音标。按 Caps Lock 切到汉字输出，继续输入拼音即可选择汉字。单按并松开 Shift，进入 IPA 模式，用字母或符号查找音"
+        L"悬浮工具栏左侧显示当前状态：默认输入拼音，选择候选后输出音标。按 Caps Lock "
+        L"切到汉字输出，继续输入拼音即可选择汉字。单按并松开 Shift，进入 IPA 模式，用字母或符号查找音"
         L"标。\n\n③ 轻按并松开 Shift，切换拼音查字与直接音标。按 Caps "
         L"Lock，在拼音查字时切换 "
         L"IPA／汉字输出。两个开关分工不同：先决定怎么输入，再决定拼音候选输出什么。新安装默认拼音查字、输出 "

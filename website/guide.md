@@ -2,7 +2,7 @@
 
 输入拼音，选择带声调的国际音标；也可以按键位直接查找和点选 IPA、extIPA、VoQS 符号。支持 Windows、macOS、Android 和 iOS。
 
-当前版本 **0.1.6 测试版**。[官网下载](https://www.phonetictoolbox.com/#ipa-ime-download) · [GitHub 下载](https://github.com/Nephelium/phonetic-ipa-ime/releases/tag/ipa-v0.1.6)。Mac 版双击安装，无需命令行工具。iOS 为待签名 IPA。
+当前版本 **0.1.7 测试版**。[官网下载](https://www.phonetictoolbox.com/#ipa-ime-download) · [GitHub 下载](https://github.com/Nephelium/phonetic-ipa-ime/releases/tag/ipa-v0.1.7)。Mac 版双击安装，无需命令行工具。iOS 为待签名 IPA。
 
 本项目基于 [水杉输入法 MSIME-Windows](https://github.com/metasequoiaime/MSIME-Windows) 开发。感谢水杉原作者及贡献者提供的输入法基础、原生界面与皮肤素材，保留上游历史、GPLv3 及原始署名。
 
@@ -146,10 +146,10 @@ IPA 模式的 `0` 保留原码表映射，其他普通数字在没有候选时�
 2. 音标表打开后，顶部可切换 **IPA / extIPA / VoQS** 分类。
 3. 在搜索框输入音标或中文名称，或直接滑动查找。辅音矩阵可左右滑动，整页可上下滑动。
 4. 点想输入的符号，符号就会加入正文。音标表可以连续点选，不必每输入一个符号就关闭。
-5. 默认字号为 50%，可用 **字号 − / 字号 ＋** 调整。附加符号旁的辅助圆圈用于辨认，实际输入不带辅助圆圈。
+5. 默认字号为 50%，最低可调至 20%，可用 **字号 − / 字号 ＋** 调整。附加符号旁的辅助圆圈用于辨认，实际输入不带辅助圆圈。
 6. 完成后点 **返回键盘**，继续使用拼音或直接音标按键。
 
-**电脑设置中的 IPA Plus 用于编辑键位。** 打开设置的音标键盘页，点要修改的键，再选中一个候选，用 IPA Plus 点选替换或追加符号，最后保存方案。手机键盘内的 IPA Plus 可以直接向正在编辑的正文输入。
+**电脑设置中的 IPA Plus 用于编辑键位。** Windows 默认适合页面宽度，最高 70%，最低可调至 20%；放大后可用左右移动按钮或 Shift＋滚轮查看表格。 打开设置的音标键盘页，点要修改的键，再选中一个候选，用 IPA Plus 点选替换或追加符号，最后保存方案。手机键盘内的 IPA Plus 可以直接向正在编辑的正文输入。
 
 **切换转写规则：先选规则，再输入拼音**
 
@@ -161,10 +161,15 @@ IPA 模式的 `0` 保留原码表映射，其他普通数字在没有候选时�
 共十套规则：
 
 - Standard Chinese Beijing 宽 / Standard Chinese Beijing 严
-- 胡裕树、黄廖、钱乃荣、吴宗济、赵元任、方音字汇
+- 胡裕树《现代汉语》、黄伯荣／廖序东《现代汉语》、钱乃荣《现代汉语》
+- 吴宗济、赵元任《汉语口语语法》、《汉语方音字汇》
 - UntPhesoca 宽 / UntPhesoca 严
 
 直接音标键盘使用自己的键位方案，切换拼音转写规则不会替换它。各套规则的来源见 [Rules-SOURCES.json](prototype/resources/ipa/Rules-SOURCES.json) 与 [来源与许可](prototype/THIRD_PARTY.md)。
+
+## 0.1.7 更新
+
+修复带圈音标显示，最低缩放降至 20%。Windows 规则菜单改用全称，隐藏辅助码与未接通的工具栏按钮，新增卸载入口和保留个人配置的升级流程。完整说明见 [0.1.7 更新说明](docs/releases/0.1.7.md)。
 
 ## 安装与首次教学
 

@@ -18,8 +18,8 @@ try {
     } else {
         $script:taskLogFile = Join-Path $taskLogs ('install-' + (Get-Date -Format 'yyyyMMdd-HHmmss') + '-' + $PID + '.log')
     }
-    Write-InstallLog ('Windows installer r2 / PowerShell ' + $PSVersionTable.PSVersion)
-    foreach ($taskRelative in @('scripts\Register-Prototype.ps1', 'scripts\Start-Settings.ps1', 'output\runtime\PhoneticIpaServer.exe', 'output\runtime\PhoneticIpaSettings.exe', 'output\runtime\tsf-x64\PhoneticIpaTsf.dll', 'output\runtime\tsf-x86\PhoneticIpaTsf.dll', 'output\runtime\data\config.toml')) {
+    Write-InstallLog ('Windows installer r3 / PowerShell ' + $PSVersionTable.PSVersion)
+    foreach ($taskRelative in @('scripts\Windows-Installation.ps1', 'scripts\Uninstall-Windows.ps1', 'scripts\Register-Prototype.ps1', 'scripts\Start-Settings.ps1', 'output\runtime\PhoneticIpaServer.exe', 'output\runtime\PhoneticIpaSettings.exe', 'output\runtime\tsf-x64\PhoneticIpaTsf.dll', 'output\runtime\tsf-x86\PhoneticIpaTsf.dll', 'output\runtime\data\config.toml')) {
         if (!(Test-Path -LiteralPath (Join-Path $taskRoot $taskRelative) -PathType Leaf)) { throw ('Missing package file: ' + $taskRelative + '. Extract the complete ZIP first.') }
     }
     foreach ($taskSkin in @('bigfish', 'bigfish-peek', 'bigfish-national-day')) {
@@ -28,6 +28,8 @@ try {
             if (!(Test-Path -LiteralPath $taskSkinFile -PathType Leaf)) { throw ('Missing package skin file: ' + $taskSkin + '\' + $taskAsset + '. Extract the complete ZIP first.') }
         }
     }
+    . (Join-Path $PSScriptRoot 'Windows-Installation.ps1')
+    Assert-IpaRuntime (Join-Path $taskRoot 'output\runtime')
     if ($CheckOnly) {
         Write-InstallLog 'Preflight passed. No system registration was performed.'
     } else {

@@ -75,7 +75,7 @@ class IpaCandidateCards : public msimeui::Visual
             auto style = CaptionStyle();
             DrawTextInRect(dr, std::to_wstring(i + 1), style, {r.x + 7, r.y + 3, 32, 15}, p.textMuted);
             style = BodyStyle();
-            style.family = L"Doulos SIL";
+            style.family = L"PTB IPA Plus";
             style.size = 30;
             const auto text = values[i].empty() ? L"…" : IpaPreviewText(values[i]);
             const float width = MeasureTextWidth(text, style);
@@ -148,7 +148,7 @@ class IpaCandidateEditor : public Column
         TextField::Options options;
         options.height = 44;
         options.fontSize = 28;
-        options.fontFamily = L"Doulos SIL";
+        options.fontFamily = L"PTB IPA Plus";
         options.placeholder = L"输入音标，或从 IPA Plus 点选";
         field_ = std::make_shared<TextField>(options);
         field_->SetMinWidth(240);

@@ -26,7 +26,8 @@ class SymbolCanvas : public msimeui::Visual
     std::string system = "ipa", section = "all";
     std::wstring query;
     nlohmann::json charts;
-    float zoom = .8f;
+    float zoom = .7f;
+    std::function<void(float, bool)> zoomChanged;
     bool IsFocusable() const override
     {
         return true;
@@ -56,8 +57,28 @@ class SymbolCanvas : public msimeui::Visual
     }
     void SetZoom(float value)
     {
-        zoom = std::clamp(value, .6f, 1.2f);
+        fitWidth_ = false;
+        zoom = std::clamp(value, .2f, 1.2f);
         Filter();
+    }
+    void FitWidth()
+    {
+        fitWidth_ = true;
+        Filter();
+    }
+    float ContentWidth() const
+    {
+        return contentWidth_;
+    }
+    void ScrollHorizontal(float x)
+    {
+        pressed_ = hovered_ = -1;
+        scrollX_ = std::clamp(x, 0.f, std::max(0.f, contentWidth_ - bounds_.width));
+        InvalidateVisual();
+    }
+    void NextHorizontal(int direction)
+    {
+        ScrollHorizontal(scrollX_ + direction * bounds_.width * .7f);
     }
     SizeF Measure(const SizeF &available) override
     {
@@ -191,6 +212,14 @@ class SymbolCanvas : public msimeui::Visual
                          bounds_.y + scrollY_ / (contentHeight_ - bounds_.height) * (bounds_.height - h), 4, h},
                         2, p.textMuted);
         }
+        if (contentWidth_ > bounds_.width)
+        {
+            const float w = std::max(24.f, bounds_.width * bounds_.width / contentWidth_);
+            FillRounded(dr,
+                        {bounds_.x + scrollX_ / (contentWidth_ - bounds_.width) * (bounds_.width - w),
+                         bounds_.y + bounds_.height - 5, w, 4},
+                        2, p.textMuted);
+        }
     }
 
   private:
@@ -208,6 +237,7 @@ class SymbolCanvas : public msimeui::Visual
     mutable std::map<std::pair<std::wstring, float>, float> symbolWidths_;
     float contentWidth_ = 1000, contentHeight_ = 0, scrollX_ = 0, scrollY_ = 0;
     int pressed_ = -1, hovered_ = -1;
+    bool fitWidth_ = true;
     int Hit(const POINT &point) const
     {
         const auto p = window_->ClientPixelsToDips(point);
@@ -229,7 +259,7 @@ class SymbolCanvas : public msimeui::Visual
     TextStyle SymbolStyle() const
     {
         auto style = BodyStyle();
-        style.family = L"Doulos SIL";
+        style.family = L"PTB IPA Plus";
         style.size = 28 * zoom;
         return style;
     }
@@ -367,6 +397,10 @@ class SymbolCanvas : public msimeui::Visual
     }
     void Layout()
     {
+        if (fitWidth_ && bounds_.width > 12)
+            zoom = std::clamp((bounds_.width - 12) / 1080.f, .2f, .7f);
+        if (zoomChanged)
+            zoomChanged(zoom, fitWidth_);
         tiles_.clear();
         decorations_.clear();
         lines_.clear();
@@ -382,19 +416,24 @@ class SymbolCanvas : public msimeui::Visual
             for (const auto &chart : charts.at(system))
                 if (section == "all" || chart.at("id") == section)
                     selected.push_back(chart);
-            for (size_t i = 0; i < selected.size();)
+            float columns[2] = {y, y};
+            for (size_t i = 0; i < selected.size(); ++i)
             {
                 if (selected[i].at("kind") == "matrix" || section != "all")
-                    y += Chart(selected[i++], {0, y, contentWidth_, 0}) + 16;
+                {
+                    y = std::max(columns[0], columns[1]);
+                    y += Chart(selected[i], {0, y, contentWidth_, 0}) + 16;
+                    columns[0] = columns[1] = y;
+                }
                 else
                 {
                     const float width = (contentWidth_ - 16) / 2;
-                    float height = Chart(selected[i++], {0, y, width, 0});
-                    if (i < selected.size())
-                        height = std::max(height, Chart(selected[i++], {width + 16, y, width, 0}));
-                    y += height + 16;
+                    const int column =
+                        system == "ipa" && selected[i].at("id") == "tones" ? 1 : (columns[0] <= columns[1] ? 0 : 1);
+                    columns[column] += Chart(selected[i], {(width + 16) * column, columns[column], width, 0}) + 16;
                 }
             }
+            y = std::max(columns[0], columns[1]);
         }
         else
         {

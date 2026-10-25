@@ -4,9 +4,9 @@ import CoreText
 
 extension Font {
     static func ipa(_ size: CGFloat) -> Font {
-        let fallback = CTFontDescriptorCreateWithNameAndSize("PTBIPAPlus-Regular" as CFString, size)
+        let fallback = CTFontDescriptorCreateWithNameAndSize("DoulosSIL" as CFString, size)
         let descriptor = CTFontDescriptorCreateWithAttributes([
-            kCTFontNameAttribute: "DoulosSIL", kCTFontCascadeListAttribute: [fallback]
+            kCTFontNameAttribute: "PTBIPAPlus-Regular", kCTFontCascadeListAttribute: [fallback]
         ] as CFDictionary)
         return Font(CTFontCreateWithFontDescriptor(descriptor, size, nil))
     }
@@ -378,7 +378,7 @@ struct PlusPicker: View {
                 Picker("音标表", selection: $system) { Text("IPA").tag("ipa"); Text("extIPA").tag("extipa"); Text("VoQS").tag("voqs") }.pickerStyle(.segmented)
                 if !compact { TextField("搜索符号或中文名称", text: $search).textFieldStyle(.roundedBorder).accessibilityIdentifier("plus-search") }
                 if !compact { HStack {
-                    Button("字号 −") { zoom = max(0.4, zoom - 0.1) }
+                    Button("字号 −") { zoom = max(0.2, zoom - 0.1) }
                     Text("\(Int((zoom * 100).rounded()))%").font(.caption).monospacedDigit()
                     Button("字号 ＋") { zoom = min(1.3, zoom + 0.1) }
                     Spacer()

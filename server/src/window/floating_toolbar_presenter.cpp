@@ -580,8 +580,8 @@ void FloatingToolbarPresenter::RebuildScene()
             {
                 const auto &rule = rules[i];
                 auto choice = std::make_shared<ToolbarIconButton>(
-                    0, L"", (rule.id == currentRule ? L"✓ " : L"  ") + string_to_wstring(rule.short_name), 28.0f * s);
-                choice->SetTextLayout(252.0f * s, 14.0f * s);
+                    0, L"", (rule.id == currentRule ? L"✓ " : L"  ") + string_to_wstring(rule.name), 28.0f * s);
+                choice->SetTextLayout(292.0f * s, 14.0f * s);
                 choice->SetColors(impl_->glyph, impl_->hover, iconRadius);
                 choice->SetOnClick([this, id = rule.id]() {
                     impl_->rulesOpen = false;

@@ -19,7 +19,7 @@ final class UI {
         try {
             Font doulos = new Font.Builder(c.getAssets(), "IPA/DoulosSIL-Regular.ttf").build();
             Font plus = new Font.Builder(c.getAssets(), "IPA/PTBIPAPlus-Regular.ttf").build();
-            ipaTypeface = new Typeface.CustomFallbackBuilder(new FontFamily.Builder(doulos).build()).addCustomFallback(new FontFamily.Builder(plus).build()).setSystemFallback("sans-serif").build();
+            ipaTypeface = new Typeface.CustomFallbackBuilder(new FontFamily.Builder(plus).build()).addCustomFallback(new FontFamily.Builder(doulos).build()).setSystemFallback("sans-serif").build();
         } catch (IOException e) { ipaTypeface = Typeface.SERIF; }
         return ipaTypeface;
     }

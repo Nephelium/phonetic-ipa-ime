@@ -369,7 +369,7 @@ std::uint64_t CandidatePresenter::FillItemsFromUi()
         item.label = (page->input_hint.empty() || view.ipa_reading_option) ? std::to_wstring(i + 1) : L"";
         item.text = string_to_wstring(view.text + view.badge);
         if (view.ipa_primary)
-            item.textFontFamily = L"Doulos SIL";
+            item.textFontFamily = L"PTB IPA Plus";
         item.annotation = string_to_wstring(view.annotation);
         if (view.ipa_needs_choice)
         {
@@ -379,7 +379,7 @@ std::uint64_t CandidatePresenter::FillItemsFromUi()
         else if (!view.ipa.empty())
         {
             item.translation = string_to_wstring(view.ipa);
-            item.secondaryFontFamily = L"Doulos SIL";
+            item.secondaryFontFamily = L"PTB IPA Plus";
             item.secondaryIsIpa = true;
         }
         else if (translationsEnabled)
@@ -432,7 +432,7 @@ std::uint64_t CandidatePresenter::FillItemsFromUi()
                 msimeui::CandidateList::Item item;
                 item.text = word;
                 if (!page->page_views.empty() && page->page_views.front().ipa_primary)
-                    item.textFontFamily = L"Doulos SIL";
+                    item.textFontFamily = L"PTB IPA Plus";
                 gridItems.push_back(std::move(item));
             }
         }

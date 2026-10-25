@@ -450,7 +450,7 @@ void CandidatePreview::Set(const SettingsModel &model, const std::string &skinId
         item.text = kSampleWords[i];
         const auto reading = PhoneticIpa::Hanzi().Convert(Narrow(kSampleWords[i]), "ni");
         item.translation = reading.ambiguous ? L"选择读音 · 数字键或点击" : Widen(reading.text);
-        item.secondaryFontFamily = reading.ambiguous ? L"" : L"Doulos SIL";
+        item.secondaryFontFamily = reading.ambiguous ? L"" : L"PTB IPA Plus";
         item.secondaryIsIpa = true;
         items.push_back(std::move(item));
     }

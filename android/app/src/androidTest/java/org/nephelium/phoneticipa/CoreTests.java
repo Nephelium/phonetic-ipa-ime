@@ -58,6 +58,21 @@ public final class CoreTests extends Instrumentation {
                 require(scrolledInk > 10, "Compact IPA must remain visible after TextView's single-line scroll");
                 image.recycle();
             });
+            runOnMainSync(() -> {
+                android.graphics.Paint paint = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
+                paint.setTypeface(UI.ipa(getTargetContext())); paint.setTextSize(48);
+                for (String text : new String[]{"C⃝", "Ȼ⃝", "F⃝", "L⃝", "G⃝", "N⃝", "P⃝", "R⃝", "S⃝", "T⃝", "Ṽ⃝", "Ʞ⃝", "σ⃝"})
+                    require(paint.hasGlyph(text), "Missing enclosed-letter ligature: " + text);
+                android.graphics.Bitmap sample = android.graphics.Bitmap.createBitmap(1000, 160, android.graphics.Bitmap.Config.ARGB_8888);
+                android.graphics.Canvas canvas = new android.graphics.Canvas(sample); canvas.drawColor(android.graphics.Color.WHITE);
+                paint.setColor(android.graphics.Color.BLACK);
+                canvas.drawText("C⃝ Ȼ⃝ F⃝ L⃝ G⃝ N⃝ P⃝ R⃝ S⃝ T⃝ Ṽ⃝ Ʞ⃝ σ⃝", 20, 95, paint);
+                java.io.File folder = new java.io.File(getTargetContext().getExternalFilesDir(null), "qa"); folder.mkdirs();
+                try (java.io.FileOutputStream file = new java.io.FileOutputStream(new java.io.File(folder, "circled-symbols.png"))) {
+                    sample.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, file);
+                } catch (java.io.IOException e) { throw new RuntimeException(e); }
+                sample.recycle();
+            });
             Engine engine = Engine.get(getTargetContext()).get();
             require(engine.symbols("a").getString(0).equals("a"), "CIN a");
             require(engine.symbols("tone:214").getString(0).equals("˨˩˦"), "five-level tone");

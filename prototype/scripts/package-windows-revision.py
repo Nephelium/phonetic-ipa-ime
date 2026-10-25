@@ -38,13 +38,14 @@ if args.guide_assets:
             replacements[path.relative_to(args.guide_assets).as_posix()] = path.read_bytes()
 if args.third_party:
     replacements['THIRD_PARTY.md'] = args.third_party.read_bytes()
-for name in ['Install-Windows.ps1', 'Start-Settings.ps1']:
+for name in ['Install-Windows.ps1', 'Start-Settings.ps1', 'Register-Prototype.ps1', 'Windows-Installation.ps1', 'Uninstall-Windows.ps1']:
     replacements['scripts/' + name] = (args.scripts / name).read_bytes()
 for skin in ['bigfish', 'bigfish-peek', 'bigfish-national-day']:
     for path in (args.skins / skin).rglob('*'):
         if path.is_file():
             replacements['output/runtime/data/skins/' + skin + '/' + path.relative_to(args.skins / skin).as_posix()] = path.read_bytes()
 replacements['使用教学.cmd'] = b'@echo off\r\npowershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\\Start-Settings.ps1" -Guide\r\nif errorlevel 1 pause\r\n'
+replacements['卸载.cmd'] = b'@echo off\r\npowershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\\Uninstall-Windows.ps1"\r\nset "result=%errorlevel%"\r\npause\r\nexit /b %result%\r\n'
 if args.readme:
     replacements['安装说明.md'] = args.readme.read_bytes()
 with zipfile.ZipFile(args.base) as source:

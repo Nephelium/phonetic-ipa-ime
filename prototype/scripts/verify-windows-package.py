@@ -31,8 +31,10 @@ with zipfile.ZipFile(args.package) as archive:
     assert b'-Guide' in archive.read('使用教学.cmd')
     assert b'-Guide' in archive.read('scripts/Install-Windows.ps1')
     assert b'--guide' in archive.read('scripts/Start-Settings.ps1')
-    for script in ['scripts/Install-Windows.ps1', 'scripts/Start-Settings.ps1']:
+    for script in ['scripts/' + name for name in ['Install-Windows.ps1', 'Start-Settings.ps1', 'Register-Prototype.ps1', 'Windows-Installation.ps1', 'Uninstall-Windows.ps1']]:
         assert archive.read(script).startswith(b'\xef\xbb\xbf'), script + ' must support PowerShell 5.1'
+    assert b'Uninstall-Windows.ps1' in archive.read('卸载.cmd')
+    assert b'UninstallString' in archive.read('scripts/Windows-Installation.ps1')
     assert not any((Path(name).name.startswith('onboarding-') and name.endswith('.done')) for name in archive.namelist()), 'User completion marker in package'
     assert not any(Path(name).name.startswith('custom-icon-') for name in archive.namelist()), 'Personal picture in package'
 print('Windows package verified: member hashes, three bigfish skins, tutorial launchers, clean completion state')

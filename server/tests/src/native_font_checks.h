@@ -103,6 +103,84 @@ std::wstring MappedIpaFamily(const wchar_t *text, const std::vector<std::wstring
     FONT_REQUIRE(SUCCEEDED(names->GetString(index, name, 256)));
     return name;
 }
+class GlyphCounter : public IDWriteTextRenderer
+{
+  public:
+    UINT32 count = 0;
+    HRESULT STDMETHODCALLTYPE QueryInterface(REFIID iid, void **p) override
+    {
+        *p = nullptr;
+        if (iid != __uuidof(IUnknown) && iid != __uuidof(IDWritePixelSnapping) && iid != __uuidof(IDWriteTextRenderer))
+            return E_NOINTERFACE;
+        *p = this;
+        return S_OK;
+    }
+    ULONG STDMETHODCALLTYPE AddRef() override
+    {
+        return 1;
+    }
+    ULONG STDMETHODCALLTYPE Release() override
+    {
+        return 1;
+    }
+    HRESULT STDMETHODCALLTYPE IsPixelSnappingDisabled(void *, BOOL *disabled) override
+    {
+        *disabled = TRUE;
+        return S_OK;
+    }
+    HRESULT STDMETHODCALLTYPE GetCurrentTransform(void *, DWRITE_MATRIX *m) override
+    {
+        *m = {1, 0, 0, 1, 0, 0};
+        return S_OK;
+    }
+    HRESULT STDMETHODCALLTYPE GetPixelsPerDip(void *, FLOAT *v) override
+    {
+        *v = 1;
+        return S_OK;
+    }
+    HRESULT STDMETHODCALLTYPE DrawGlyphRun(void *, FLOAT, FLOAT, DWRITE_MEASURING_MODE, const DWRITE_GLYPH_RUN *run,
+                                           const DWRITE_GLYPH_RUN_DESCRIPTION *, IUnknown *) override
+    {
+        count += run->glyphCount;
+        for (UINT32 i = 0; i < run->glyphCount; ++i)
+            if (!run->glyphIndices[i])
+                return E_FAIL;
+        return S_OK;
+    }
+    HRESULT STDMETHODCALLTYPE DrawUnderline(void *, FLOAT, FLOAT, const DWRITE_UNDERLINE *, IUnknown *) override
+    {
+        return S_OK;
+    }
+    HRESULT STDMETHODCALLTYPE DrawStrikethrough(void *, FLOAT, FLOAT, const DWRITE_STRIKETHROUGH *, IUnknown *) override
+    {
+        return S_OK;
+    }
+    HRESULT STDMETHODCALLTYPE DrawInlineObject(void *, FLOAT, FLOAT, IDWriteInlineObject *, BOOL, BOOL,
+                                               IUnknown *) override
+    {
+        return E_FAIL;
+    }
+};
+void CheckEnclosedGlyphs()
+{
+    ComPtr<IDWriteFactory> factory;
+    FONT_REQUIRE(SUCCEEDED(DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED, __uuidof(IDWriteFactory),
+                                               reinterpret_cast<IUnknown **>(factory.GetAddressOf()))));
+    ComPtr<IDWriteTextFormat> format;
+    FONT_REQUIRE(SUCCEEDED(factory->CreateTextFormat(
+        L"PTB IPA Plus", msimeui::PrivateIpaFontCollection(L"PTB IPA Plus"), DWRITE_FONT_WEIGHT_NORMAL,
+        DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, 32, L"en-us", &format)));
+    for (const wchar_t *text : {L"C⃝", L"Ȼ⃝", L"F⃝", L"L⃝", L"G⃝", L"N⃝", L"P⃝", L"R⃝", L"S⃝", L"T⃝", L"Ṽ⃝", L"Ʞ⃝", L"σ⃝"})
+    {
+        ComPtr<IDWriteTextLayout> layout;
+        FONT_REQUIRE(SUCCEEDED(
+            factory->CreateTextLayout(text, static_cast<UINT32>(wcslen(text)), format.Get(), 200, 80, &layout)));
+        GlyphCounter renderer;
+        FONT_REQUIRE(SUCCEEDED(layout->Draw(nullptr, &renderer, 0, 0)));
+        FONT_REQUIRE(renderer.count == 1);
+    }
+}
+
 } // namespace
 
 #undef FONT_REQUIRE

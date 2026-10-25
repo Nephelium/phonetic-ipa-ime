@@ -134,7 +134,7 @@ class ToolbarPreview : public msimeui::Visual
         float iconSize = 24.0f;
         bool shadow = true;
         // fullwidth, punctuation, character_set, emoji, screen_keyboard, settings
-        bool items[6] = {true, true, true, true, false, true};
+        bool items[6] = {false, false, false, false, false, true};
         bool centered = false; // host justify-content: center
     };
 

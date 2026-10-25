@@ -57,6 +57,15 @@ import SwiftUI
         rejected = false; do { _ = try IPAResources.readProfileData(oversized) } catch { rejected = true }
         try require(rejected, "Large imports must stop at the read limit")
         print("Swift session: separate commits, explicit readings, composition isolation, CIN, tones and profile round trip passed")
+        let circleSamples = ["C⃝", "Ȼ⃝", "F⃝", "L⃝", "G⃝", "N⃝", "P⃝", "R⃝", "S⃝", "T⃝", "Ṽ⃝", "Ʞ⃝", "σ⃝"]
+        let circleFont = CTFontCreateWithName("PTBIPAPlus-Regular" as CFString, 40, nil)
+        for sample in circleSamples {
+            let line = CTLineCreateWithAttributedString(NSAttributedString(string: sample, attributes: [.font: circleFont]))
+            let runs = CTLineGetGlyphRuns(line) as! [CTRun]
+            try require(runs.reduce(0) { $0 + CTRunGetGlyphCount($1) } == 1, "Enclosed letter must shape as one glyph: " + sample)
+        }
+        try render(Text(circleSamples.joined(separator: " ")).font(.ipa(40)).foregroundStyle(Color.black), size: NSSize(width: 1000, height: 150), file: output.appendingPathComponent("mac-circled-symbols.png"))
+        print("13 enclosed-letter ligatures: passed")
         model.toggleMode(); model.status = ""
         try render(FirstUseGuide {}, size: NSSize(width: 560, height: 570), file: output.appendingPathComponent("mac-first-use.png"))
         try render(SettingsView(model: model), size: NSSize(width: 1180, height: 880), file: output.appendingPathComponent("mac-settings.png"))

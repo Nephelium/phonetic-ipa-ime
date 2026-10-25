@@ -11,7 +11,7 @@ destination=Path(sys.argv[1]).resolve()
 destination.mkdir(parents=True,exist_ok=True)
 guide=repo/'website/guide.md'
 source=(guide if guide.is_file() else repo/'README.md').read_text(encoding='utf-8')
-base='https://github.com/Nephelium/phonetic-ipa-ime/blob/ipa-v0.1.6/'
+base='https://github.com/Nephelium/phonetic-ipa-ime/blob/ipa-v0.1.7/'
 def inline(text):
     text=html.escape(text)
     text=re.sub(r'`([^`]+)`',r'<code>\1</code>',text)
