@@ -4,6 +4,8 @@
 
 当前版本 **0.1.7 测试版**。[官网下载](https://www.phonetictoolbox.com/#ipa-ime-download) · [GitHub 下载](https://github.com/Nephelium/phonetic-ipa-ime/releases/tag/ipa-v0.1.7)。Mac 版双击安装，无需命令行工具。iOS 为待签名 IPA。
 
+[![官网使用说明 · 分步图解](../assets/buttons/usage-guide.svg)](https://www.phonetictoolbox.com/ipa-ime-guide/)
+
 本项目基于 [水杉输入法 MSIME-Windows](https://github.com/metasequoiaime/MSIME-Windows) 开发。感谢水杉原作者及贡献者提供的输入法基础、原生界面与皮肤素材，保留上游历史、GPLv3 及原始署名。
 
 <p align="center"><img src="../assets/icons/ipa-bigfish-v1.png" width="120" alt="大肥鱼抱着 ə 键帽的应用图标"></p>
@@ -40,9 +42,10 @@
 
 候选编号以当前页为准。空格确认首项／高亮候选，再按一次才插入空格。Windows / Mac 用上下键移动、Page Up / Page Down 翻页、Esc 取消组合；读音页用 Ctrl＋Shift＋Enter 返回。手机直接点读音，按退格返回待选内容。
 
-输入完整词语可以使用词语读音，例如 **yanwu → 厌恶 → jan˥˩ wu˥˩**。输入 wu 查到恶时，只保留与 wu 对应的读音。词语仍有歧义时会继续让用户选读音。
+输入完整词语可以使用词语读音，例如 **kuaile → 快乐 → kʰuai˥˩ lɤ˥˩**（Standard Chinese Beijing 宽）。乐在快乐里读 lè。单独输入 le 或 yue 查乐时，只保留与所输拼音对应的读音。词语仍有歧义时会继续让用户选读音。
 
-<p><img src="images/0.1.6/windows-guide-pinyin.png" width="428" alt="Windows 详细教学：拼音查字与两次数字选择读音"></p>
+<p><img src="../website/visual-guide/screens/windows-word-326911106e.png" width="428" alt="Windows：输入 kuaile，选择快乐及其音标"></p>
+<p><img src="../website/visual-guide/screens/android-word-365017a591.png" width="260" alt="Android：输入 kuaile，候选显示快乐和对应音标"> <img src="../website/visual-guide/screens/ios-word-20c34af12d.png" width="260" alt="iOS：输入 kuaile，候选显示快乐和对应音标"></p>
 <p><img src="images/0.1.4/windows-ipa-preview.png" width="420" alt="Windows 产品原生控件渲染的大肥鱼候选与 IPA 工具栏"></p>
 
 ## 直接输入单个音标
@@ -51,7 +54,7 @@
 
 **Android / iOS**：点左下角，直到显示 **IPA**。带 **···** 的键有多个音标，**短按一次打开选择面板，再点所需音标**，例如点 g 后选择 ɠ。打开或关闭面板本身不会输入字母。没有 ··· 的单项键直接输入。
 
-<p><img src="images/0.1.6/android-picker.png" width="260" alt="Android 真实系统键盘：短按后选择音标"> <img src="images/0.1.6/ios-picker.png" width="260" alt="iOS 模拟器真实系统键盘：音标选择面板"></p>
+<p><img src="../website/visual-guide/screens/android-ipa-picker-0ee7a723f5.png" width="260" alt="Android 真实系统键盘：短按 g 后选择音标"> <img src="../website/visual-guide/screens/ios-ipa-picker-7ff0cc8b48.png" width="260" alt="iOS 模拟器真实系统键盘：短按 g 后选择音标"></p>
 
 键位可以在设置的音标键盘中查看或编辑。直接模式可使用 `/`、`\` 等编码，手机先点符号页。`\` 收录声调符号，首项是 ˥；`/` 默认输出斜杠。IPA 模式的 `0` 保留原码表映射，其他普通数字在没有候选时输入数字。Windows / Mac 需要输入含数字的连续编码时，可以使用 `code:` 前缀。
 
@@ -66,7 +69,7 @@
 
 出现 `tone:214` 时还没有确认声调。选择 **˨˩˦**、**²¹⁴** 或 **214** 中需要的一项。电脑按对应数字，或空格选首项；手机点候选，或空格选首项。手机进入声调组合后，轻点 1–5 可以继续追加调值。
 
-<p><img src="images/0.1.6/android-tone.png" width="260" alt="Android 声调组合：tone:214 和三种输出形式"></p>
+<p><img src="../website/visual-guide/screens/android-tone-17d95f217a.png" width="260" alt="Android 声调组合：tone:214 和三种输出形式"></p>
 
 ## 随时查完整音标表，切换转写规则
 
