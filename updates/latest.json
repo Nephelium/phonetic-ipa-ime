@@ -1,32 +1,20 @@
 {
   "schema": 1,
   "product": "phonetic-ipa-ime",
-  "version": "0.1.7",
-  "notes": "修复四端 IPA Plus 带圈音标显示，最低缩放降至 20%。Windows 默认适合宽度，支持左右移动，声调放在右列；规则菜单使用全称，隐藏辅助码和未接通按钮。新增 Windows 卸载入口，升级时退出旧进程、替换旧注册并保留个人配置。",
+  "version": "0.1.8",
+  "notes": "Windows 改为安装到 Program Files，个人数据按账户保存，升级时自动迁移旧键位与配置；键位文件损坏不再阻止启动。没有音标的候选可直接输入汉字；修正含撇号拼音的部分选词；Caps Lock 输出汉字时 Shift＋1–5 恢复标点；工具栏区分三种模式；切换规则更快。Android 改为 release 构建，只计算当前页读音，打字更流畅。macOS／iOS 仍为 0.1.7。",
   "platforms": {
     "windows": {
-      "url": "https://www.phonetictoolbox.com/releases/phonetic-ipa-ime/0.1.7/PhoneticIPA-Windows-0.1.7.zip",
-      "githubUrl": "https://github.com/Nephelium/phonetic-ipa-ime/releases/download/ipa-v0.1.7/PhoneticIPA-Windows-0.1.7.zip",
-      "bytes": 97507032,
-      "sha256": "fcac76d9cb4e79c38a8a7b41323475b10f6477cf700fa1fb81f5375efde12cba"
-    },
-    "macos": {
-      "url": "https://www.phonetictoolbox.com/releases/phonetic-ipa-ime/0.1.7/PhoneticIPA-macOS-0.1.7.zip",
-      "githubUrl": "https://github.com/Nephelium/phonetic-ipa-ime/releases/download/ipa-v0.1.7/PhoneticIPA-macOS-0.1.7.zip",
-      "bytes": 55662796,
-      "sha256": "fd9e60aba94298d79ccd2bd875ab019e0ecdae1a848e84528c562e4d611b7681"
-    },
-    "ios": {
-      "url": "https://www.phonetictoolbox.com/releases/phonetic-ipa-ime/0.1.7/PhoneticIPA-iOS-0.1.7-unsigned.ipa",
-      "githubUrl": "https://github.com/Nephelium/phonetic-ipa-ime/releases/download/ipa-v0.1.7/PhoneticIPA-iOS-0.1.7-unsigned.ipa",
-      "bytes": 105779492,
-      "sha256": "7121fcd352fb47aa461c09b9765e3d12a233f82c3fc63d69a111602088caacfd"
+      "url": "https://www.phonetictoolbox.com/releases/phonetic-ipa-ime/0.1.8/PhoneticIPA-Windows-0.1.8.zip",
+      "githubUrl": "https://github.com/Nephelium/phonetic-ipa-ime/releases/download/ipa-v0.1.8/PhoneticIPA-Windows-0.1.8.zip",
+      "bytes": 97561554,
+      "sha256": "19475375b420a3be16fc3ce12343cf21677f3c54ae4c000a01797fead8451dd0"
     },
     "android": {
-      "url": "https://www.phonetictoolbox.com/releases/phonetic-ipa-ime/0.1.7/PhoneticIPA-Android-0.1.7.apk",
-      "githubUrl": "https://github.com/Nephelium/phonetic-ipa-ime/releases/download/ipa-v0.1.7/PhoneticIPA-Android-0.1.7.apk",
-      "bytes": 122229733,
-      "sha256": "5880f116c39d7bb819584a76105daf8d03cf1bce2f69e77bbac6bdf725b7ca87"
+      "url": "https://www.phonetictoolbox.com/releases/phonetic-ipa-ime/0.1.8/PhoneticIPA-Android-0.1.8.apk",
+      "githubUrl": "https://github.com/Nephelium/phonetic-ipa-ime/releases/download/ipa-v0.1.8/PhoneticIPA-Android-0.1.8.apk",
+      "bytes": 121202603,
+      "sha256": "ab122fb8b4f3bade45061e0aa103b94c0c46a09ffef842ec37b07c3f9d1bb5e8"
     }
   }
 }
