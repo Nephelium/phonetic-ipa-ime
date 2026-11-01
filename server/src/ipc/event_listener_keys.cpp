@@ -28,6 +28,7 @@
 #include "mixed/date_time_candidates.h"
 #include "log/candidate_diag_log.h"
 #include "statistics/stats_candidate_capture.h"
+#include "window/window_hook.h"
 
 using namespace event_listener_detail;
 
@@ -996,14 +997,39 @@ void HandleImeKey(uint64_t client_id, uint64_t activation_epoch, uint64_t reques
         return;
     }
 
-    if (PhoneticIpaKey::IsToneShortcut(Global::Keycode, Global::ModifiersDown))
+    // Caps Lock (Hanzi output) keeps Shift+1..5 as punctuation; the TSF applies
+    // the same rule before forwarding the key.
+    if (PhoneticIpaKey::IsToneShortcut(Global::Keycode, Global::ModifiersDown) &&
+        PhoneticIpaKey::ToneShortcutApplies(g_english_input_mode, GetServerCapsLockState() != 0))
     {
         Global::MsgTypeToTsf = Global::DataFromServerMsgType::OutofRange;
+        const auto tone = phonetic_ipa::ToneShortcutOutput(PhoneticIpa::Cin(), Global::Keycode);
         if (g_inputSession->get_pinyin_sequence().empty())
         {
-            const auto output = phonetic_ipa::ToneShortcutOutput(PhoneticIpa::Cin(), Global::Keycode);
-            Global::candidate_ui.selected_text = string_to_wstring(output);
+            Global::candidate_ui.selected_text = string_to_wstring(tone);
             Global::MsgTypeToTsf = Global::DataFromServerMsgType::CommitExactText;
+        }
+        else if (g_english_input_mode)
+        {
+            // Direct IPA: commit the highlighted symbol followed by the tone letter.
+            EnsureCandidatePageReady();
+            const auto &ui = Global::candidate_ui;
+            const int index = ui.selected_index_in_page;
+            if (index >= 0 && static_cast<size_t>(index) < ui.page_words.size())
+            {
+                Global::candidate_ui.selected_text = ui.page_words[index] + string_to_wstring(tone);
+                Global::MsgTypeToTsf = Global::DataFromServerMsgType::CommitExactText;
+                SendCurrentDataToClient(client_id, activation_epoch, request_id);
+                ClearState();
+                return;
+            }
+            ShowCandidateTransientHint(L"没有可确认的音标 · 先修改编码，再按 Shift＋1–5 输入声调");
+        }
+        else
+        {
+            // A pinyin candidate may still need a reading choice; keep the
+            // composition and say what to do instead of dropping the key silently.
+            ShowCandidateTransientHint(L"先选定候选，再按 Shift＋1–5 输入声调");
         }
         SendCurrentDataToClient(client_id, activation_epoch, request_id);
         return;

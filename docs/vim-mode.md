@@ -2,7 +2,7 @@
 
 在 Vim 或启用 Vim 插件的编辑器中，中文输入完成后按 Esc，编辑器可以正常回到 normal 模式，但水杉仍停留在中文状态。可按应用启用 Vim 模式，让这次 Esc 同时将水杉切到英文，随后直接输入 `hjkl` 等命令。
 
-在数据目录的 `config.toml`（默认 `%LOCALAPPDATA%\metasequoiaime\config.toml`，安装时若选了别的位置就在那里；`METASEQUOIA_IME_DATA_DIR` 环境变量优先）的 `[input]` 段填写要启用的应用：
+在数据目录的 `config.toml`（默认 `%LOCALAPPDATA%\metasequoiaime\config.toml`，安装时若选了别的位置就在那里；`PHONETIC_IPA_DATA_DIR` 环境变量优先）的 `[input]` 段填写要启用的应用：
 
 ```toml
 [input]

@@ -287,9 +287,9 @@ int run_test()
     metasequoia::test::ScopedDataDirectoryCleanup cleanup(data_directory);
     std::filesystem::create_directories(data_directory);
 #ifdef _WIN32
-    if (_wputenv_s(L"METASEQUOIA_IME_DATA_DIR", data_directory.c_str()) != 0)
+    if (_wputenv_s(L"PHONETIC_IPA_DATA_DIR", data_directory.c_str()) != 0)
 #else
-    if (setenv("METASEQUOIA_IME_DATA_DIR", metasequoia::path_to_utf8(data_directory).c_str(), 1) != 0)
+    if (setenv("PHONETIC_IPA_DATA_DIR", metasequoia::path_to_utf8(data_directory).c_str(), 1) != 0)
 #endif
     {
         throw std::runtime_error("Failed to set the data directory override.");

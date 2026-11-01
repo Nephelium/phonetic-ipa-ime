@@ -150,6 +150,9 @@ void SyncShuangpinPreeditForms();
 void EnsureCandidatePageReady();
 std::wstring BuildUiLessCandidatePageW();
 void RefreshCandidatePageUi(bool show_window);
+// Shows a one-shot hint above the current candidates without hiding their
+// numbers. The next page rebuild clears it.
+void ShowCandidateTransientHint(const std::wstring &hint);
 
 // event_listener_pipes.cpp
 void WakeNamedPipeListenersForShutdown();

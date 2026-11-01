@@ -165,3 +165,77 @@ Mac 新增双击安装器，随包预编译注册助手，安装及升级阶段�
 ## 0.1.7 — 2026-10-25
 
 修复四端 IPA Plus 字体组合，放宽最低缩放至 20%，调整 Windows 两列布局与横向移动。Windows 规则菜单使用全称，隐藏未接通工具栏按钮与候选辅助码。新增卸载入口、保留个人配置的升级流程与注册失败恢复。四端版本统一为 0.1.7，详见 docs/releases/0.1.7.md。
+
+## 0.1.8 — 2026-11-01
+
+依据 2026-11-01 代码审查修改：Windows 改为安装到 Program Files，个人数据按账户保存在 LOCALAPPDATA；码表和规则表加载失败时回退与重试；无音标候选上屏汉字；含撇号的部分选词保持一致；Caps Lock 下 Shift+1–5 恢复标点；工具栏区分三种模式；规则表进程内共享；更新检查退避；保存只保留一份备份；数据目录环境变量改为 PHONETIC_IPA_DATA_DIR。Windows 与 Android 版本为 0.1.8，详见 docs/releases/0.1.8.md 与 docs/testing/2026-11-01-代码审查修复进度.md。本轮改动的上游路径：
+
+- `docs/vim-mode.md`
+- `engine/contracts/ipa_input.h`
+- `engine/core/data_path.h`
+- `engine/ipa/ipa_readings.h`
+- `engine/ipa/ipa_tables.h`
+- `engine/ipa/update_manifest.h`
+- `engine/tests/src/bench_input_session.cpp`
+- `engine/tests/src/bench_key_latency_diag.cpp`
+- `engine/tests/src/bench_neural_rescore.cpp`
+- `engine/tests/src/eval_quanpin_sentence.cpp`
+- `engine/tests/src/test_candidate_consistency.cpp`
+- `engine/tests/src/test_data_path.cpp`
+- `engine/tests/src/test_direct_helpcode.cpp`
+- `engine/tests/src/test_engine_smoke.cpp`
+- `engine/tests/src/test_english_input_session.cpp`
+- `engine/tests/src/test_input_session.cpp`
+- `engine/tests/src/test_jianpin_input_session.cpp`
+- `engine/tests/src/test_mixed_expressive_input_session.cpp`
+- `engine/tests/src/test_neural_sentence.cpp`
+- `engine/tests/src/test_online_input_session.cpp`
+- `engine/tests/src/test_pinyin.cpp`
+- `engine/tests/src/test_quick_phrase_input_session.cpp`
+- `engine/tests/src/test_temporary_input_session.cpp`
+- `installer/msime_setup.iss`
+- `installer/README.md`
+- `server/AGENTS.md`
+- `server/CMakeLists.txt`
+- `server/README.md`
+- `server/src/global/globals.h`
+- `server/src/ipa/ipa_profile.h`
+- `server/src/ipa/ipa_runtime.h`
+- `server/src/ipa/ipa_user_data.h`
+- `server/src/ipc/event_listener_candidates.cpp`
+- `server/src/ipc/event_listener_internal.h`
+- `server/src/ipc/event_listener_keys.cpp`
+- `server/src/ipc/event_listener_selection.cpp`
+- `server/src/ipc/event_listener_worker.cpp`
+- `server/src/main.cpp`
+- `server/src/settings/native/native_ipa_onboarding.h`
+- `server/src/settings/native/native_page_about.cpp`
+- `server/src/settings/native/native_page_ipa.cpp`
+- `server/src/settings/native/native_page_skin_common.cpp`
+- `server/src/settings/settings_app.cpp`
+- `server/src/utils/common_utils.h`
+- `server/src/utils/ime_paths.cpp`
+- `server/src/utils/ipa_app_icon.h`
+- `server/src/utils/ipa_update.cpp`
+- `server/src/window/candidate_presenter.cpp`
+- `server/src/window/candidate_view_model.h`
+- `server/src/window/floating_toolbar_presenter.cpp`
+- `server/tests/README.md`
+- `server/tests/src/benchmark_model_path.cpp`
+- `server/tests/src/native_preview_capture.h`
+- `server/tests/src/test_collocation_model.cpp`
+- `server/tests/src/test_config_non_ascii_path.cpp`
+- `server/tests/src/test_custom_shuangpin.cpp`
+- `server/tests/src/test_dictionary_validation.cpp`
+- `server/tests/src/test_engine_shuangpin_session.cpp`
+- `server/tests/src/test_ipa_profile.cpp`
+- `server/tests/src/test_ipa_readings.cpp`
+- `server/tests/src/test_ipa_updates.cpp`
+- `server/tests/src/test_neural_model.cpp`
+- `tests/pipe-probe/ipa_readings_probe.h`
+- `ui/src/Fonts.cpp`
+- `windows/src/IME/MetasequoiaIME.rc`
+- `windows/src/Key/KeyEventSink.cpp`
+- `windows/src/Key/KeyEventSink_DeferredKeys.cpp`
+- `windows/src/Utils/FanyUtils.cpp`
+- `windows/tests/temporary-japanese-validation.md`

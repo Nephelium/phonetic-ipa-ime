@@ -10,7 +10,14 @@ REPO = ROOT.parent
 OUT = ROOT / 'output'
 RUNTIME = OUT / 'runtime'
 RUNTIME.mkdir(parents=True, exist_ok=True)
+# CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE may be redirected in the build cache; staging must
+# follow it, or an old bin/Release copy would be packaged instead of the fresh build.
 server = OUT / 'build-server/bin/Release'
+cache = OUT / 'build-server/CMakeCache.txt'
+if cache.exists():
+    for line in cache.read_text(encoding='utf-8', errors='replace').splitlines():
+        if line.startswith('CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE:'):
+            server = Path(line.split('=', 1)[1].strip())
 for name in ('PhoneticIpaServer.exe', 'PhoneticIpaSettings.exe', 'PhoneticIpaWatchdog.exe'):
     shutil.copy2(server / name, RUNTIME / name)
 for binary in server.glob('*.dll'):

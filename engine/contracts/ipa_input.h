@@ -9,6 +9,13 @@ constexpr bool IsToneShortcut(unsigned key, unsigned modifiers)
 {
     return key >= '1' && key <= '5' && (modifiers & 7u) == 1u;
 }
+// Shift+1..5 types tone letters only where IPA is the output: the direct IPA
+// keyboard, or pinyin with Caps Lock off. With Caps Lock on (Hanzi output) the
+// keys stay ordinary punctuation, so ! @ # $ % and full-width ！ ￥ still work.
+constexpr bool ToneShortcutApplies(bool ipa_direct_mode, bool caps_lock_on)
+{
+    return ipa_direct_mode || !caps_lock_on;
+}
 constexpr bool IsReadingChoiceKey(unsigned key, unsigned modifiers)
 {
     return key == 0x0d && (modifiers & 7u) == 3u; // Ctrl+Shift+Enter
@@ -47,7 +54,10 @@ constexpr bool EditableChord(unsigned modifiers, unsigned key)
                               (key >= 0xdb && key <= 0xde);
     return modifiers >= 2 && modifiers <= 7 && printableKey && !(modifiers == 3 && (key == 'I' || key == 'F')) &&
            !(modifiers == 2 && ((key >= '1' && key <= '9') || (key >= 0x61 && key <= 0x69))) &&
-           !(modifiers == 4 && key == 0x73); // Alt+F4 closes the foreground window.
+           !(modifiers == 4 && key == 0x73) && // Alt+F4 closes the foreground window.
+           // Ctrl+A/C/S/V/X/Y/Z are the hosts' select-all, clipboard, save and undo keys.
+           !(modifiers == 2 &&
+             (key == 'A' || key == 'C' || key == 'S' || key == 'V' || key == 'X' || key == 'Y' || key == 'Z'));
 }
 // Ordinary CIN input keeps 1-9 for selection and the existing zero behavior.
 // Explicit tone:/code: entries accept digits; Space confirms the chosen output.

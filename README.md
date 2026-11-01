@@ -2,7 +2,7 @@
 
 输入拼音，选择带声调的国际音标；也可以按键位直接查找和点选 IPA、extIPA、VoQS 符号。支持 Windows、macOS、Android 和 iOS。
 
-当前版本 **0.1.7 测试版**。[官网下载](https://www.phonetictoolbox.com/#ipa-ime-download) · [GitHub 下载](https://github.com/Nephelium/phonetic-ipa-ime/releases/tag/ipa-v0.1.7)。Mac 版双击安装，无需命令行工具。iOS 为待签名 IPA。
+当前版本 **Windows / Android 0.1.8，macOS / iOS 0.1.7 测试版**。[官网下载](https://www.phonetictoolbox.com/#ipa-ime-download) · [GitHub 下载 0.1.8](https://github.com/Nephelium/phonetic-ipa-ime/releases/tag/ipa-v0.1.8) · [macOS / iOS 0.1.7](https://github.com/Nephelium/phonetic-ipa-ime/releases/tag/ipa-v0.1.7)。Mac 版双击安装，无需命令行工具。iOS 为待签名 IPA。
 
 [![官网使用说明 · 分步图解](assets/buttons/usage-guide.svg)](https://www.phonetictoolbox.com/ipa-ime-guide/)
 
@@ -26,7 +26,7 @@
 
 | 平台 | 拼音查字，默认输出 IPA | 拼音查字，默认输出汉字 | 直接音标键盘 |
 |---|---|---|---|
-| Windows 悬浮工具栏 | **IPA** | **汉字** | **IPA** |
+| Windows 悬浮工具栏 | **拼音→IPA** | **拼音→汉字** | **IPA 键盘** |
 | macOS 候选栏空闲状态 | **拼音 → 音标** | **拼音 → 汉字** | **IPA · 点选音标** |
 | Android / iOS | 左下角 **拼音**，上方 **音标** | 左下角 **拼音**，上方 **汉字** | 左下角 **IPA** |
 
@@ -64,10 +64,13 @@
 
 | 平台 | 输入 214 调值的操作 | 随后会看到什么 |
 |---|---|---|
-| Windows / Mac | **按住 Shift**，依次按 **2、1、4**，再松开 Shift | `tone:214` 与声调候选 |
+| Windows | **按住 Shift**，依次按 **2、1、4** | 每按一次直接输入一个调符，得到 ˨˩˦ |
+| Mac | **按住 Shift**，依次按 **2、1、4**，再松开 Shift | `tone:214` 与声调候选 |
 | Android / iOS | 在 **2、1、4** 三个数字键上分别 **向上划动** | `tone:214` 与声调候选 |
 
-出现 `tone:214` 时还没有确认声调。选择 **˨˩˦**、**²¹⁴** 或 **214** 中需要的一项。电脑按对应数字，或空格选首项；手机点候选，或空格选首项。手机进入声调组合后，轻点 1–5 可以继续追加调值。
+出现 `tone:214` 时还没有确认声调。选择 **˨˩˦**、**²¹⁴** 或 **214** 中需要的一项。电脑按对应数字，或空格选首项；手机点候选，或空格选首项。手机进入声调组合后，轻点 1–5 可以继续追加调值。Windows 需要 ²¹⁴ 或 214 写法时，在直接音标模式输入 `tone:214` 再选择。
+
+Caps Lock 打开、输出汉字时，Shift＋1–5 仍输入 `!`、`@`、`！`、`￥` 等标点。直接音标模式还有未确认的编码时，Shift＋数字会先输入高亮的音标，再接调符。拼音模式下请先选定候选，再输入声调。
 
 <p><img src="website/visual-guide/screens/android-tone-17d95f217a.png" width="260" alt="Android 声调组合：tone:214 和三种输出形式"></p>
 
@@ -82,13 +85,17 @@
 - 吴宗济、赵元任《汉语口语语法》、《汉语方音字汇》
 - UntPhesoca 宽 / UntPhesoca 严
 
+转写输出的是字典本调，没有处理上声连读变调、一和不的变调、儿化合并以及轻声的实际音高。例如你好输出 ni˨˩˧ xau˨˩˧（Standard Chinese Beijing 宽），严式规则也一样。需要实际读音时请手动调整。
+
+候选没有完整音标时，例如卡拉OK或少见字，候选下行显示暂无音标 · 选择输入汉字，选择后输入汉字。
+
 直接音标键盘按自己的键位方案输入。切换拼音转写规则不会替换键位方案。各套音标与声调写法、来源列及 SHA-256 见 [Rules-SOURCES.json](prototype/resources/ipa/Rules-SOURCES.json) 与 [来源与许可](prototype/THIRD_PARTY.md)。
 
 ## 安装与首次教学
 
 | 平台 | 安装与启用 |
 |---|---|
-| Windows 10 / 11 x64 | 完整解压 ZIP，双击安装启动器，按系统提示注册。窗口保留安装结果，日志位于 install-logs。输入时用 Win＋空格选择国际音标输入法。 |
+| Windows 10 / 11 x64 | 完整解压 ZIP，双击安装启动器，按系统提示授权。程序复制到 `C:\Program Files\PhoneticIPA` 后注册，个人键位与配置保存在各 Windows 账户自己的 `%LOCALAPPDATA%\phonetic-ipa-prototype`。窗口保留安装结果，日志位于 install-logs。输入时用 Win＋空格选择国际音标输入法。 |
 | macOS 13+，Intel / Apple 芯片 | 解压 ZIP，双击 **安装国际音标输入法.app**，点安装并启用／升级并启用。**无需 Xcode 或命令行工具**。完成后点打开输入法设置，从系统输入法菜单选择。详见 [Mac 图文安装说明](apple/INSTALL-macOS.md)。 |
 | Android 10+，arm64 / x86_64 | 安装 APK，在试打页先点启用键盘，再点切换键盘，选择国际音标输入法。固定测试签名支持保留数据升级。 |
 | iOS 16+，iPhone / iPad | 自行签名 App 与键盘扩展后安装。系统设置→通用→键盘→键盘→添加新键盘，选择国际音标输入法。输入时长按地球键切换。见 [待签名 IPA 安装说明](apple/INSTALL-unsigned.md)。 |
@@ -103,7 +110,7 @@ Mac 当前为本地签名、尚未公证。如果系统阻止打开，请按 [Ap
 
 ## 常见问题与设置
 
-**Windows 升级与卸载**：0.1.7安装时会退出本输入法旧进程、解除旧版注册并安装新版，保留个人键位和配置。可从 Windows 设置的应用列表卸载，也可双击解压目录中的卸载.cmd。卸载保留个人数据和解压文件。
+**Windows 升级与卸载**：安装时会退出本输入法旧进程、解除旧版注册，把新版复制到 Program Files 并注册，成功后删除 Program Files 中由安装程序创建的旧版程序文件夹。从 0.1.7 及更早版本升级时，发起安装的账户会自动复制原解压目录中的键位、规则、配置和用户词库，原解压目录保持不变；其他账户首次使用时得到出厂资料。可从 Windows 设置的应用列表卸载，删除解压目录后也能卸载；也可双击解压目录中的卸载.cmd。卸载删除 Program Files 中的程序文件（正被其他程序使用的文件在重启后删除），保留个人数据和解压文件。
 
 **Windows 工具栏与候选**：工具栏保留输入模式、转写规则和设置。展开的规则菜单显示完整名称。候选中的括号字母是上游的辅助码提示，0.1.7已隐藏。
 
@@ -115,7 +122,7 @@ Mac 当前为本地签名、尚未公证。如果系统阻止打开，请按 [Ap
 
 **皮肤与图标**：Windows 新安装默认普通蓝色大肥鱼，保留探头、国庆献礼等其他选择。四端图标为大肥鱼抱 ə。Windows 关于页可选本机 PNG / JPEG / BMP 图片作为设置窗口、任务栏和应用内显示图标，最大 10 MB，可恢复默认；程序文件图标保留默认。图片仅保存在本机。
 
-**更新**：设置中可手动检查或关闭自动检查。官网与 GitHub 任一版本源有新版时提示下载，由用户安装。iOS 在配套 App 前台检查。请求不包含按键、宿主文本、词库或个人方案。
+**更新**：设置中可手动检查或关闭自动检查。自动检查每天一次，官网与 GitHub 任一版本源有新版时提示下载，由用户安装。两个来源都连不上时，从 10 分钟起逐次加倍间隔重试，最长一天。Windows 更新提示显示安装包 SHA-256。iOS 在配套 App 前台检查。请求不包含按键、宿主文本、词库或个人方案。
 
 ## 来源与许可
 
@@ -129,6 +136,6 @@ Mac 当前为本地签名、尚未公证。如果系统阻止打开，请按 [Ap
 
 ## 开发与验证
 
-0.1.7 修正记录：[IPA Plus、规则全称与 Windows 安装升级](docs/testing/2026-10-25-IPA-Plus与安装升级修复.md)。[更新说明](docs/releases/0.1.7.md)。
+0.1.8 修正记录：[代码审查修复](docs/testing/2026-11-01-代码审查修复进度.md)，[更新说明](docs/releases/0.1.8.md)。0.1.7 修正记录：[IPA Plus、规则全称与 Windows 安装升级](docs/testing/2026-10-25-IPA-Plus与安装升级修复.md)，[更新说明](docs/releases/0.1.7.md)。
 
 构建入口：[Windows](prototype/README.md)、[Apple](apple/README.md)、[Android](android/README.md)。本版记录见 [0.1.6 安装与教学验证](docs/testing/2026-10-25-016-review.md)。分别记录原生控件、两种 TSF 架构、Mac 专用 NSTextView 实际输入和 Android / iOS 模拟器键盘测试。iPhone 实机签名、物理 Intel Mac 和各厂商 Android 实机尚未逐一验证。

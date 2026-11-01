@@ -1,5 +1,7 @@
 #include "ipa/ipa_profile.h"
 #include "ipa/ipa_keyboard_layout.h"
+#include "ipa/ipa_user_data.h"
+#include <fstream>
 #include <iostream>
 
 static void Require(bool value, const char *message)
@@ -96,6 +98,108 @@ int main(int argc, char **argv)
         Reject([&] { PhoneticIpa::ImportProfile(scratch / "bad.json"); }, "Bad import accepted");
         PhoneticIpa::WriteProfileFile(scratch / "active.cin", "broken");
         Require(live.Get(scratch).Hotkey(6, 'A') == u8"ɾ", "Malformed external edit replaced live map");
+        {
+            // 2026-11-01 review H3/M11/L1: a damaged active.cin that never loaded
+            // falls back to default.cin instead of failing, and empty outputs are dropped.
+            const auto fallback = scratch / "fallback";
+            std::filesystem::create_directories(fallback);
+            PhoneticIpa::WriteProfileFile(fallback / "active.cin", "broken");
+            PhoneticIpa::WriteProfileFile(fallback / "default.cin", "%chardef begin\na\t\nb\tx\nc\ty\n%chardef end\n");
+            phonetic_ipa::LiveCinTable fresh;
+            const auto &table = fresh.Get(fallback);
+            Require(table.Lookup("b").size() == 1 && fresh.ActiveFailed() &&
+                        fresh.LoadedPath().filename() == "default.cin",
+                    "Damaged active.cin did not fall back to default.cin");
+            Require(table.Lookup("a").empty(), "Empty CIN output produced a blank candidate");
+            Require(fresh.Get(fallback).Lookup("c").size() == 1 && fresh.ActiveFailed(),
+                    "Fallback state not kept for an unchanged damaged file");
+            std::filesystem::remove(fallback / "default.cin");
+            Reject(
+                [&] {
+                    phonetic_ipa::LiveCinTable none;
+                    (void)none.Get(fallback);
+                },
+                "Missing tables were reported as loaded");
+            PhoneticIpa::WriteProfileFile(fallback / "active.cin", "%chardef begin\nb\tz\n%chardef end\n");
+            Require(fresh.Get(fallback).Lookup("b")[0] == "z" && !fresh.ActiveFailed(),
+                    "Repaired active.cin was not picked up");
+            // M9: an applied profile keeps one fixed-name backup instead of one per save.
+            PhoneticIpa::WriteProfileFile(fallback / "active.cin", "%chardef begin\nb\tw\n%chardef end\n",
+                                          PhoneticIpa::ProfileBackup::Previous);
+            PhoneticIpa::WriteProfileFile(fallback / "active.cin", "%chardef begin\nb\tv\n%chardef end\n",
+                                          PhoneticIpa::ProfileBackup::Previous);
+            size_t backups = 0;
+            for (const auto &entry : std::filesystem::directory_iterator(fallback))
+                if (entry.path().filename().wstring().find(L".backup-") != std::wstring::npos ||
+                    entry.path().filename() == "active.cin.previous")
+                    ++backups;
+            Require(backups == 1 && std::filesystem::exists(fallback / "active.cin.previous"),
+                    "Profile saves accumulated backup files");
+            // H2: each account is seeded from the factory folder; personal files are never replaced.
+            {
+                const auto factory = fallback / "factory";
+                const auto account = fallback / "account";
+                const auto write = [](const std::filesystem::path &path, const std::string &text) {
+                    std::filesystem::create_directories(path.parent_path());
+                    std::ofstream(path, std::ios::binary | std::ios::trunc) << text;
+                };
+                const auto read = [](const std::filesystem::path &path) {
+                    std::ifstream input(path, std::ios::binary);
+                    return std::string((std::istreambuf_iterator<char>(input)), std::istreambuf_iterator<char>());
+                };
+                write(factory / "config.toml", "factory-config");
+                write(factory / "ipa" / "default.cin", "keys-1");
+                write(factory / "factory-stamp.txt", "app-1\n");
+                write(account / "ipa" / "active.cin", "mine");
+                PhoneticIpa::UserData::SeedFrom(factory, account);
+                Require(read(account / "config.toml") == "factory-config" &&
+                            read(account / "ipa" / "default.cin") == "keys-1" &&
+                            read(account / "ipa" / "active.cin") == "mine",
+                        "First seed did not copy factory files or replaced a personal file");
+                write(account / "config.toml", "my-config");
+                write(factory / "config.toml", "factory-config-2");
+                write(factory / "ipa" / "default.cin", "keys-2");
+                write(factory / "factory-stamp.txt", "app-2\n");
+                PhoneticIpa::UserData::SeedFrom(factory, account);
+                Require(read(account / "ipa" / "default.cin") == "keys-2" &&
+                            read(account / "config.toml") == "my-config" &&
+                            read(account / "factory-stamp.txt") == "app-2\n",
+                        "Upgrade seed did not refresh factory files or replaced personal config");
+                Require(PhoneticIpa::UserData::IsPersonal("msime_user.db-wal") &&
+                            PhoneticIpa::UserData::IsPersonal("ipa/onboarding-v2.done") &&
+                            !PhoneticIpa::UserData::IsPersonal("ipa/default.cin") &&
+                            !PhoneticIpa::UserData::IsPersonal("msime.db"),
+                        "Personal file classification");
+                // Engine databases keep learned data across upgrades and change only with the dictionary.
+                write(factory / "msime.db", "db-1");
+                write(factory / "dictionary-manifest.json", "dict-1");
+                write(factory / "factory-stamp.txt", "app-3\n");
+                PhoneticIpa::UserData::SeedFrom(factory, account);
+                write(account / "msime.db", "learned");
+                write(factory / "msime.db", "db-2");
+                write(factory / "factory-stamp.txt", "app-4\n");
+                PhoneticIpa::UserData::SeedFrom(factory, account);
+                Require(read(account / "msime.db") == "learned" && read(account / "factory-stamp.txt") == "app-4\n",
+                        "Upgrade without a new dictionary replaced the engine database");
+                write(factory / "dictionary-manifest.json", "dict-2");
+                write(factory / "factory-stamp.txt", "app-5\n");
+                PhoneticIpa::UserData::SeedFrom(factory, account);
+                Require(read(account / "msime.db") == "db-2" &&
+                            read(account / "msime.db.before-upgrade-app-5") == "learned" &&
+                            read(account / "dictionary-manifest.json") == "dict-2",
+                        "New dictionary was not installed or the old database was not kept");
+            }
+            // L9: host clipboard and undo shortcuts cannot become IPA chords.
+            for (const unsigned key : {'A', 'C', 'S', 'V', 'X', 'Y', 'Z'})
+                Require(!PhoneticIpaKey::EditableChord(2, key), "System shortcut accepted as IPA chord");
+            Require(PhoneticIpaKey::EditableChord(6, 'C') && PhoneticIpaKey::EditableChord(2, 'Q'),
+                    "Ordinary chord rejected");
+            // M3: Shift+1..5 stays punctuation with Caps Lock (Hanzi output).
+            Require(PhoneticIpaKey::ToneShortcutApplies(true, true) &&
+                        PhoneticIpaKey::ToneShortcutApplies(false, false) &&
+                        !PhoneticIpaKey::ToneShortcutApplies(false, true),
+                    "Tone shortcut mode rule");
+        }
         std::cout << "CIN/JSON Unicode roundtrip, atomic save, failure preservation, live reload and chord validation "
                      "passed\n";
         return 0;

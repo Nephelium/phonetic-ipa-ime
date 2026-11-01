@@ -25,12 +25,12 @@ vcpkg and Boost with `python server/scripts/prepare_env.py`:
 python scripts/product_lock.py fetch-dictionaries --staging-root .
 if ($LASTEXITCODE -ne 0) { throw 'Dictionary verification failed' }
 $env:LOCALAPPDATA = Join-Path $PWD 'build/test-data/user-local'
-$env:METASEQUOIA_IME_DATA_DIR = Join-Path $env:LOCALAPPDATA 'metasequoiaime'
-New-Item -ItemType Directory -Force $env:METASEQUOIA_IME_DATA_DIR | Out-Null
-Copy-Item MetasequoiaImeDict/out/* $env:METASEQUOIA_IME_DATA_DIR -Force
-Copy-Item engine/helpcode/helpcodes $env:METASEQUOIA_IME_DATA_DIR -Recurse -Force
-Copy-Item server/assets/tables/* $env:METASEQUOIA_IME_DATA_DIR -Force
-Copy-Item server/assets/config/config.toml $env:METASEQUOIA_IME_DATA_DIR -Force
+$env:PHONETIC_IPA_DATA_DIR = Join-Path $env:LOCALAPPDATA 'metasequoiaime'
+New-Item -ItemType Directory -Force $env:PHONETIC_IPA_DATA_DIR | Out-Null
+Copy-Item MetasequoiaImeDict/out/* $env:PHONETIC_IPA_DATA_DIR -Force
+Copy-Item engine/helpcode/helpcodes $env:PHONETIC_IPA_DATA_DIR -Recurse -Force
+Copy-Item server/assets/tables/* $env:PHONETIC_IPA_DATA_DIR -Force
+Copy-Item server/assets/config/config.toml $env:PHONETIC_IPA_DATA_DIR -Force
 .\server\tests\scripts\llaunch.ps1 -Configuration Release
 ```
 
@@ -89,7 +89,7 @@ server/build-release/bin/Release/MetasequoiaImeServerTests.exe --benchmark-model
 ```
 
 The executable creates small model files in a temporary data directory.
-It restores `METASEQUOIA_IME_DATA_DIR` when it exits.
+It restores `PHONETIC_IPA_DATA_DIR` when it exits.
 It does not load model contents.
 Each row reports P50, P95, P99, and worst latency in nanoseconds.
 
@@ -106,7 +106,7 @@ It does not simulate all disk workloads.
 The benchmark calls the production path resolvers used by `ApplyConfiguration()`.
 It measures their cost per call.
 It does not measure full `handle_key()` latency.
-The benchmark sets `METASEQUOIA_IME_DATA_DIR` to an isolated temporary directory.
+The benchmark sets `PHONETIC_IPA_DATA_DIR` to an isolated temporary directory.
 Each resolver call reads this override and builds a path.
 Normal installations do not set this override. Their directory lookup takes a different path.
 The `disabled-empty-id` row returns before `data_directory()` runs.

@@ -6,7 +6,9 @@
 #include <wincodec.h>
 #include <wrl/client.h>
 #include <algorithm>
+#include <atomic>
 #include <cstdint>
+#include <map>
 #include <fstream>
 #include <stdexcept>
 #include <string>
@@ -32,16 +34,33 @@ inline std::filesystem::path Current(const std::filesystem::path &root = Resourc
     return std::filesystem::is_regular_file(path, error) ? path : std::filesystem::path{};
 }
 
+// Bumped by Import and Reset so painting code can reuse the resolved path
+// instead of reading custom-icon-name.txt on every frame.
+inline std::atomic<unsigned> &Generation()
+{
+    static std::atomic<unsigned> generation{1};
+    return generation;
+}
+
 inline std::wstring AssetOr(const std::wstring &fallback)
 {
-    const auto path = Current();
-    return path.empty() ? fallback : path.wstring();
+    static thread_local unsigned seen = 0;
+    static thread_local std::wstring cached;
+    const unsigned current = Generation().load(std::memory_order_acquire);
+    if (seen != current)
+    {
+        const auto path = Current();
+        cached = path.empty() ? std::wstring() : path.wstring();
+        seen = current;
+    }
+    return cached.empty() ? fallback : cached;
 }
 
 inline void Reset(const std::filesystem::path &root = ResourceRoot())
 {
     // Keep imported files so restoring the default never deletes a user image.
     WriteProfileFile(root / "custom-icon-name.txt", "");
+    Generation().fetch_add(1, std::memory_order_acq_rel);
 }
 
 inline void Check(HRESULT value)
@@ -121,17 +140,37 @@ inline void Import(const std::filesystem::path &source, const std::filesystem::p
         throw std::runtime_error("图片转换失败，请选择另一张图片。");
     DestroyIcon(decoded);
     WriteProfileFile(root / "custom-icon-name.txt", name);
+    Generation().fetch_add(1, std::memory_order_acq_rel);
 }
 
 inline void Refresh(HWND hwnd, int defaultResource)
 {
-    static std::wstring previous;
-    static HICON iconBig = nullptr, iconSmall = nullptr;
-    static HWND owner = nullptr;
+    // Icons are owned per window: replacing one window's icon must not destroy
+    // an icon another window is still showing. Entries of closed windows are freed.
+    struct WindowIcons
+    {
+        std::wstring signature;
+        HICON big_icon = nullptr, small_icon = nullptr;
+    };
+    static std::map<HWND, WindowIcons> windows;
+    for (auto it = windows.begin(); it != windows.end();)
+    {
+        if (it->first != hwnd && !IsWindow(it->first))
+        {
+            if (it->second.big_icon)
+                DestroyIcon(it->second.big_icon);
+            if (it->second.small_icon)
+                DestroyIcon(it->second.small_icon);
+            it = windows.erase(it);
+        }
+        else
+            ++it;
+    }
+    auto &state = windows[hwnd];
     const auto path = Current();
     const UINT dpi = GetDpiForWindow(hwnd);
     const auto signature = path.wstring() + std::to_wstring(dpi);
-    if (owner == hwnd && previous == signature)
+    if (state.signature == signature)
         return;
     const auto load = [&](int size) {
         HICON icon = static_cast<HICON>(
@@ -142,13 +181,12 @@ inline void Refresh(HWND hwnd, int defaultResource)
     HICON nextSmall = load(GetSystemMetricsForDpi(SM_CXSMICON, dpi));
     SendMessageW(hwnd, WM_SETICON, ICON_BIG, reinterpret_cast<LPARAM>(nextBig));
     SendMessageW(hwnd, WM_SETICON, ICON_SMALL, reinterpret_cast<LPARAM>(nextSmall));
-    if (iconBig)
-        DestroyIcon(iconBig);
-    if (iconSmall)
-        DestroyIcon(iconSmall);
-    iconBig = nextBig;
-    iconSmall = nextSmall;
-    owner = hwnd;
-    previous = signature;
+    if (state.big_icon)
+        DestroyIcon(state.big_icon);
+    if (state.small_icon)
+        DestroyIcon(state.small_icon);
+    state.big_icon = nextBig;
+    state.small_icon = nextSmall;
+    state.signature = signature;
 }
 } // namespace PhoneticIpa::AppIcon

@@ -23,6 +23,8 @@ struct Candidate: Identifiable {
     var ipa: String
     var symbol: Bool
     var reading: Reading?
+    // Readings are computed for the visible page only (see resolveVisible).
+    var resolved = false
     var id: String { word + "\t" + canonical }
 }
 struct KeyChord: Codable {
@@ -115,8 +117,8 @@ struct TranscriptionRule: Identifiable {
     @Published var ruleId = "beijing"
     private var ruleError = ""
     @Published var candidates: [Candidate] = []
-    @Published var page = 0
-    @Published var pageSize = 6
+    @Published var page = 0 { didSet { resolveVisible() } }
+    @Published var pageSize = 6 { didSet { resolveVisible() } }
     @Published var selectedIndex = 0
     @Published var pending: Candidate?
     @Published var status = ""
@@ -148,19 +150,42 @@ struct TranscriptionRule: Identifiable {
     }
     func refresh() {
         if pinyin && !ruleError.isEmpty { candidates = []; pending = nil; status = ruleError; onChange(); return }
-        page = 0; selectedIndex = 0; pending = nil
+        candidates = []; page = 0; selectedIndex = 0; pending = nil
         let records = engine?.candidates(raw, pinyin: pinyin) as? [[String: Any]] ?? []
         candidates = records.compactMap { item in
             guard let word = item["word"] as? String else { return nil }
-            var reading: Reading?
-            if let object = item["reading"], let data = try? JSONSerialization.data(withJSONObject: object) {
-                reading = try? JSONDecoder().decode(Reading.self, from: data)
-            }
-            return Candidate(word: word, canonical: item["canonical"] as? String ?? "",
-                             ipa: item["ipa"] as? String ?? "", symbol: item["symbol"] as? Bool ?? false,
-                             reading: reading)
+            let symbol = item["symbol"] as? Bool ?? false
+            return Candidate(word: word, canonical: item["canonical"] as? String ?? "", ipa: "", symbol: symbol,
+                             reading: nil, resolved: symbol)
         }
+        resolveVisible()
         onChange()
+    }
+    // Each keystroke used to query and convert every candidate (up to 180).
+    // Only the page on screen needs a reading; later pages resolve when shown.
+    private func resolveVisible() {
+        guard let engine, !candidates.isEmpty else { return }
+        let start = page * pageSize
+        let end = min(candidates.count, start + pageSize)
+        guard start >= 0, start < end else { return }
+        for i in start..<end where !candidates[i].resolved {
+            let reading = Self.reading(from: engine.transcription(candidates[i].word, canonical: candidates[i].canonical))
+            candidates[i].reading = reading
+            candidates[i].ipa = reading?.text ?? ""
+            candidates[i].resolved = true
+        }
+    }
+    static func reading(from object: [AnyHashable: Any]) -> Reading? {
+        guard let text = object["text"] as? String, let ambiguous = object["ambiguous"] as? Bool,
+              let parts = object["parts"] as? [[String: Any]] else { return nil }
+        return Reading(text: text, ambiguous: ambiguous, parts: parts.compactMap { part in
+            guard let word = part["word"] as? String, let selected = part["selected"] as? Int,
+                  let options = part["options"] as? [[String: Any]] else { return nil }
+            return ReadingPart(word: word, selected: selected, options: options.compactMap { option in
+                guard let pinyin = option["pinyin"] as? String, let ipa = option["ipa"] as? String else { return nil }
+                return IPAOption(pinyin: pinyin, ipa: ipa)
+            })
+        })
     }
     func append(_ text: String) {
         guard text.utf8.count <= 64, raw.utf8.count + text.utf8.count <= 128 else { return }
@@ -168,6 +193,10 @@ struct TranscriptionRule: Identifiable {
     }
     func tone(_ digit: String) {
         guard ["1", "2", "3", "4", "5"].contains(digit) else { return }
+        if !pinyin, !raw.isEmpty, !raw.hasPrefix("tone:"), visible.indices.contains(selectedIndex) {
+            // Direct IPA: confirm the highlighted symbol, then start the tone.
+            choose(selectedIndex, ipa: true)
+        }
         guard raw.isEmpty || raw.hasPrefix("tone:") else {
             status = "先确认当前候选，再输入声调"; onChange(); return
         }
@@ -200,10 +229,24 @@ struct TranscriptionRule: Identifiable {
         let item = visible[index]
         if ipa && !item.symbol {
             if item.reading?.ambiguous == true { pending = item; commitAfterReading = true; onChange(); return }
-            guard !item.ipa.isEmpty else { status = "当前字表没有完整读音"; return }
+            // No complete IPA (letters, rare characters): commit the Hanzi
+            // instead of ignoring the key, as on Windows.
+            guard !item.ipa.isEmpty else { onCommit(item.word); clear(); return }
         }
         onCommit(ipa && !item.symbol ? item.ipa : item.word)
         clear()
+    }
+    // Focus loss must not drop input: an ambiguous or IPA-less first candidate
+    // commits its Hanzi, other candidates use the current output.
+    func commitOnFocusLoss() {
+        guard !raw.isEmpty else { return }
+        pending = nil
+        guard visible.indices.contains(selectedIndex) else { onCommit(raw); clear(); return }
+        let item = visible[selectedIndex]
+        if outputIpa && !item.symbol && (item.reading?.ambiguous == true || item.ipa.isEmpty) {
+            onCommit(item.word); clear(); return
+        }
+        chooseDefault(selectedIndex)
     }
     func chooseReading(_ index: Int) {
         guard var item = pending, var reading = item.reading,
@@ -223,9 +266,7 @@ struct TranscriptionRule: Identifiable {
     func reopenReading(_ index: Int) {
         guard visible.indices.contains(index), let engine else { return }
         var item = visible[index]
-        let snapshot = engine.transcription(item.word, canonical: item.canonical)
-        if let data = try? JSONSerialization.data(withJSONObject: snapshot),
-           var reading = try? JSONDecoder().decode(Reading.self, from: data) {
+        if var reading = Self.reading(from: engine.transcription(item.word, canonical: item.canonical)) {
             for i in reading.parts.indices where reading.parts[i].options.count > 1 { reading.parts[i].selected = -1 }
             guard reading.parts.contains(where: { $0.selected < 0 }) else { return }
             commitAfterReading = false; item.reading = reading; pending = item; onChange()
@@ -239,6 +280,7 @@ struct TranscriptionRule: Identifiable {
         let encoded = try JSONEncoder().encode(snapshot)
         guard encoded.count <= 8 * 1024 * 1024 else { throw CocoaError(.fileReadTooLarge) }
         let candidateURL = folder.appendingPathComponent("candidate-\(UUID().uuidString).cin")
+        defer { try? FileManager.default.removeItem(at: candidateURL) }
         try cinText(normalized).write(to: candidateURL, atomically: true, encoding: .utf8)
         let validator = try IPAEngine(resourcePath: IPAResources.directory.path)
         _ = try validator.loadCIN(candidateURL.path)
@@ -261,6 +303,7 @@ struct TranscriptionRule: Identifiable {
             let profile = try JSONDecoder().decode(KeyboardProfile.self, from: data).validated()
             // Loading performs no shared writes. The derived CIN stays in this process's temp directory.
             let temporary = FileManager.default.temporaryDirectory.appendingPathComponent("ipa-profile-\(UUID().uuidString).cin")
+            defer { try? FileManager.default.removeItem(at: temporary) }
             try cinText(profile.mappings, layout: profile.layout, hotkeys: profile.hotkeys).write(to: temporary, atomically: true, encoding: .utf8)
             let validator = try IPAEngine(resourcePath: IPAResources.directory.path)
             _ = try validator.loadCIN(temporary.path)
@@ -281,6 +324,7 @@ struct TranscriptionRule: Identifiable {
         } else {
             let temporary = try IPAEngine(resourcePath: IPAResources.directory.path)
             let captured = FileManager.default.temporaryDirectory.appendingPathComponent("ipa-import-\(UUID().uuidString).cin")
+            defer { try? FileManager.default.removeItem(at: captured) }
             try data.write(to: captured, options: .atomic)
             _ = try temporary.loadCIN(captured.path)
             let previousLayout = profileLayout; let previousChords = profileHotkeys

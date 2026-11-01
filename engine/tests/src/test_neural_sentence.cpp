@@ -10,7 +10,7 @@
 // 到静态顺序——重排要等下一次重查。后台那条路单独测：请求一次必落空，回调到了再请求必命中。
 //
 // 缺 sentence-model*.safetensors 时与其它集成测试一样优雅跳过（返回 0）。用
-// METASEQUOIA_IME_DATA_DIR 指到备好资源的目录来实际跑通。
+// PHONETIC_IPA_DATA_DIR 指到备好资源的目录来实际跑通。
 
 #include "core/sentence_association_options.h"
 #include "core/word_item.h"

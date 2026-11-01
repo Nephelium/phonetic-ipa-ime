@@ -1,5 +1,5 @@
 // Measure the engine async rerank path with real dictionaries and neural models.
-// Run by hand: METASEQUOIA_IME_DATA_DIR=<data directory> bench_neural_rescore [repeats]
+// Run by hand: PHONETIC_IPA_DATA_DIR=<data directory> bench_neural_rescore [repeats]
 // Each row measures the final key. Prefix keys run before the timer starts.
 // session_cold and session_warm describe InputSession prefix/query caches.
 // Warm mode types the prefix twice without clearing those caches.

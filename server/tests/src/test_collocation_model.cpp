@@ -73,8 +73,8 @@ class ScopedCollocationEnvironment
         : root_(std::filesystem::temp_directory_path() /
                 (L"msime-collocation-model-test-" + std::to_wstring(GetCurrentProcessId()))),
           local_app_data_(L"LOCALAPPDATA", root_.wstring()),
-          config_dir_(L"METASEQUOIA_IME_CONFIG_DIR", (root_ / L"metasequoiaime").wstring()),
-          data_dir_(L"METASEQUOIA_IME_DATA_DIR", (root_ / L"metasequoiaime").wstring())
+          config_dir_(L"PHONETIC_IPA_CONFIG_DIR", (root_ / L"metasequoiaime").wstring()),
+          data_dir_(L"PHONETIC_IPA_DATA_DIR", (root_ / L"metasequoiaime").wstring())
     {
         std::error_code ec;
         std::filesystem::remove_all(root_, ec);

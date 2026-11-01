@@ -25,6 +25,8 @@ python scripts/build-native.py --ndk /path/to/android-ndk-r30 --source-root /pat
 gradle --no-daemon :app:assembleDebug :app:assembleDebugAndroidTest :app:lintDebug
 ```
 
+公开发布使用 release 构建，不可调试：`gradle --no-daemon :app:assembleRelease`。签名信息写在 `android/keystore.properties`（`storeFile`、`storePassword`、`keyAlias`、`keyPassword`，已被 git 忽略，与密钥库一起离线备份）；缺少该文件时产出未签名 APK。要让已安装的测试版直接覆盖升级，release 需继续使用原固定签名。
+
 `local.properties` 仅写本机 `sdk.dir`，不提交。工具链可置于项目输出目录，无需修改全局环境。JNI 编译 arm64-v8a 和 x86_64，原型 APK 使用开发调试签名，本地交付不代表商店发布。
 
 固定的 NDK Windows 下载来自 [Android 官方](https://developer.android.com/ndk/downloads)，r30 ZIP SHA-1 为 `9bf167a1985fa7d4a036186b78f702eab9179408`。构建脚本不自动下载和安装全局工具。

@@ -83,8 +83,15 @@ public final class PhoneticIME extends InputMethodService {
                     for (int i=0; i<choices.length(); i++) { JSONObject choice = choices.getJSONObject(i);
                         menu.getMenu().add(0,i,i,choice.getString("name")).setCheckable(true).setChecked(choice.getString("id").equals(model.engine.ruleId())); }
                     menu.setOnMenuItemClickListener(item -> {
-                        try { model.engine.selectRule(choices.getJSONObject(item.getItemId()).getString("id")); model.refresh(); }
-                        catch (Exception error) { model.status = error.getMessage(); candidates(); }
+                        // Parse the rule table off the UI thread, then refresh on it.
+                        final String id;
+                        try { id = choices.getJSONObject(item.getItemId()).getString("id"); }
+                        catch (Exception error) { model.status = error.getMessage(); candidates(); return true; }
+                        android.os.Handler ui = new android.os.Handler(android.os.Looper.getMainLooper());
+                        java.util.concurrent.CompletableFuture.runAsync(() -> {
+                            try { model.engine.selectRule(id); ui.post(model::refresh); }
+                            catch (Exception error) { ui.post(() -> { model.status = error.getMessage(); candidates(); }); }
+                        });
                         return true;
                     }); menu.show();
                 } catch (Exception error) { model.status = error.getMessage(); candidates(); }
@@ -112,7 +119,7 @@ public final class PhoneticIME extends InputMethodService {
                 Button word = item.symbol() ? UI.ipaButton(this, (i + 1) + "  " + UI.displaySymbol(item.word), () -> model.choose(index, false)) : UI.button(this, (i + 1) + "  " + item.word, () -> model.choose(index, false));
                 word.setTextSize(android.util.TypedValue.COMPLEX_UNIT_DIP, item.symbol() ? 21 : 17); if (item.symbol()) word.setTypeface(UI.ipa(this)); word.setContentDescription("hanzi-" + item.word + "-" + item.canonical); UI.full(card, word, item.symbol() ? keyHeight(34, 28) : keyHeight(30, 26));
                 if (!item.symbol()) {
-                    String value = item.ipa().isEmpty() ? (item.reading.optBoolean("ambiguous") ? "选择读音…" : "暂无音标") : item.ipa();
+                    String value = item.ipa().isEmpty() ? (item.ambiguous() ? "选择读音…" : "暂无音标") : item.ipa();
                     Button ipa = UI.ipaButton(this, value, () -> model.choose(index, true)); ipa.setTextSize(android.util.TypedValue.COMPLEX_UNIT_DIP, 23); ipa.setTypeface(UI.ipa(this)); ipa.setTextColor(UI.ACCENT); ipa.setContentDescription("ipa-" + item.word + "-" + item.canonical);
                     ipa.setOnLongClickListener(v -> { model.reopen(index); return true; }); UI.full(card, ipa, keyHeight(36, 26));
                 }
@@ -140,7 +147,7 @@ public final class PhoneticIME extends InputMethodService {
         }
         UI.full(keyPanel, digits, -2);
         JSONObject mappings;
-        try { mappings = model.engine.profile().getJSONObject("sequences"); } catch (Exception e) { mappings = new JSONObject(); }
+        mappings = model.engine.sequences();
         for (String row : symbols ? new String[]{"-/:;()$&@", "[]{}#%^*+=", ".,?!'\\_~<>"} : new String[]{"qwertyuiop", "asdfghjkl", "zxcvbnm"}) {
             LinearLayout keys = UI.row(this);
             if (row.equals("asdfghjkl")) keys.setPadding(UI.dp(this, 16), 0, UI.dp(this, 16), 0);
@@ -148,7 +155,7 @@ public final class PhoneticIME extends InputMethodService {
             for (char c : row.toCharArray()) {
                 String key = uppercase ? ("" + c).toUpperCase(Locale.ROOT) : "" + c;
                 JSONArray values = mappings.optJSONArray(key); String output = !model.pinyin && values != null ? values.optString(0, key) : key;
-                boolean chooser = !model.pinyin && directOutput(key, mappings) == null;
+                boolean chooser = !model.pinyin && model.engine.directOutput(key) == null;
                 Button b = UI.ipaButton(this, UI.displaySymbol(output), () -> typeKey(key)); b.setTypeface(UI.ipa(this)); b.setTextSize(android.util.TypedValue.COMPLEX_UNIT_DIP, 25); b.setContentDescription("key-" + c);
                 b.setOnLongClickListener(v -> { showSymbols(key); return true; });
                 if (android.os.Build.VERSION.SDK_INT >= 30) b.setStateDescription(model.pinyin ? "输入拼音" : chooser ? "多个音标，点按选择" : "单个符号，点按直接输入");
@@ -191,7 +198,7 @@ public final class PhoneticIME extends InputMethodService {
         if (model.pinyin) model.append(key);
         else if (!model.raw.isEmpty()) { model.status = "先确认当前候选，再输入音标"; candidates(); }
         else {
-            try { String direct = directOutput(key, model.engine.profile().getJSONObject("sequences"));
+            try { String direct = model.engine.directOutput(key);
                 if (direct != null) { model.commit.accept(direct); model.clear(); } else showSymbols(key);
             } catch (Exception error) { model.status = error.getMessage(); candidates(); }
         }
@@ -199,12 +206,6 @@ public final class PhoneticIME extends InputMethodService {
     private void typeDigit(String digit) {
         if (digit.equals("0") && !model.pinyin && model.raw.isEmpty()) typeKey(digit);
         else model.digit(digit);
-    }
-    private String directOutput(String key, JSONObject mappings) {
-        JSONArray values = mappings.optJSONArray(key);
-        if (values != null && values.length() != 1) return null;
-        for (Iterator<String> it = mappings.keys(); it.hasNext();) { String code = it.next(); if (!code.equals(key) && code.startsWith(key)) return null; }
-        return values == null ? key : values.optString(0, key);
     }
     private void showPlus() {
         if (!model.raw.isEmpty()) { model.status = "先确认当前候选，再打开音标表"; candidates(); return; }
@@ -224,7 +225,7 @@ public final class PhoneticIME extends InputMethodService {
         if (!model.raw.isEmpty()) { model.status = "先确认当前候选，再选择音标"; candidates(); return; }
         try {
             dismissSymbols();
-            symbolPicker = SymbolPicker.create(this, key, model.engine.profile().getJSONObject("sequences"), output -> {
+            symbolPicker = SymbolPicker.create(this, key, model.engine.sequences(), output -> {
                 dismissSymbols(); model.commit.accept(output); model.clear();
             }, this::dismissSymbols);
             symbolPicker.setPadding(UI.dp(this, 8), UI.dp(this, 6), UI.dp(this, 8), root.getPaddingBottom());

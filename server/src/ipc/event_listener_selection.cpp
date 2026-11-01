@@ -103,6 +103,20 @@ void LearnEnglishSlot(const WordItem &selected, size_t absolute_index, uint64_t 
                                                    static_cast<int>(absolute_index), client_id, activation_epoch);
     }
 }
+// Restores an unconsumed spelling exactly, including apostrophes and helpcode
+// markers. Replaying it key by key would turn ' into VK_RIGHT (0x27) and drop
+// it, leaving the server segmentation out of step with the TSF buffer.
+void RestoreIpaComposition(const std::string &raw)
+{
+    if (raw.empty())
+        return;
+    g_inputSession->set_pinyin_sequence(raw);
+    g_inputSession->set_pinyin_sequence_with_cases(raw);
+    g_inputSession->recompute_candidates();
+    GlobalIme::composition.raw_input_with_cases = g_inputSession->get_pinyin_sequence_with_cases();
+    GlobalIme::composition.segmented_pinyin = g_inputSession->get_pinyin_segmentation_with_cases();
+    GlobalIme::composition.caret_position = GlobalIme::composition.raw_input_with_cases.size();
+}
 } // namespace
 
 namespace FanyNamedPipe
@@ -127,29 +141,40 @@ bool ProcessIpaSelection(int index_in_page, uint64_t client_id, uint64_t activat
     const auto word = CandidateTextForOutput(item.word);
     if (HelpcodeUtils::count_han_chars(word) == 0)
         return false;
-    const auto transcription = g_ipa_readings.Resolve(PhoneticIpa::Hanzi(), word, item.canonical_pinyin);
+    const auto transcription = g_ipa_readings.Resolve(*PhoneticIpa::Hanzi(), word, item.canonical_pinyin);
     if (transcription.ambiguous)
     {
         EnterIpaReadingPage(index_in_page);
         return true;
     }
+    // No complete IPA (letters such as 卡拉OK, rare characters, a rule table that
+    // failed to load). The candidate line already says so; commit the Hanzi
+    // through the normal path instead of swallowing the key.
     if (transcription.text.empty())
-        return true;
+        return false;
     const std::string raw = g_inputSession->get_pinyin_sequence_with_cases();
     const auto transition =
         g_inputSession->advance_composition_after_selection(item.pinyin, item.word, item.canonical_pinyin, item.scheme);
     const std::string rest = transition.continues_composition ? g_inputSession->get_pinyin_sequence_with_cases() : "";
-    const size_t consumed =
-        transition.continues_composition ? transition.consumed_raw_input_with_cases.size() : raw.size();
+    // The engine drops separators that lead the rest (wo'men -> consumed "wo",
+    // rest "men"), so the TSF must also trim those apostrophes: consumed covers
+    // everything before the rest, and the gap may only hold separators.
+    size_t consumed = raw.size();
+    if (transition.continues_composition)
+    {
+        const auto &prefix = transition.consumed_raw_input_with_cases;
+        const bool rest_is_suffix =
+            rest.size() < raw.size() && raw.compare(raw.size() - rest.size(), rest.size(), rest) == 0;
+        consumed = rest_is_suffix ? raw.size() - rest.size() : 0;
+        if (consumed < prefix.size() || raw.compare(0, prefix.size(), prefix) != 0 ||
+            raw.find_first_not_of('\'', prefix.size()) < consumed)
+            consumed = 0;
+    }
     const bool valid_transition = consumed > 0 && consumed <= raw.size() && raw.substr(consumed) == rest;
     if (!valid_transition)
     {
         ClearState();
-        for (unsigned char c : raw)
-            g_inputSession->handle_key(c >= 'a' && c <= 'z' ? c - 'a' + 'A' : c, 0, c);
-        GlobalIme::composition.raw_input_with_cases = raw;
-        GlobalIme::composition.segmented_pinyin = g_inputSession->get_pinyin_segmentation_with_cases();
-        GlobalIme::composition.caret_position = raw.size();
+        RestoreIpaComposition(raw);
         PrepareCandidateList(client_id, activation_epoch);
         RequestShowCandidateWindow();
         return true;
@@ -165,14 +190,10 @@ bool ProcessIpaSelection(int index_in_page, uint64_t client_id, uint64_t activat
     // Rebuild just the unconsumed spelling. IPA selections do not teach IPA
     // strings to the Hanzi dictionary or create a mixed Hanzi/IPA word.
     ClearState();
-    const std::string &remaining = sent ? rest : raw;
-    for (unsigned char c : remaining)
-        g_inputSession->handle_key(c >= 'a' && c <= 'z' ? c - 'a' + 'A' : c, 0, c);
+    const std::string remaining = sent ? rest : raw;
     if (!remaining.empty())
     {
-        GlobalIme::composition.raw_input_with_cases = g_inputSession->get_pinyin_sequence_with_cases();
-        GlobalIme::composition.segmented_pinyin = g_inputSession->get_pinyin_segmentation_with_cases();
-        GlobalIme::composition.caret_position = remaining.size();
+        RestoreIpaComposition(remaining);
         PrepareCandidateList(client_id, activation_epoch);
         RequestShowCandidateWindow();
     }

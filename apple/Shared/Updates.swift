@@ -63,7 +63,7 @@ private final class UpdateRedirectPolicy: NSObject, URLSessionTaskDelegate {
 
 @MainActor final class UpdateStore: ObservableObject {
     static let shared = UpdateStore()
-    static let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.1.7"
+    static let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.1.8"
     static let sources = [
         "https://www.phonetictoolbox.com/releases/phonetic-ipa-ime/update.json",
         "https://raw.githubusercontent.com/Nephelium/phonetic-ipa-ime/ipa-prototype/updates/latest.json"
@@ -115,8 +115,11 @@ private final class UpdateRedirectPolicy: NSObject, URLSessionTaskDelegate {
         if ProcessInfo.processInfo.environment["IPA_UPDATE_DISABLE_NETWORK"] == "1" { return }
         let now = Date().timeIntervalSince1970
         if !manual {
+            // Either source answering counts as a check; total failures back off from 10 minutes to a day.
+            let failures = defaults.integer(forKey: "ipa.update.failures")
+            let retry = min(86_400, 600 * pow(2, Double(min(failures, 8))))
             guard automatic, now - defaults.double(forKey: "ipa.update.success") >= 86_400,
-                  now - defaults.double(forKey: "ipa.update.attempt") >= 600 else { return }
+                  now - defaults.double(forKey: "ipa.update.attempt") >= retry else { return }
         }
         checking = true; status = "正在检查官网与 GitHub…"
         defaults.set(now, forKey: "ipa.update.attempt")
@@ -127,9 +130,12 @@ private final class UpdateRedirectPolicy: NSObject, URLSessionTaskDelegate {
             return values
         }
         checking = false
-        guard let newest = UpdateFeed.newest(feeds) else { status = "暂时无法连接更新服务，请稍后重试"; return }
-        // A failed source gets a short retry window instead of being treated as current for a day.
-        if feeds.count == Self.sources.count { defaults.set(now, forKey: "ipa.update.success") }
+        guard let newest = UpdateFeed.newest(feeds) else {
+            defaults.set(min(defaults.integer(forKey: "ipa.update.failures") + 1, 16), forKey: "ipa.update.failures")
+            status = "暂时无法连接更新服务，请稍后重试"; return
+        }
+        defaults.set(now, forKey: "ipa.update.success")
+        defaults.set(0, forKey: "ipa.update.failures")
         if ReleaseVersion(newest.version)! > ReleaseVersion(Self.version)! {
             if latest == nil || ReleaseVersion(newest.version)! >= ReleaseVersion(latest!.version)! {
                 latest = newest; defaults.set(try? JSONEncoder().encode(newest), forKey: "ipa.update.latest")

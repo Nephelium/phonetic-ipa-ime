@@ -15,6 +15,7 @@ static void SetError(NSError **error, const char *message) {
     phonetic_ipa::CinTable _cin;
     phonetic_ipa::HanziTable _table;
     sqlite3 *_database;
+    sqlite3_stmt *_readings;
     std::filesystem::path _root;
 }
 - (instancetype)initWithResourcePath:(NSString *)path error:(NSError **)error {
@@ -28,6 +29,9 @@ static void SetError(NSError **error, const char *message) {
             if (sqlite3_open_v2((root / "lookup.sqlite").c_str(), &_database, SQLITE_OPEN_READONLY, nullptr) != SQLITE_OK)
                 throw std::runtime_error("无法打开拼音和词语读音资料");
             sqlite3_exec(_database, "PRAGMA cache_size=-1024", nullptr, nullptr, nullptr);
+            // Prepared once; transcription is called for every visible candidate.
+            if (sqlite3_prepare_v2(_database, "SELECT reading FROM readings WHERE word=?", -1, &_readings, nullptr) != SQLITE_OK)
+                throw std::runtime_error("无法读取词语读音资料");
         } catch (const std::exception &exception) {
             SetError(error, exception.what());
             return nil;
@@ -47,21 +51,20 @@ static void SetError(NSError **error, const char *message) {
           _table = std::move(next); return YES; }
     catch (const std::exception &exception) { SetError(error, exception.what()); return NO; }
 }
-- (void)dealloc { if (_database) sqlite3_close(_database); }
+- (void)dealloc { if (_readings) sqlite3_finalize(_readings); if (_database) sqlite3_close(_database); }
 - (NSDictionary *)transcription:(NSString *)word canonical:(NSString *)canonical {
     std::vector<std::vector<std::string>> readings;
-    sqlite3_stmt *statement = nullptr;
-    if (sqlite3_prepare_v2(_database, "SELECT reading FROM readings WHERE word=?", -1, &statement, nullptr) == SQLITE_OK) {
-        sqlite3_bind_text(statement, 1, word.UTF8String, -1, SQLITE_TRANSIENT);
-        while (sqlite3_step(statement) == SQLITE_ROW) {
-            std::istringstream stream(reinterpret_cast<const char *>(sqlite3_column_text(statement, 0)));
-            std::vector<std::string> parts;
-            std::string part;
-            while (std::getline(stream, part, '\'')) parts.push_back(part);
-            readings.push_back(std::move(parts));
-        }
+    sqlite3_reset(_readings);
+    sqlite3_clear_bindings(_readings);
+    sqlite3_bind_text(_readings, 1, word.UTF8String, -1, SQLITE_TRANSIENT);
+    while (sqlite3_step(_readings) == SQLITE_ROW) {
+        std::istringstream stream(reinterpret_cast<const char *>(sqlite3_column_text(_readings, 0)));
+        std::vector<std::string> parts;
+        std::string part;
+        while (std::getline(stream, part, '\'')) parts.push_back(part);
+        readings.push_back(std::move(parts));
     }
-    sqlite3_finalize(statement);
+    sqlite3_reset(_readings);
     const auto value = _table.ConvertWithWordReadings(word.UTF8String, canonical.UTF8String, readings);
     NSMutableArray *parts = [NSMutableArray array];
     for (const auto &part : value.parts) {
@@ -84,14 +87,16 @@ static void SetError(NSError **error, const char *message) {
     sqlite3_stmt *statement = nullptr;
     const char *sql = "SELECT word,canonical FROM candidates WHERE code=? ORDER BY weight DESC,word,canonical LIMIT 180";
     if (sqlite3_prepare_v2(_database, sql, -1, &statement, nullptr) == SQLITE_OK) {
+        // Same spelling normalization as Android: apostrophes dropped, ü and u: written as v.
         NSString *normalized = [[code lowercaseString] stringByReplacingOccurrencesOfString:@"'" withString:@""];
+        normalized = [[normalized stringByReplacingOccurrencesOfString:@"ü" withString:@"v"]
+            stringByReplacingOccurrencesOfString:@"u:" withString:@"v"];
         sqlite3_bind_text(statement, 1, normalized.UTF8String, -1, SQLITE_TRANSIENT);
         while (sqlite3_step(statement) == SQLITE_ROW) {
+            // Readings are resolved per visible page by InputModel.
             NSString *word = @((const char *)sqlite3_column_text(statement, 0));
             NSString *canonical = @((const char *)sqlite3_column_text(statement, 1));
-            NSDictionary *reading = [self transcription:word canonical:canonical];
-            [result addObject:@{@"word": word, @"canonical": canonical, @"ipa": reading[@"text"],
-                               @"reading": reading, @"symbol": @NO}];
+            [result addObject:@{@"word": word, @"canonical": canonical, @"symbol": @NO}];
         }
     }
     sqlite3_finalize(statement);

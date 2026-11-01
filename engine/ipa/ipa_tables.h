@@ -7,6 +7,7 @@
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace phonetic_ipa
@@ -105,7 +106,9 @@ class CinTable
             if (split == std::string::npos)
                 throw std::runtime_error("Invalid CIN row");
             const auto value = line[split] == '\t' ? split + 1 : line.find_first_not_of("\t ", split);
-            if (value != std::string::npos)
+            // Empty outputs such as "a<TAB>" are dropped on every platform, matching
+            // the space-delimited form instead of producing a blank candidate.
+            if (value != std::string::npos && value < line.size())
                 entries_[line.substr(0, split)].push_back(line.substr(value));
         }
         if (body || entries_.empty())
@@ -157,47 +160,78 @@ class CinTable
 
 // Each caller owns its cache; complete replacement keeps a malformed update from
 // invalidating an already usable map. The editor validates before atomic publication.
+// Lookup order is active.cin, default.cin, ipa.cin. A file that fails to load is
+// remembered by path and timestamp so it is not reparsed until it changes, and the
+// next file in that order is used instead of refusing to start.
 class LiveCinTable
 {
   public:
     const CinTable &Get(const std::filesystem::path &directory)
     {
-        std::error_code error;
-        auto path = directory / "active.cin";
-        if (!std::filesystem::is_regular_file(path, error))
+        active_failed_ = false;
+        for (const char *name : {"active.cin", "default.cin", "ipa.cin"})
         {
-            path = directory / "default.cin";
+            const auto path = directory / name;
+            std::error_code error;
             if (!std::filesystem::is_regular_file(path, error))
-                path = directory / "ipa.cin";
+                continue;
+            const auto stamp = std::filesystem::last_write_time(path, error);
+            if (error)
+                continue;
+            if (path == path_ && stamp == stamp_)
+                return table_;
+            if (!KnownFailure(path, stamp) && TryLoad(path, stamp))
+                return table_;
+            if (path == path_)
+                return table_; // Keep the last good version of the same file.
+            if (std::string_view(name) == "active.cin")
+                active_failed_ = true;
         }
-        const auto stamp = std::filesystem::last_write_time(path, error);
-        if (error && path_.empty())
-            throw std::runtime_error("Cannot locate IPA CIN table");
-        if (!error && (path != path_ || stamp != stamp_))
-        {
-            try
-            {
-                if (std::filesystem::file_size(path) > 4 * 1024 * 1024)
-                    throw std::runtime_error("IPA CIN file exceeds 4 MB");
-                CinTable next;
-                next.Load(path);
-                table_ = std::move(next);
-                path_ = path;
-                stamp_ = stamp;
-            }
-            catch (...)
-            {
-                if (path_.empty())
-                    throw;
-            }
-        }
-        return table_;
+        if (!path_.empty())
+            return table_;
+        throw std::runtime_error("Cannot load any IPA CIN table");
+    }
+    // True when active.cin exists but could not be loaded during the last Get().
+    bool ActiveFailed() const
+    {
+        return active_failed_;
+    }
+    const std::filesystem::path &LoadedPath() const
+    {
+        return path_;
     }
 
   private:
+    bool KnownFailure(const std::filesystem::path &path, std::filesystem::file_time_type stamp) const
+    {
+        const auto found = failures_.find(path.native());
+        return found != failures_.end() && found->second == stamp;
+    }
+    bool TryLoad(const std::filesystem::path &path, std::filesystem::file_time_type stamp)
+    {
+        try
+        {
+            if (std::filesystem::file_size(path) > 4 * 1024 * 1024)
+                throw std::runtime_error("IPA CIN file exceeds 4 MB");
+            CinTable next;
+            next.Load(path);
+            table_ = std::move(next);
+            path_ = path;
+            stamp_ = stamp;
+            failures_.erase(path.native());
+            return true;
+        }
+        catch (...)
+        {
+            failures_[path.native()] = stamp;
+            return false;
+        }
+    }
     CinTable table_;
     std::filesystem::path path_;
     std::filesystem::file_time_type stamp_{};
+    std::map<std::filesystem::path::string_type, std::filesystem::file_time_type> failures_;
+    bool active_failed_ = false;
 };
 
 } // namespace phonetic_ipa

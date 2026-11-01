@@ -433,6 +433,9 @@ struct CandidatePageSnapshot
     std::vector<std::wstring> page_words;
     std::wstring candidate_string;
     std::wstring input_hint;
+    // Entry hints for tone:/code: hide selection numbers because digits are
+    // input there; a transient hint keeps them.
+    bool input_hint_hides_labels = true;
     int page_index = 0;
     int selected_index_in_page = 0;
     // page_count mirrors current_page_count() and page_item_count mirrors cur_page_item_cnt. Both are carried because

@@ -64,6 +64,8 @@ import SwiftUI
     private let model = InputModel()
     private var panel: NSPanel?
     private var shiftArmed = false
+    private var shiftArmedAt = Date.distantPast
+    private var shiftMouseCount: UInt32 = 0
     private var lastCapsLock: Bool?
     private weak var inputClient: (any IMKTextInput)?
     override init!(server: IMKServer!, delegate: Any!, client inputClient: Any!) {
@@ -78,8 +80,14 @@ import SwiftUI
         guard !model.raw.isEmpty else { return }
         inputClient = sender as? any IMKTextInput
         if model.pending != nil { model.pending = nil }
-        if model.candidates.isEmpty { model.onCommit(model.raw); model.clear() }
-        else { model.chooseDefault(model.selectedIndex) }
+        model.commitOnFocusLoss()
+    }
+    // Counts mouse presses system-wide without extra permissions, so a
+    // Shift+click (extend selection) does not count as a lone Shift tap.
+    private static func mouseDownCount() -> UInt32 {
+        [CGEventType.leftMouseDown, .rightMouseDown, .otherMouseDown].reduce(UInt32(0)) {
+            $0 &+ CGEventSource.counterForEventType(.combinedSessionState, eventType: $1)
+        }
     }
     override func recognizedEvents(_ sender: Any!) -> Int { Int(NSEvent.EventTypeMask.keyDown.rawValue | NSEvent.EventTypeMask.flagsChanged.rawValue) }
     override func handle(_ event: NSEvent!, client sender: Any!) -> Bool {
@@ -90,17 +98,32 @@ import SwiftUI
         if lastCapsLock != caps { model.outputIpa = !caps; lastCapsLock = caps }
         if event.type == .flagsChanged {
             if event.keyCode == 56 || event.keyCode == 60 {
-                if flags.contains(.shift) { shiftArmed = flags.intersection([.command, .option, .control]).isEmpty }
-                else if shiftArmed { shiftArmed = false; model.toggleMode() }
+                if flags.contains(.shift) {
+                    shiftArmed = flags.intersection([.command, .option, .control]).isEmpty
+                    shiftArmedAt = Date(); shiftMouseCount = Self.mouseDownCount()
+                } else if shiftArmed {
+                    shiftArmed = false
+                    if Date().timeIntervalSince(shiftArmedAt) < 0.6 && Self.mouseDownCount() == shiftMouseCount {
+                        model.toggleMode()
+                    }
+                }
             } else { shiftArmed = false }
             model.onChange()
-            return true
+            // Modifier changes still belong to the host application.
+            return false
         }
         shiftArmed = false
         if flags.contains(.command) || flags.contains(.option) { return false }
         if event.keyCode == 49 && flags.contains(.shift) { model.toggleMode(); return true }
         let digits: [UInt16: String] = [18:"1",19:"2",20:"3",21:"4",23:"5"]
-        if flags.contains(.shift), !flags.contains(.control), let digit = digits[event.keyCode] { model.tone(digit); return true }
+        if flags.contains(.shift), !flags.contains(.control), let digit = digits[event.keyCode] {
+            // Hanzi output (Caps Lock) keeps Shift+1..5 as ! @ # $ % for the host.
+            if model.pinyin && !model.outputIpa {
+                if !model.raw.isEmpty { model.chooseDefault(model.selectedIndex) }
+                return false
+            }
+            model.tone(digit); return true
+        }
         if event.keyCode == 36 && flags.contains(.control) {
             let hadComposition = !model.raw.isEmpty
             if flags.contains(.shift) { model.reopenReading(model.selectedIndex) }

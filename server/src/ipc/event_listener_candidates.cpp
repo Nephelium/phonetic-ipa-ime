@@ -298,6 +298,10 @@ std::string BuildCurrentCandidatePage()
 
     const int start = ui.current_page_start();
     const int loop = ui.current_page_count();
+    // One table lookup per page, not per candidate.
+    const bool ipa_page = !g_english_input_mode && !translation_page;
+    const auto hanzi = ipa_page ? PhoneticIpa::Hanzi() : nullptr;
+    const bool hanzi_failed = ipa_page && PhoneticIpa::HanziFailed();
 
     int maxCount = 0;
     std::string candidate_string;
@@ -330,11 +334,14 @@ std::string BuildCurrentCandidatePage()
         }
         else if (!g_english_input_mode && !translation_page)
         {
-            const auto transcription = g_ipa_readings.Resolve(PhoneticIpa::Hanzi(), word, item.canonical_pinyin);
+            const auto transcription = g_ipa_readings.Resolve(*hanzi, word, item.canonical_pinyin);
             view.ipa = transcription.text;
             view.ipa_committable = !transcription.text.empty();
             view.ipa_can_choose = transcription.CanChoose();
             view.ipa_needs_choice = transcription.ambiguous;
+            // Selecting such a candidate commits the Hanzi; say so before the key press.
+            if (transcription.text.empty() && !transcription.ambiguous && HelpcodeUtils::count_han_chars(word) > 0)
+                view.ipa_hint = hanzi_failed ? u8"规则表载入失败 · 选择输入汉字" : u8"暂无音标 · 选择输入汉字";
         }
         if (show_autocorrect_marker && !item.corrected_from.empty())
         {
@@ -498,6 +505,8 @@ void PrepareCandidateTranslationRequest()
 // Copy the page the worker just finished into an immutable snapshot for the UI thread. This is the single publish
 // point: set_items() and clear_page() are only intermediate steps of a rebuild, so publishing there would hand the UI a
 // half-built page.
+std::wstring g_candidate_transient_hint;
+
 void PublishBuiltCandidatePage(const std::wstring &candidate_string)
 {
     const auto &ui = Global::candidate_ui;
@@ -510,6 +519,12 @@ void PublishBuiltCandidatePage(const std::wstring &candidate_string)
     if (g_english_input_mode && g_inputSession)
         snapshot->input_hint =
             string_to_wstring(phonetic_ipa::EntryHint(g_inputSession->get_pinyin_sequence_with_cases()));
+    if (!g_candidate_transient_hint.empty())
+    {
+        snapshot->input_hint = std::move(g_candidate_transient_hint);
+        snapshot->input_hint_hides_labels = false;
+        g_candidate_transient_hint.clear();
+    }
     snapshot->page_index = ui.page_index;
     snapshot->selected_index_in_page = ui.selected_index_in_page;
     snapshot->page_count = ui.current_page_count();
@@ -554,7 +569,7 @@ bool EnterIpaReadingPage(int index_in_page)
         static_cast<size_t>(index_in_page) >= ui.page_views.size() || !ui.page_views[index_in_page].ipa_can_choose)
         return false;
     const auto &item = ui.items[ui.current_page_start() + index_in_page];
-    if (!g_ipa_readings.Begin(PhoneticIpa::Hanzi(), CandidateTextForOutput(item.word), item.canonical_pinyin))
+    if (!g_ipa_readings.Begin(*PhoneticIpa::Hanzi(), CandidateTextForOutput(item.word), item.canonical_pinyin))
         return false;
     g_translation_saved_items = ui.items;
     g_translation_saved_page_index = ui.page_index;
@@ -584,6 +599,12 @@ bool SelectIpaReading(int index_in_page)
     else
         FanyNamedPipe::ExitCandidateSubPage();
     return true;
+}
+
+void ShowCandidateTransientHint(const std::wstring &hint)
+{
+    g_candidate_transient_hint = hint;
+    RefreshCandidatePageUi(true);
 }
 
 void RefreshCandidatePageUi(bool show_window)

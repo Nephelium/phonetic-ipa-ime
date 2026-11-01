@@ -1,4 +1,4 @@
-param([string]$TestData = '')
+param([string]$TestData = '', [string]$ServerBin = '')
 $ErrorActionPreference = 'Stop'
 $taskRoot = Split-Path $PSScriptRoot -Parent
 if (!$TestData) {
@@ -11,14 +11,17 @@ if ($resolvedData -eq (Resolve-Path -LiteralPath "$taskRoot\output\runtime\data"
 foreach ($name in @('beijing-toned.tsv', 'word-readings.tsv', 'CC-CEDICT-README.txt', 'readings-provenance.json')) {
     Copy-Item -LiteralPath "$taskRoot\output\runtime\data\ipa\$name" -Destination "$resolvedData\ipa\$name"
 }
+Get-ChildItem -LiteralPath "$taskRoot\output\runtime\data\ipa" -File | Where-Object { $_.Name -like 'hanzi-rule*.tsv' -or $_.Name -eq 'Rules-SOURCES.json' } | ForEach-Object {
+    Copy-Item -LiteralPath $_.FullName -Destination "$resolvedData\ipa\$($_.Name)"
+}
 if (Get-Process -Name PhoneticIpaServer -ErrorAction SilentlyContinue) {
     throw 'A prototype server is already running. Leave it untouched and run this check after it exits.'
 }
-$savedData = $env:METASEQUOIA_IME_DATA_DIR
-$savedConfig = $env:METASEQUOIA_IME_CONFIG_DIR
-$env:METASEQUOIA_IME_DATA_DIR = $resolvedData
-$env:METASEQUOIA_IME_CONFIG_DIR = $resolvedData
-$bin = "$taskRoot\output\build-server\bin\Release"
+$savedData = $env:PHONETIC_IPA_DATA_DIR
+$savedConfig = $env:PHONETIC_IPA_CONFIG_DIR
+$env:PHONETIC_IPA_DATA_DIR = $resolvedData
+$env:PHONETIC_IPA_CONFIG_DIR = $resolvedData
+$bin = if ($ServerBin) { (Resolve-Path -LiteralPath $ServerBin).Path } else { "$taskRoot\output\build-server\bin\Release" }
 $ownedProcess = Start-Process -FilePath "$bin\PhoneticIpaServer.exe" -ArgumentList '--watchdog-managed --pipe-probe' -WorkingDirectory $bin -WindowStyle Hidden -PassThru
 try {
     foreach ($arch in @('x64', 'Win32')) {
@@ -32,6 +35,6 @@ try {
         Stop-Process -Id $ownedProcess.Id
         $ownedProcess.WaitForExit(10000) | Out-Null
     }
-    $env:METASEQUOIA_IME_DATA_DIR = $savedData
-    $env:METASEQUOIA_IME_CONFIG_DIR = $savedConfig
+    $env:PHONETIC_IPA_DATA_DIR = $savedData
+    $env:PHONETIC_IPA_CONFIG_DIR = $savedConfig
 }

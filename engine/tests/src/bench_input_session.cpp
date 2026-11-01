@@ -2,7 +2,7 @@
 //
 // Not a test: it asserts nothing and is not registered with ctest. Run it by
 // hand to see what one key costs under each sentence-association setting, e.g.
-//   set METASEQUOIA_IME_DATA_DIR=<a copy of the data directory>
+//   set PHONETIC_IPA_DATA_DIR=<a copy of the data directory>
 //   bench_input_session [repeats]
 // It only types and resets; it never selects a candidate, so it does not write
 // to the user journal. Still, point it at a copy of the data directory.

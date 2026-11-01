@@ -366,7 +366,9 @@ std::uint64_t CandidatePresenter::FillItemsFromUi()
     {
         const auto &view = page->page_views[i];
         msimeui::CandidateList::Item item;
-        item.label = (page->input_hint.empty() || view.ipa_reading_option) ? std::to_wstring(i + 1) : L"";
+        item.label = (page->input_hint.empty() || !page->input_hint_hides_labels || view.ipa_reading_option)
+                         ? std::to_wstring(i + 1)
+                         : L"";
         item.text = string_to_wstring(view.text + view.badge);
         if (view.ipa_primary)
             item.textFontFamily = L"PTB IPA Plus";
@@ -380,6 +382,11 @@ std::uint64_t CandidatePresenter::FillItemsFromUi()
         {
             item.translation = string_to_wstring(view.ipa);
             item.secondaryFontFamily = L"PTB IPA Plus";
+            item.secondaryIsIpa = true;
+        }
+        else if (!view.ipa_hint.empty())
+        {
+            item.translation = string_to_wstring(view.ipa_hint);
             item.secondaryIsIpa = true;
         }
         else if (translationsEnabled)

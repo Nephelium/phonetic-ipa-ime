@@ -63,7 +63,7 @@ class ScopedDataRoot
     {
         wchar_t *previous = nullptr;
         size_t size = 0;
-        if (_wdupenv_s(&previous, &size, L"METASEQUOIA_IME_DATA_DIR") == 0 && previous)
+        if (_wdupenv_s(&previous, &size, L"PHONETIC_IPA_DATA_DIR") == 0 && previous)
         {
             had_previous_ = true;
             previous_ = previous;
@@ -75,11 +75,11 @@ class ScopedDataRoot
         std::filesystem::remove_all(root_, ec);
         std::filesystem::create_directories(custom_directory(), ec);
         REQUIRE(!ec);
-        _wputenv_s(L"METASEQUOIA_IME_DATA_DIR", root_.c_str());
+        _wputenv_s(L"PHONETIC_IPA_DATA_DIR", root_.c_str());
     }
     ~ScopedDataRoot()
     {
-        _wputenv_s(L"METASEQUOIA_IME_DATA_DIR", had_previous_ ? previous_.c_str() : L"");
+        _wputenv_s(L"PHONETIC_IPA_DATA_DIR", had_previous_ ? previous_.c_str() : L"");
         std::error_code ec;
         std::filesystem::remove_all(root_, ec);
     }

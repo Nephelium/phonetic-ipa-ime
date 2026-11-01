@@ -536,7 +536,10 @@ BOOL CMetasequoiaIME::_IsKeyEaten(         //
         }
 
         if ((GetAsyncKeyState(VK_LWIN) & 0x8000) == 0 && (GetAsyncKeyState(VK_RWIN) & 0x8000) == 0 &&
-            (PhoneticIpaKey::IsToneShortcut(*pCodeOut, shortcutModifiers) ||
+            ((PhoneticIpaKey::IsToneShortcut(*pCodeOut, shortcutModifiers) &&
+              PhoneticIpaKey::ToneShortcutApplies(
+                  (GetTemporaryJapanesePolicy() & FanyImeTemporaryJapanese::EnglishCandidates) != 0,
+                  (GetKeyState(VK_CAPITAL) & 0x0001) != 0)) ||
              ((GetTemporaryJapanesePolicy() & FanyImeTemporaryJapanese::EnglishCandidates) != 0 &&
               (freshCompositionState || pCompositionProcessorEngine->GetVirtualKeyLength() == 0) &&
               FanyUtils::HasIpaHotkey(shortcutModifiers, *pCodeOut))))

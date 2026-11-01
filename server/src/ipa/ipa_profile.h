@@ -78,7 +78,16 @@ inline phonetic_ipa::CinTable ImportProfile(const std::filesystem::path &file)
     ValidateProfile(table);
     return table;
 }
-inline void WriteProfileFile(const std::filesystem::path &path, const std::string &text)
+// Previous keeps exactly one copy of the replaced file as <name>.previous (each
+// save overwrites it); None replaces without a backup, for exports to folders the
+// user chose and for small marker files.
+enum class ProfileBackup
+{
+    None,
+    Previous,
+};
+inline void WriteProfileFile(const std::filesystem::path &path, const std::string &text,
+                             ProfileBackup backup_mode = ProfileBackup::None)
 {
     static std::atomic<unsigned> sequence{0};
     const auto suffix = std::to_wstring(GetCurrentProcessId()) + L"-" + std::to_wstring(GetTickCount64()) + L"-" +
@@ -96,8 +105,9 @@ inline void WriteProfileFile(const std::filesystem::path &path, const std::strin
         throw std::runtime_error("写入失败，原方案保留");
     if (std::filesystem::exists(path))
     {
-        const auto backup = std::filesystem::path(path.wstring() + L".backup-" + suffix);
-        if (!ReplaceFileW(path.c_str(), temporary.c_str(), backup.c_str(), 0, nullptr, nullptr))
+        const auto backup = std::filesystem::path(path.wstring() + L".previous");
+        if (!ReplaceFileW(path.c_str(), temporary.c_str(),
+                          backup_mode == ProfileBackup::Previous ? backup.c_str() : nullptr, 0, nullptr, nullptr))
             throw std::runtime_error("保存失败，原方案与临时文件均保留");
     }
     else if (!MoveFileExW(temporary.c_str(), path.c_str(), MOVEFILE_WRITE_THROUGH))

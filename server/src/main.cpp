@@ -1,4 +1,5 @@
 #include "ipa/ipa_runtime.h"
+#include "ipa/ipa_user_data.h"
 #include "utils/ipa_update.h"
 #include "msimeui/Fonts.h"
 #include "ipc/event_listener.h"
@@ -31,6 +32,7 @@
 #include "session/session_factory.h"
 #include "statistics/stats_pipe.h"
 #include "voice-input/voice_input_service.h"
+#include "watchdog/watchdog_protocol.h"
 
 namespace
 {
@@ -121,23 +123,31 @@ int CALLBACK WinMain(_In_ HINSTANCE hInstance, _In_ HINSTANCE /*hPrevInstance*/,
     InitializeSpdLog();
     // #endif
 
+    // Copy factory resources into this account's data directory before anything reads it.
+    PhoneticIpa::UserData::Seed();
     // Initialize config
     InitImeConfig();
+    // Only a completely missing key table stops the server. A damaged active.cin
+    // falls back to default.cin inside LiveCinTable, a rule table that fails to
+    // load is retried and reported on the candidate line, and missing private
+    // fonts (or Windows before 1703 without IDWriteFactory5) fall back to system
+    // fonts. kStopExitCode keeps the watchdog from relaunching into the same error.
     try
     {
         (void)PhoneticIpa::Cin();
-        (void)PhoneticIpa::Hanzi();
-        if (!msimeui::LoadPrivateIpaFont((PhoneticIpa::ResourceRoot() / "DoulosSIL-Regular.ttf").wstring()))
-            throw std::runtime_error("Cannot load IPA font");
-        if (!msimeui::LoadPrivateIpaFont((PhoneticIpa::ResourceRoot() / "PTBIPAPlus-Regular.ttf").wstring()))
-            throw std::runtime_error("Cannot load IPA Plus font");
     }
     catch (const std::exception &)
     {
-        MessageBoxW(nullptr, L"请先运行 prepare-resources.py 准备音标字表。", L"国际音标输入法原型",
-                    MB_OK | MB_ICONERROR);
-        return 2;
+        if (!pipe_probe)
+            MessageBoxW(nullptr,
+                        L"国际音标输入法缺少音标键位资料，暂时无法启动。\n\n"
+                        L"请重新解压完整的安装包并再次运行安装程序。个人键位不会因此丢失。",
+                        L"国际音标输入法", MB_OK | MB_ICONERROR);
+        return WatchdogProtocol::kStopExitCode;
     }
+    (void)PhoneticIpa::Hanzi();
+    (void)msimeui::LoadPrivateIpaFont((PhoneticIpa::ResourceRoot() / "DoulosSIL-Regular.ttf").wstring());
+    (void)msimeui::LoadPrivateIpaFont((PhoneticIpa::ResourceRoot() / "PTBIPAPlus-Regular.ttf").wstring());
     VoiceInput::Initialize();
     Global::candidate_ui.page_size = GetConfiguredCandidatePageSize();
 

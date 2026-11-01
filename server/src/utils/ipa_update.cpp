@@ -188,7 +188,9 @@ Result Check(bool manual)
     auto now =
         std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
     Result cached{latest, latest ? L"发现新版本 " + Wide(latest->version) : L"自动检查官网与 GitHub 的新版本"};
-    if (!manual && (!Automatic() || now - Time(L"Success") < 86400 || now - Time(L"Attempt") < 600))
+    const auto failures = Time(L"Failures");
+    if (!manual && (!Automatic() || now - Time(L"Success") < kCheckIntervalSeconds ||
+                    now - Time(L"Attempt") < RetryDelaySeconds(failures)))
         return cached;
     HANDLE mutex = CreateMutexW(nullptr, FALSE, L"Local\\PhoneticIpa_UpdateCheck");
     if (!mutex)
@@ -213,8 +215,13 @@ Result Check(bool manual)
     catch (const std::exception &)
     {
     }
-    if (feeds.size() == 2)
+    if (!feeds.empty())
+    {
         Write(L"Success", std::to_string(now));
+        Write(L"Failures", "0");
+    }
+    else
+        Write(L"Failures", std::to_string(failures + 1));
     if (auto best = Newest(feeds); best && *ParseVersion(best->version) > *ParseVersion(kVersion) &&
                                    (!latest || *ParseVersion(best->version) >= *ParseVersion(latest->version)))
     {

@@ -23,7 +23,7 @@ class ScopedDataDirectory
     {
         wchar_t *previous = nullptr;
         size_t size = 0;
-        if (_wdupenv_s(&previous, &size, L"METASEQUOIA_IME_DATA_DIR") == 0 && previous != nullptr)
+        if (_wdupenv_s(&previous, &size, L"PHONETIC_IPA_DATA_DIR") == 0 && previous != nullptr)
         {
             had_previous_ = true;
             previous_ = previous;
@@ -33,11 +33,11 @@ class ScopedDataDirectory
         std::filesystem::remove_all(root_, ec);
         std::filesystem::create_directories(root_, ec);
         REQUIRE(!ec);
-        _wputenv_s(L"METASEQUOIA_IME_DATA_DIR", root_.wstring().c_str());
+        _wputenv_s(L"PHONETIC_IPA_DATA_DIR", root_.wstring().c_str());
     }
     ~ScopedDataDirectory()
     {
-        _wputenv_s(L"METASEQUOIA_IME_DATA_DIR", had_previous_ ? previous_.c_str() : L"");
+        _wputenv_s(L"PHONETIC_IPA_DATA_DIR", had_previous_ ? previous_.c_str() : L"");
         std::error_code ec;
         std::filesystem::remove_all(root_, ec);
     }

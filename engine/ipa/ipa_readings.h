@@ -3,6 +3,7 @@
 #include <filesystem>
 #include <fstream>
 #include <map>
+#include <memory>
 #include <sstream>
 #include <stdexcept>
 #include <string>
@@ -54,23 +55,24 @@ struct Transcription
 class HanziTable
 {
   public:
+    using Words = std::map<std::string, std::vector<std::vector<std::string>>>;
     void Load(const std::filesystem::path &path, bool include_word_table = true)
     {
         std::ifstream in(path, std::ios::binary);
         if (!in)
             throw std::runtime_error("Cannot read Beijing IPA table");
         entries_.clear();
-        words_.clear();
+        words_.reset();
         std::string line;
-        while (std::getline(in, line))
+        for (size_t number = 1; std::getline(in, line); ++number)
         {
-            if (!line.empty() && line.back() == '\r')
-                line.pop_back();
+            if (!CleanLine(line, number))
+                continue;
             const auto fields = Split(line, '\t');
             if (fields.size() != 3 && fields.size() != 4)
-                throw std::runtime_error("Invalid Beijing IPA row");
+                throw std::runtime_error("Invalid Beijing IPA row at line " + std::to_string(number));
             entries_[fields[0]].push_back(
-                {Normalize(fields[1]), fields[2], fields.size() == 4 ? std::stoi(fields[3]) : -1});
+                {Normalize(fields[1]), fields[2], fields.size() == 4 ? ParseTone(fields[3], number) : -1});
         }
         // Old three-column tables remain readable. Without tones/word data,
         // ambiguous characters are still explicit choices, never first-row defaults.
@@ -80,26 +82,43 @@ class HanziTable
     }
     void LoadWords(const std::filesystem::path &path)
     {
+        words_ = ReadWords(path);
+    }
+    // The word table is identical for every transcription rule. Hosts that switch
+    // rules can parse it once and share it between tables instead of reparsing.
+    static std::shared_ptr<const Words> ReadWords(const std::filesystem::path &path)
+    {
         std::ifstream in(path, std::ios::binary);
         if (!in)
             throw std::runtime_error("Cannot read word pronunciation table");
-        words_.clear();
+        auto words = std::make_shared<Words>();
         std::string line;
-        while (std::getline(in, line))
+        for (size_t number = 1; std::getline(in, line); ++number)
         {
-            if (!line.empty() && line.back() == '\r')
-                line.pop_back();
+            if (!CleanLine(line, number))
+                continue;
             const auto fields = Split(line, '\t');
             if (fields.size() != 2)
-                throw std::runtime_error("Invalid word pronunciation row");
-            words_[fields[0]].push_back(Split(fields[1], '\''));
+                throw std::runtime_error("Invalid word pronunciation row at line " + std::to_string(number));
+            (*words)[fields[0]].push_back(Split(fields[1], '\''));
         }
+        return words;
+    }
+    void SetWords(std::shared_ptr<const Words> words)
+    {
+        words_ = std::move(words);
+    }
+    const std::shared_ptr<const Words> &SharedWords() const
+    {
+        return words_;
     }
     Transcription Convert(const std::string &word, const std::string &canonical = {}) const
     {
-        const auto entry = words_.find(word);
         static const std::vector<std::vector<std::string>> empty;
-        return ConvertWithWordReadings(word, canonical, entry == words_.end() ? empty : entry->second);
+        if (!words_)
+            return ConvertWithWordReadings(word, canonical, empty);
+        const auto entry = words_->find(word);
+        return ConvertWithWordReadings(word, canonical, entry == words_->end() ? empty : entry->second);
     }
     // Mobile hosts can query only this word from an indexed store instead of
     // retaining the complete phrase dictionary in a keyboard extension's memory.
@@ -174,7 +193,22 @@ class HanziTable
         int tone;
     };
     std::map<std::string, std::vector<Reading>> entries_;
-    std::map<std::string, std::vector<std::vector<std::string>>> words_;
+    std::shared_ptr<const Words> words_;
+    // Strips CR and a leading UTF-8 BOM; returns false for blank lines.
+    static bool CleanLine(std::string &line, size_t number)
+    {
+        if (!line.empty() && line.back() == '\r')
+            line.pop_back();
+        if (number == 1 && line.compare(0, 3, "\xef\xbb\xbf") == 0)
+            line.erase(0, 3);
+        return !line.empty();
+    }
+    static int ParseTone(const std::string &field, size_t number)
+    {
+        if (field.size() != 1 || field[0] < '0' || field[0] > '5')
+            throw std::runtime_error("Invalid tone \"" + field + "\" at line " + std::to_string(number));
+        return field[0] - '0';
+    }
     static std::vector<std::string> Split(const std::string &text, char separator)
     {
         std::vector<std::string> result;

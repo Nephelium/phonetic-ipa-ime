@@ -260,7 +260,7 @@ static void CheckFirstUsePages(TestSurface &surface, const std::filesystem::path
 static int RenderPreviews(const std::filesystem::path &resources, const std::filesystem::path &destination)
 {
     CheckHr(CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED), "COM");
-    SetEnvironmentVariableW(L"METASEQUOIA_IME_DATA_DIR", resources.parent_path().c_str());
+    SetEnvironmentVariableW(L"PHONETIC_IPA_DATA_DIR", resources.parent_path().c_str());
     std::filesystem::create_directories(destination);
     msimeui::LoadPrivateIpaFont((resources / "DoulosSIL-Regular.ttf").wstring());
     msimeui::LoadPrivateIpaFont((resources / "PTBIPAPlus-Regular.ttf").wstring());

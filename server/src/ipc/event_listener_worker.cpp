@@ -613,6 +613,8 @@ void WorkerThread()
             {
                 if (!task.ipa_rule_id.empty())
                     PhoneticIpa::SetRuleId(task.ipa_rule_id);
+                else
+                    PhoneticIpa::InvalidateRuleId(); // Changed by the settings process.
                 if (g_ipa_reading_page_active)
                     ExitCandidateSubPage();
                 if (g_inputSession && !g_inputSession->get_pinyin_sequence_with_cases().empty())

@@ -5,7 +5,7 @@
 // InputSession::handle_character 的同步调用（server/src/ipc/event_listener_keys.cpp 的
 // "handle-engine" 阶段），所以这里逐键量到的就是那条同步路径。
 //
-//   set METASEQUOIA_IME_DATA_DIR=<数据目录的副本>
+//   set PHONETIC_IPA_DATA_DIR=<数据目录的副本>
 //   bench_key_latency_diag [repeats] [trim] [trim-every=<n>] [pressure=<MB>]
 //                         [purge-standby] [cpu-load=<threads>] [octagram] [model=<path>]
 //

@@ -27,7 +27,7 @@ class DataRoot
     {
         wchar_t *previous = nullptr;
         size_t size = 0;
-        if (_wdupenv_s(&previous, &size, L"METASEQUOIA_IME_DATA_DIR") != 0)
+        if (_wdupenv_s(&previous, &size, L"PHONETIC_IPA_DATA_DIR") != 0)
         {
             throw std::runtime_error("Cannot read benchmark data directory");
         }
@@ -40,9 +40,9 @@ class DataRoot
         root_ = fs::temp_directory_path() / (L"msime-model-path-bench-" + std::to_wstring(GetCurrentProcessId()) +
                                              L"-" + std::to_wstring(GetTickCount64()));
         fs::create_directories(root_ / "models");
-        if (_wputenv_s(L"METASEQUOIA_IME_DATA_DIR", root_.c_str()) != 0 || metasequoia::data_directory() != root_)
+        if (_wputenv_s(L"PHONETIC_IPA_DATA_DIR", root_.c_str()) != 0 || metasequoia::data_directory() != root_)
         {
-            _wputenv_s(L"METASEQUOIA_IME_DATA_DIR", had_previous_ ? previous_.c_str() : L"");
+            _wputenv_s(L"PHONETIC_IPA_DATA_DIR", had_previous_ ? previous_.c_str() : L"");
             std::error_code error;
             fs::remove_all(root_, error);
             throw std::runtime_error("Cannot isolate benchmark data directory");
@@ -51,7 +51,7 @@ class DataRoot
 
     ~DataRoot()
     {
-        _wputenv_s(L"METASEQUOIA_IME_DATA_DIR", had_previous_ ? previous_.c_str() : L"");
+        _wputenv_s(L"PHONETIC_IPA_DATA_DIR", had_previous_ ? previous_.c_str() : L"");
         std::error_code error;
         fs::remove_all(root_, error);
     }

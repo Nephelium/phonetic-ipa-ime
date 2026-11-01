@@ -36,13 +36,13 @@ Copy-Item server/assets/settings $devAssets -Recurse -Force
 python server/scripts/prepare_env.py
 if ($LASTEXITCODE -ne 0) { throw 'Server environment setup failed' }
 $env:LOCALAPPDATA = $devLocalData
-$env:METASEQUOIA_IME_DATA_DIR = $devData
+$env:PHONETIC_IPA_DATA_DIR = $devData
 cd server
 ```
 
 Use a dedicated PowerShell terminal. These steps stage the same locked data as CI
 and the settings window assets in a separate development directory. Both
-`LOCALAPPDATA` (Windows config/assets) and `METASEQUOIA_IME_DATA_DIR` (Engine data)
+`LOCALAPPDATA` (Windows config/assets) and `PHONETIC_IPA_DATA_DIR` (Engine data)
 are set for that terminal; setting only the latter would still use installed
 Windows configuration and assets. Close the terminal after development.
 Dictionary source changes belong in Engine's `dictionary/`; use its root `build_profile.py`

@@ -47,6 +47,14 @@ def main():
                 frozen.write_bytes(body)
             if not (data / name).exists():
                 shutil.copy2(frozen, data / name)
+            elif digest(data / name) != expected:
+                # A dictionary from an older lock (or with local learning data) must not be
+                # packaged. Keep it beside the new file instead of overwriting it.
+                kept = data / (name + '.before-' + lock['tag'])
+                if not kept.exists():
+                    shutil.copy2(data / name, kept)
+                shutil.copy2(frozen, data / name)
+                print('Replaced', name, 'with locked dictionary; previous copy kept as', kept.name, flush=True)
     shutil.copytree(REPO / 'engine/helpcode/helpcodes', data / 'helpcodes', dirs_exist_ok=True)
     shutil.copytree(REPO / 'server/assets/tables', data, dirs_exist_ok=True)
     (data / 'radical').mkdir(exist_ok=True)

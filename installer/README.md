@@ -37,7 +37,7 @@ pwsh -File ./Prepare-PackageFiles.ps1 -TargetVersion 1.2.3 -RepoRoot .. `
 程序本体固定装在 `Program Files\metasequoiaime`（Server 带 `uiAccess=true`，只有装在受信任目录里这个标志才生效），**用户数据目录可以在安装向导里改**：词库、`config.toml`、用户词库、皮肤和设置窗口的图片资源都在那里，整包几百 MB，装 C 盘吃紧的用户可以放到别的盘。
 
 - 默认值 `%LOCALAPPDATA%\metasequoiaime`；升级安装时默认沿用上次的位置
-- 选择写进 `HKLM\Software\Metasequoia\MetasequoiaIME` 的 `DataDir`。这是运行期唯一的权威来源：Server（`server/src/utils/ime_paths.cpp`）、TSF DLL（`windows/src/Utils/FanyUtils.cpp`）和引擎（`engine/core/data_path.h`）各自按 `METASEQUOIA_IME_DATA_DIR` 环境变量 → 该注册表值 → `%LOCALAPPDATA%\metasequoiaime` 的顺序解析，三处必须保持一致。32 位 TSF DLL 用 `KEY_WOW64_64KEY` 读，所以这个值必须写在 64 位视图里
+- 选择写进 `HKLM\Software\Metasequoia\MetasequoiaIME` 的 `DataDir`。这是运行期唯一的权威来源：Server（`server/src/utils/ime_paths.cpp`）、TSF DLL（`windows/src/Utils/FanyUtils.cpp`）和引擎（`engine/core/data_path.h`）各自按 `PHONETIC_IPA_DATA_DIR` 环境变量 → 该注册表值 → `%LOCALAPPDATA%\metasequoiaime` 的顺序解析，三处必须保持一致。32 位 TSF DLL 用 `KEY_WOW64_64KEY` 读，所以这个值必须写在 64 位视图里
 - 升级时改了位置，安装器会把用户词库（`msime_user.db` 及其 WAL/SHM）、输入统计库（`stats.db` 及其 WAL/SHM）、`config.toml`、`config.base.toml`、`custom_translations.txt`，以及 `skins\`、`helpcodes\custom\`、`shuangpin\`、`models\` 搬到新目录，再删掉旧目录。`config.toml` 或 `custom_translations.txt` 在新旧目录里各有一份且内容不同时，安装器拒绝这个目录，不覆盖任何一份；`custom_translations.txt` 没搬成会中止安装；词库和设置窗口的图片资源由本次安装重新写入，不搬
 - **数据目录必须整个归输入法**（[#537](https://github.com/metasequoiaime/MSIME-Windows/issues/537)）。用户选的目录里已经有别的文件、或者选了驱动器根目录时，安装器改用其中的 `metasequoiaime` 子目录，并在向导里把实际位置告诉用户；连那个子目录也不空就拒绝。输入法用过的目录（有标记，或历史默认位置）原样沿用
 - 安装器在数据目录里放一个 `.metasequoiaime-data` 标记文件。只有标记里带 `exclusive: adopted empty by the installer` 这一行（安装时目录是空的），或目录就是历史默认位置，覆盖安装才整目录清理、卸载才整目录删除

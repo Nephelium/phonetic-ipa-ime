@@ -477,9 +477,12 @@ void FloatingToolbarPresenter::RebuildScene()
         return button;
     };
 
-    auto mode = addText(impl_->englishInputMode == 1 ? L"IPA" : (impl_->capsLock == 1 ? L"汉字" : L"IPA"), false,
-                        [this]() { FanyNamedPipe::EnqueueToolbarLanguageToggleTask(impl_->cnEn == 1); });
-    mode->SetTextLayout(48.0f * s, 16.0f * s);
+    // Three distinct states: pinyin lookup with IPA output, pinyin with Hanzi
+    // output (Caps Lock), and the direct IPA keyboard.
+    auto mode =
+        addText(impl_->englishInputMode == 1 ? L"IPA 键盘" : (impl_->capsLock == 1 ? L"拼音→汉字" : L"拼音→IPA"), false,
+                [this]() { FanyNamedPipe::EnqueueToolbarLanguageToggleTask(impl_->cnEn == 1); });
+    mode->SetTextLayout(84.0f * s, 14.0f * s);
     std::vector<phonetic_ipa::TranscriptionRule> rules;
     std::string currentRule;
     try

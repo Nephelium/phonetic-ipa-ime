@@ -175,16 +175,22 @@ void ShowUpdateDialog(PageContext &context, const PhoneticIpa::Updates::Feed &fe
     column->Add(MakeLabel(L"国际音标输入法 " + Widen(feed.version), DocStyle(16.0f, DWRITE_FONT_WEIGHT_SEMI_BOLD),
                           TextRole::Primary));
     column->Add(MakeLabel(Widen(feed.notes), DocStyle(13.0f, DWRITE_FONT_WEIGHT_NORMAL, 1.65f, true), TextRole::Muted));
+    if (!feed.sha256.empty())
+        column->Add(MakeLabel(L"安装包 SHA-256：" + Widen(feed.sha256) +
+                                  L"\n下载后可在 PowerShell 运行 Get-FileHash <文件名> 核对，两者一致再解压安装。",
+                              DocStyle(12.0f, DWRITE_FONT_WEIGHT_NORMAL, 1.5f, true), TextRole::Muted));
     auto actions = std::make_shared<Row>(9.0f);
     actions->SetJustify(Row::Justify::End);
     HostServices *host = &context.host;
     auto later = std::make_shared<CssButton>(L"稍后", DialogButtonStyle(false));
     later->SetOnClick([host] { host->CloseModal(); });
     actions->Add(later);
-    for (const auto &entry :
-         std::vector<std::pair<std::wstring, std::string>>{{L"GitHub 下载", feed.github_url}, {L"官网下载", feed.url}})
+    // The official button opens the download page described in the notice; GitHub
+    // links straight to the release asset.
+    for (const auto &entry : std::vector<std::pair<std::wstring, std::string>>{
+             {L"GitHub 下载", feed.github_url}, {L"前往官网", "https://www.phonetictoolbox.com/#ipa-ime-download"}})
     {
-        auto button = std::make_shared<CssButton>(entry.first, DialogButtonStyle(entry.first == L"官网下载"));
+        auto button = std::make_shared<CssButton>(entry.first, DialogButtonStyle(entry.first == L"前往官网"));
         button->SetOnClick([host, url = entry.second] {
             host->CloseModal();
             ShellExecuteW(nullptr, L"open", Widen(url).c_str(), nullptr, nullptr, SW_SHOWNORMAL);

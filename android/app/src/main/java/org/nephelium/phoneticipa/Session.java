@@ -8,9 +8,12 @@ import java.util.function.Consumer;
 final class Session {
     static final class Candidate {
         final String word, canonical;
+        private final boolean symbol;
         JSONObject reading;
-        Candidate(String word, String canonical, JSONObject reading) { this.word = word; this.canonical = canonical; this.reading = reading; }
-        boolean symbol() { return reading == null; }
+        boolean resolved;
+        Candidate(String word, String canonical, boolean symbol) { this.word = word; this.canonical = canonical; this.symbol = symbol; this.resolved = symbol; }
+        boolean symbol() { return symbol; }
+        boolean ambiguous() { return reading != null && reading.optBoolean("ambiguous"); }
         String ipa() { return reading == null ? "" : reading.optString("text"); }
     }
     final Engine engine;
@@ -24,7 +27,16 @@ final class Session {
     Runnable changed = () -> {};
     Session(Engine engine) { this.engine = engine; reload(); }
     void reload() { clear(); try { pageSize = engine.profile().getInt("pageSize"); status = engine.profileError; } catch (Exception e) { status = e.getMessage(); } changed.run(); }
-    List<Candidate> visible() { int start = Math.min(page * pageSize, candidates.size()); return candidates.subList(start, Math.min(start + pageSize, candidates.size())); }
+    /** The visible page; only these candidates query readings (instead of all 180 on every key). */
+    List<Candidate> visible() {
+        int start = Math.min(page * pageSize, candidates.size());
+        List<Candidate> shown = candidates.subList(start, Math.min(start + pageSize, candidates.size()));
+        for (Candidate item : shown) if (!item.resolved) {
+            item.resolved = true;
+            try { item.reading = engine.reading(item.word, item.canonical); } catch (Exception e) { item.reading = null; }
+        }
+        return shown;
+    }
     void refresh() {
         pending = null; page = 0;
         try { candidates = engine.candidates(raw, pinyin); } catch (Exception e) { candidates = new ArrayList<>(); status = "查询失败：" + e.getMessage(); }
@@ -33,6 +45,8 @@ final class Session {
     void append(String text) { if (raw.length() + text.length() > 128) return; raw += text; status = ""; refresh(); }
     void tone(String digit) {
         if (!Arrays.asList("1", "2", "3", "4", "5").contains(digit)) return;
+        // Direct IPA: confirm the highlighted symbol first, then start the tone.
+        if (!pinyin && !raw.isEmpty() && !raw.startsWith("tone:") && !visible().isEmpty()) choose(0, true);
         if (!raw.isEmpty() && !raw.startsWith("tone:")) { status = "先确认当前候选，再输入声调"; changed.run(); return; }
         if (raw.isEmpty()) raw = "tone:"; append(digit);
     }
@@ -62,8 +76,9 @@ final class Session {
         if (index < 0 || index >= visible().size()) return;
         Candidate item = visible().get(index);
         if (ipa && !item.symbol()) {
-            if (item.reading.optBoolean("ambiguous")) { pending = item; commitAfterReading = true; changed.run(); return; }
-            if (item.ipa().isEmpty()) { status = "当前字表没有完整读音"; changed.run(); return; }
+            if (item.ambiguous()) { pending = item; commitAfterReading = true; changed.run(); return; }
+            // No complete IPA: commit the Hanzi instead of ignoring the key, as on the desktop.
+            if (item.ipa().isEmpty()) { commit.accept(item.word); clear(); return; }
         }
         commit.accept(ipa && !item.symbol() ? item.ipa() : item.word); clear();
     }

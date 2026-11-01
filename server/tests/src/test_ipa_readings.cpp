@@ -2,7 +2,9 @@
 #include "engine/contracts/ipa_input.h"
 #include "engine/ipa/ipa_rules.h"
 #include <chrono>
+#include <fstream>
 #include <iostream>
+#include <windows.h>
 
 static void Require(bool ok, const char *message)
 {
@@ -26,6 +28,36 @@ int main(int argc, char **argv)
             const auto result = table.Convert(test.first, test.second);
             Require(result.word_matched && !result.ambiguous && !result.text.empty(), "Word reading unresolved");
             std::cout << test.first << " -> " << result.parts[0].options[0].pinyin << " -> " << result.text << '\n';
+        }
+        {
+            // 2026-11-01 review L2: BOM and blank lines are accepted; a bad tone names its line.
+            const auto scratch =
+                std::filesystem::temp_directory_path() / ("ipa-readings-" + std::to_string(GetTickCount64()));
+            std::filesystem::create_directories(scratch);
+            {
+                std::ofstream out(scratch / "rows.tsv", std::ios::binary);
+                out << "\xef\xbb\xbf" << u8"好\thao\txau˨˩˦\t3\n\n" << u8"好\thao\txau˥˩\t4\r\n";
+            }
+            phonetic_ipa::HanziTable bom;
+            bom.Load(scratch / "rows.tsv", false);
+            Require(bom.Convert(u8"好", "hao").parts.at(0).options.size() == 2, "BOM or blank line broke the table");
+            {
+                std::ofstream out(scratch / "bad.tsv", std::ios::binary);
+                out << u8"好\thao\txau\t3\n" << u8"好\thao\txau\tx\n";
+            }
+            bool named = false;
+            try
+            {
+                phonetic_ipa::HanziTable bad;
+                bad.Load(scratch / "bad.tsv", false);
+            }
+            catch (const std::runtime_error &e)
+            {
+                named = std::string(e.what()).find("line 2") != std::string::npos;
+            }
+            Require(named, "Invalid tone did not report its line");
+            std::error_code ignored;
+            std::filesystem::remove_all(scratch, ignored);
         }
         const auto disgust = table.Convert(u8"厌恶", "yan'wu");
         phonetic_ipa::HanziTable indexedTable;

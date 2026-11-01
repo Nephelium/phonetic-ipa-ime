@@ -26,6 +26,10 @@ int main(int argc, char **argv)
         if (Newest({server, github})->version != "0.1.10" || Newest({github, server})->version != "0.1.10" ||
             Newest({server})->version != server.version || Newest({}))
             throw std::runtime_error("source independence");
+        // 2026-11-01 review M10: failures back off from 10 minutes to one day.
+        if (RetryDelaySeconds(0) != 600 || RetryDelaySeconds(1) != 1200 || RetryDelaySeconds(3) != 4800 ||
+            RetryDelaySeconds(20) != kCheckIntervalSeconds)
+            throw std::runtime_error("retry backoff");
         if (Parse(std::string(65537, ' ')) || Parse("{"))
             throw std::runtime_error("size and malformed JSON");
         std::cout << "Update manifest, numeric versions, source independence and URL checks passed\n";

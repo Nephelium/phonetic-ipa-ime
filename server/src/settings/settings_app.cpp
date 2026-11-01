@@ -15,6 +15,7 @@
 #include "msimeui/DeviceResources.h"
 #include "msimeui/Fonts.h"
 #include "ipa/ipa_runtime.h"
+#include "ipa/ipa_user_data.h"
 #include "settings/serial_task_queue.h"
 #include "statistics/stats_overview.h"
 #include "statistics/stats_store.h"
@@ -1938,6 +1939,7 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR command_line, int show_
     std::future<bool> initial_light = initial_config->get_future();
     g_worker->Submit([initial_config] {
         g_worker_com_initialized = SUCCEEDED(CoInitializeEx(nullptr, COINIT_MULTITHREADED));
+        PhoneticIpa::UserData::Seed(); // Same per-account copy as the Server.
         TraceStartup("worker: InitImeConfig begin");
         InitImeConfig();
         TraceStartup("worker: InitImeConfig end");

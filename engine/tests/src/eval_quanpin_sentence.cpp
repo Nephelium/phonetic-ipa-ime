@@ -2,7 +2,7 @@
 // 预编辑，并统计每键耗时。
 //
 // 不是测试：不断言，也不进 ctest。改切分或整句打分前后各跑一遍对比，例如
-//   set METASEQUOIA_IME_DATA_DIR=<数据目录的副本>
+//   set PHONETIC_IPA_DATA_DIR=<数据目录的副本>
 //   eval_quanpin_sentence engine\tests\data\quanpin_sentence_cases.tsv [repeats] [lattice] [fuzzy=<rules>]
 // 只敲键和重置，从不选词，不写用户日志；仍请指向副本，别用正在用的数据目录。
 #include "../../core/data_path.h"

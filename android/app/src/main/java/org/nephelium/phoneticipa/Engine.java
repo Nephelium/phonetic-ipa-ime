@@ -17,6 +17,9 @@ final class Engine implements AutoCloseable {
     static { System.loadLibrary("phoneticipa"); }
     private static CompletableFuture<Engine> shared;
     static synchronized CompletableFuture<Engine> get(Context context) {
+        // A failed start (no space, interrupted copy) is retried on the next request
+        // instead of being cached until the process dies.
+        if (shared != null && shared.isCompletedExceptionally()) shared = null;
         if (shared == null) {
             Context app = context.getApplicationContext();
             shared = CompletableFuture.supplyAsync(() -> {
@@ -40,6 +43,7 @@ final class Engine implements AutoCloseable {
     private final SQLiteDatabase db;
     final File directory, profileFile;
     private JSONObject profile;
+    private TreeSet<String> codes;
     String profileError = "";
 
     Engine(Context context) throws Exception {
@@ -65,7 +69,7 @@ final class Engine implements AutoCloseable {
         File target = new File(context.getFilesDir(), "ipa-" + version);
         if (!target.isDirectory() && !target.mkdirs()) throw new IOException("无法创建音标资料目录");
         File ready = new File(target, "ready");
-        if (ready.exists()) return target;
+        if (ready.exists()) { removeStaleResources(context.getFilesDir(), target); return target; }
         for (Iterator<String> it = files.keys(); it.hasNext();) {
             String name = it.next();
             if (name.contains("/") || name.contains("\\") || name.startsWith(".")) throw new IOException("无效资料名称");
@@ -79,7 +83,21 @@ final class Engine implements AutoCloseable {
             if (!part.renameTo(new File(target, name))) throw new IOException("无法保存音标资料：" + name);
         }
         Files.write(ready.toPath(), manifestBytes);
+        removeStaleResources(context.getFilesDir(), target);
         return target;
+    }
+    /** Each release copies its resources to files/ipa-<hash>; older copies are removed once the current one is ready. */
+    private static void removeStaleResources(File parent, File current) {
+        File[] entries = parent.listFiles();
+        if (entries == null) return;
+        for (File entry : entries)
+            if (entry.isDirectory() && entry.getName().matches("ipa-[0-9a-f]{16}") && !entry.equals(current)) deleteTree(entry);
+    }
+    private static void deleteTree(File file) {
+        File[] children = file.listFiles();
+        if (children != null) for (File child : children) deleteTree(child);
+        //noinspection ResultOfMethodCallIgnored
+        file.delete();
     }
     private static String hex(byte[] bytes) {
         StringBuilder result = new StringBuilder(); for (byte b : bytes) result.append(String.format(Locale.ROOT, "%02x", b & 255)); return result.toString();
@@ -91,7 +109,21 @@ final class Engine implements AutoCloseable {
         if (!preferences.edit().putString("rule", id).commit()) { nativeSetRule(handle, ruleId); throw new IOException("无法保存转写规则"); }
         ruleId = id; ruleError = "";
     }
+    /** Editable copy for the settings screen. */
     synchronized JSONObject profile() throws JSONException { return new JSONObject(profile.toString()); }
+    /** Read-only view of the active key map for the keyboard; callers must not modify it. */
+    synchronized JSONObject sequences() { JSONObject value = profile.optJSONObject("sequences"); return value == null ? new JSONObject() : value; }
+    /** Single output for a key, or null when the key opens the chooser (several outputs or longer codes). */
+    synchronized String directOutput(String key) {
+        JSONObject entries = sequences();
+        JSONArray values = entries.optJSONArray(key);
+        if (values != null && values.length() != 1) return null;
+        if (codes == null) { codes = new TreeSet<>(); entries.keys().forEachRemaining(codes::add); }
+        // Codes sharing the prefix sort directly after it, so one lookup replaces a full scan.
+        String next = codes.higher(key);
+        if (next != null && next.startsWith(key)) return null;
+        return values == null ? key : values.optString(0, key);
+    }
     synchronized JSONArray symbols(String code) throws JSONException { return new JSONArray(nativeSymbols(handle, code)); }
     synchronized JSONObject reading(String word, String canonical) throws JSONException {
         List<String> variants = new ArrayList<>();
@@ -105,11 +137,12 @@ final class Engine implements AutoCloseable {
         List<Session.Candidate> result = new ArrayList<>();
         if (!pinyin || code.startsWith("tone:") || code.startsWith("code:")) {
             JSONArray symbols = symbols(code);
-            for (int i = 0; i < symbols.length(); i++) result.add(new Session.Candidate(symbols.getString(i), "", null));
+            for (int i = 0; i < symbols.length(); i++) result.add(new Session.Candidate(symbols.getString(i), "", true));
         } else if (!code.isEmpty()) {
             String normalized = code.toLowerCase(Locale.ROOT).replace("'", "").replace("ü", "v").replace("u:", "v");
+            // Readings are resolved lazily for the visible page by Session.visible().
             try (Cursor rows = db.rawQuery("SELECT word,canonical FROM candidates WHERE code=? ORDER BY weight DESC,word,canonical LIMIT 180", new String[]{normalized})) {
-                while (rows.moveToNext()) result.add(new Session.Candidate(rows.getString(0), rows.getString(1), reading(rows.getString(0), rows.getString(1))));
+                while (rows.moveToNext()) result.add(new Session.Candidate(rows.getString(0), rows.getString(1), false));
             }
         }
         return result;
@@ -174,7 +207,9 @@ final class Engine implements AutoCloseable {
             try { out = file.startWrite(); out.write(serialized); file.finishWrite(out); }
             catch (IOException e) { file.failWrite(out); throw e; }
         }
-        nativeLoadCIN(handle, temporary.getPath()); profile = validated; profileError = "";
+        nativeLoadCIN(handle, temporary.getPath()); profile = validated; codes = null; profileError = "";
+        //noinspection ResultOfMethodCallIgnored
+        temporary.delete();
     }
     synchronized void importBytes(byte[] bytes, boolean json) throws Exception {
         if (bytes.length > 8 * 1024 * 1024) throw new IOException("方案不能超过 8 MB");
@@ -182,7 +217,10 @@ final class Engine implements AutoCloseable {
         if (json) next = new JSONObject(new String(bytes, StandardCharsets.UTF_8));
         else {
             File input = new File(profileFile.getParentFile(), "import.cin"); Files.write(input.toPath(), bytes);
-            next = new JSONObject(nativeReadCIN(input.getPath())); next.put("pageSize", profile.getInt("pageSize"));
+            try { next = new JSONObject(nativeReadCIN(input.getPath())); }
+            finally { //noinspection ResultOfMethodCallIgnored
+                input.delete(); }
+            next.put("pageSize", profile.getInt("pageSize"));
         }
         loadProfile(next, true);
     }

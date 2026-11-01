@@ -56,7 +56,7 @@ ctest --test-dir .build/server -C Release --output-on-failure --timeout 120
 
 Server tests require the product-lock dictionaries plus repository tables,
 helpcodes and test configuration. Point `LOCALAPPDATA`,
-`METASEQUOIA_IME_DATA_DIR` and `METASEQUOIA_IME_CONFIG_DIR` at isolated staging
+`PHONETIC_IPA_DATA_DIR` and `PHONETIC_IPA_CONFIG_DIR` at isolated staging
 directories; do not run against installed user data. Follow the repository's
 clang-format 18.1.8 and changed-file checks before submitting.
 

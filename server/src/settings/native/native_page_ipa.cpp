@@ -314,8 +314,9 @@ struct Editor
         try
         {
             PhoneticIpa::ValidateProfile(table);
-            PhoneticIpa::WriteProfileFile(PhoneticIpa::ResourceRoot() / "active.cin", table.Serialize());
-            Status(L"方案已应用。下一次输入会使用新键位；原方案备份保留在同一目录。");
+            PhoneticIpa::WriteProfileFile(PhoneticIpa::ResourceRoot() / "active.cin", table.Serialize(),
+                                          PhoneticIpa::ProfileBackup::Previous);
+            Status(L"方案已应用。下一次输入会使用新键位；上一版方案保存为同一目录的 active.cin.previous。");
         }
         catch (const std::exception &e)
         {
@@ -348,6 +349,9 @@ VisualPtr BuildIpaKeyboardPage(PageContext &context)
         return page.Build();
     }
     auto top = std::make_shared<Column>(12.0f);
+    if (PhoneticIpa::ActiveCinFailed())
+        top->Add(MakeDescription(L"个人键位文件 active.cin 无法读取，输入法已临时使用默认键位。"
+                                 L"可导入之前导出的方案，或在此编辑后点击应用方案，覆盖损坏的文件。"));
     top->Add(MakeDescription(L"悬停放大查看音标，点击原键位编辑。移到相邻键即可切换预览；候选较多时可用滚轮翻页。"));
     auto controls = std::make_shared<Row>(12.0f);
     controls->SetWrap(true, 8);
@@ -761,6 +765,8 @@ VisualPtr BuildIpaInputPage(PageContext &context)
             options.push_back({Widen(rule.name), rule.id});
         auto selector = std::make_shared<Dropdown>(options);
         selector->SetValue(PhoneticIpa::RuleId());
+        rules->Add(MakeDescription(L"各规则输出字典本调，未处理上声连读变调、一和不的变调、儿化合并与轻声实际音高，"
+                                   L"严式规则也是如此。"));
         auto status = MakeDescription(L"也可点击悬浮工具栏上的规则名称快捷切换。切换后重新计算当前候选。");
         selector->SetOnChanged([status](size_t, const DropdownOption &option) {
             try

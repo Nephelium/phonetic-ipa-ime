@@ -67,10 +67,10 @@ std::wstring QueryEnvironmentW(const wchar_t *name)
     return value;
 }
 
-// The installer records the data directory the user picked during setup. KEY_WOW64_64KEY is
-// mandatory: a 32-bit reader would otherwise be redirected to Wow6432Node, where the 64-bit
-// setup never wrote anything.
-std::wstring QueryInstalledDataDir()
+// The installer records the read-only factory resource directory under Program Files.
+// KEY_WOW64_64KEY is mandatory: a 32-bit reader would otherwise be redirected to Wow6432Node,
+// where the 64-bit setup never wrote anything.
+std::wstring QueryFactoryDataDir()
 {
     HKEY key = nullptr;
     if (RegOpenKeyExW(HKEY_LOCAL_MACHINE, L"Software\\PhoneticIpa\\Prototype", 0, KEY_QUERY_VALUE | KEY_WOW64_64KEY,
@@ -81,7 +81,7 @@ std::wstring QueryInstalledDataDir()
 
     DWORD type = 0;
     DWORD bytes = 0;
-    if (RegQueryValueExW(key, L"DataDir", nullptr, &type, nullptr, &bytes) != ERROR_SUCCESS || type != REG_SZ ||
+    if (RegQueryValueExW(key, L"FactoryDataDir", nullptr, &type, nullptr, &bytes) != ERROR_SUCCESS || type != REG_SZ ||
         bytes < sizeof(wchar_t))
     {
         RegCloseKey(key);
@@ -90,7 +90,7 @@ std::wstring QueryInstalledDataDir()
 
     std::wstring value(bytes / sizeof(wchar_t), L'\0');
     const LSTATUS status =
-        RegQueryValueExW(key, L"DataDir", nullptr, &type, reinterpret_cast<LPBYTE>(value.data()), &bytes);
+        RegQueryValueExW(key, L"FactoryDataDir", nullptr, &type, reinterpret_cast<LPBYTE>(value.data()), &bytes);
     RegCloseKey(key);
     if (status != ERROR_SUCCESS)
     {
@@ -293,31 +293,37 @@ std::wstring get_local_appdata_path_w()
 std::wstring get_ime_data_path_w()
 {
     // Resolution order, shared with the engine (engine/core/data_path.h) and the TSF DLL:
-    // explicit environment override, then the location chosen during setup, then the default
-    // under LocalAppData. Resolved on every call, not cached: tests relocate the profile between
-    // cases inside one process.
-    const std::wstring from_env = QueryEnvironmentW(L"METASEQUOIA_IME_DATA_DIR");
+    // explicit environment override, then the per-account default under LocalAppData. Personal
+    // data never follows a machine-wide registry value, so accounts do not share keymaps.
+    // Resolved on every call, not cached: tests relocate the profile between cases inside one
+    // process.
+    const std::wstring from_env = QueryEnvironmentW(L"PHONETIC_IPA_DATA_DIR");
     if (IsUsableAbsolutePath(from_env))
     {
         return from_env;
     }
 
-    const std::wstring installed = QueryInstalledDataDir();
-    if (IsUsableAbsolutePath(installed))
-    {
-        return installed;
-    }
-
     return get_local_appdata_path_w() + L"\\" + kAppName;
+}
+
+std::wstring get_factory_data_path_w()
+{
+    // Not used while PHONETIC_IPA_DATA_DIR redirects a development or test run.
+    if (IsUsableAbsolutePath(QueryEnvironmentW(L"PHONETIC_IPA_DATA_DIR")))
+    {
+        return {};
+    }
+    const std::wstring factory = QueryFactoryDataDir();
+    return IsUsableAbsolutePath(factory) ? factory : std::wstring();
 }
 
 std::wstring get_ime_config_dir_w()
 {
     // Configuration normally lives in the data directory. The separate override exists for tests
     // that must redirect config writes without moving the dictionaries with them: the engine
-    // resolves its own data directory (engine/core/data_path.h), so METASEQUOIA_IME_DATA_DIR
+    // resolves its own data directory (engine/core/data_path.h), so PHONETIC_IPA_DATA_DIR
     // would take the dictionaries along. Nothing in the product sets this.
-    const std::wstring from_env = QueryEnvironmentW(L"METASEQUOIA_IME_CONFIG_DIR");
+    const std::wstring from_env = QueryEnvironmentW(L"PHONETIC_IPA_CONFIG_DIR");
     if (IsUsableAbsolutePath(from_env))
     {
         return from_env;

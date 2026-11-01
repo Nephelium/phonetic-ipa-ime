@@ -11,6 +11,9 @@ namespace msimeui
 {
 using Microsoft::WRL::ComPtr;
 
+// Loaded at startup and read from several window threads. Entries are never
+// removed, so a returned collection pointer stays valid after the lock is released.
+static std::mutex privateIpaFontsMutex;
 static std::vector<ComPtr<IDWriteFontCollection1>> privateIpaFonts;
 
 bool LoadPrivateIpaFont(const std::wstring &path)
@@ -28,12 +31,16 @@ bool LoadPrivateIpaFont(const std::wstring &path)
                         SUCCEEDED(builder->AddFontFile(file.Get())) && SUCCEEDED(builder->CreateFontSet(&set)) &&
                         SUCCEEDED(factory->CreateFontCollectionFromFontSet(set.Get(), &collection));
     if (loaded)
+    {
+        std::lock_guard<std::mutex> lock(privateIpaFontsMutex);
         privateIpaFonts.push_back(std::move(collection));
+    }
     return loaded;
 }
 
 IDWriteFontCollection *PrivateIpaFontCollection(const std::wstring &family)
 {
+    std::lock_guard<std::mutex> lock(privateIpaFontsMutex);
     for (const auto &collection : privateIpaFonts)
     {
         UINT32 index = 0;

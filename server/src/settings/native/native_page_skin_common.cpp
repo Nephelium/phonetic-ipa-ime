@@ -448,7 +448,7 @@ void CandidatePreview::Set(const SettingsModel &model, const std::string &skinId
         msimeui::CandidateList::Item item;
         item.label = std::to_wstring(i + 1);
         item.text = kSampleWords[i];
-        const auto reading = PhoneticIpa::Hanzi().Convert(Narrow(kSampleWords[i]), "ni");
+        const auto reading = PhoneticIpa::Hanzi()->Convert(Narrow(kSampleWords[i]), "ni");
         item.translation = reading.ambiguous ? L"选择读音 · 数字键或点击" : Widen(reading.text);
         item.secondaryFontFamily = reading.ambiguous ? L"" : L"PTB IPA Plus";
         item.secondaryIsIpa = true;

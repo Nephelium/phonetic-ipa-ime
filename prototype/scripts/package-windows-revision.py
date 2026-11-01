@@ -23,6 +23,13 @@ parser.add_argument('--guide-assets', type=Path)
 parser.add_argument('--third-party', type=Path)
 args = parser.parse_args()
 sha = lambda data: hashlib.sha256(data).hexdigest()
+
+
+def require(condition, message):
+    # Explicit checks: assert statements disappear under python -O.
+    if not condition:
+        raise SystemExit('Package check failed: ' + message)
+
 replacements = {'output/runtime/PhoneticIpaSettings.exe': args.settings.read_bytes()}
 if args.runtime:
     for name in ['PhoneticIpaServer.exe', 'PhoneticIpaSettings.exe', 'PhoneticIpaWatchdog.exe']:
@@ -49,10 +56,10 @@ replacements['卸载.cmd'] = b'@echo off\r\npowershell.exe -NoProfile -Execution
 if args.readme:
     replacements['安装说明.md'] = args.readme.read_bytes()
 with zipfile.ZipFile(args.base) as source:
-    assert source.testzip() is None
+    require(source.testzip() is None, 'base ZIP is damaged')
     original = json.loads(source.read('SHA256.json'))
     for name, digest in original.items():
-        assert sha(source.read(name)) == digest, 'Base package changed: ' + name
+        require(sha(source.read(name)) == digest, 'Base package changed: ' + name)
     binaries = json.loads(source.read('output/runtime/build-manifest.json'))
     for name, data in replacements.items():
         if name.startswith('output/runtime/') and name.endswith(('.exe', '.dll')):
@@ -60,7 +67,8 @@ with zipfile.ZipFile(args.base) as source:
     replacements['output/runtime/build-manifest.json'] = json.dumps(binaries, indent=2).encode()
     config = source.read('output/runtime/data/config.toml').decode('utf-8-sig')
     replacements['output/runtime/data/config.toml'] = config.replace('candidate_skin = "fluent"', 'candidate_skin = "bigfish"').encode()
-    assert sha(source.read('output/runtime/data/msime.db')) == '9e68e88be036206fc14d44db7111376b1d92f9173b04d623e601e31edd664c2f'
+    require(sha(source.read('output/runtime/data/msime.db')) == '9e68e88be036206fc14d44db7111376b1d92f9173b04d623e601e31edd664c2f',
+            'factory dictionary msime.db changed')
     hashes = {}
     with zipfile.ZipFile(args.output, 'x', zipfile.ZIP_DEFLATED, compresslevel=6) as target:
         for info in source.infolist():

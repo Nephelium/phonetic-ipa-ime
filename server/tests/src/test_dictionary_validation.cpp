@@ -214,7 +214,7 @@ class ScopedDataDir
     ScopedDataDir &operator=(const ScopedDataDir &) = delete;
 
   private:
-    static constexpr const wchar_t *kName = L"METASEQUOIA_IME_DATA_DIR";
+    static constexpr const wchar_t *kName = L"PHONETIC_IPA_DATA_DIR";
     std::wstring previous_;
     bool had_previous_ = false;
 };

@@ -1,4 +1,4 @@
-﻿param([switch]$CheckOnly, [string]$LogFile = '')
+﻿param([switch]$CheckOnly, [string]$LogFile = '', [string]$UserDataDir = '')
 $ErrorActionPreference = 'Stop'
 $taskRoot = Split-Path -Parent $PSScriptRoot
 $taskLogs = Join-Path $taskRoot 'install-logs'
@@ -37,7 +37,9 @@ try {
         $taskAdministrator = ([Security.Principal.WindowsPrincipal]::new($taskIdentity)).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
         if (!$taskAdministrator) {
             Write-InstallLog '请在管理员授权窗口中确认安装。'
-            $taskArguments = '-NoProfile -ExecutionPolicy Bypass -File "' + $PSCommandPath + '" -LogFile "' + $script:taskLogFile + '"'
+            # The elevated child copies earlier personal files into this account, not the administrator's.
+            $taskUserData = Join-Path $env:LOCALAPPDATA 'phonetic-ipa-prototype'
+            $taskArguments = '-NoProfile -ExecutionPolicy Bypass -File "' + $PSCommandPath + '" -LogFile "' + $script:taskLogFile + '" -UserDataDir "' + $taskUserData + '"'
             $taskChild = Start-Process -FilePath (Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe') -Verb RunAs -ArgumentList $taskArguments -Wait -PassThru
             $taskResult = $taskChild.ExitCode
             if ($taskResult -ne 0) { Write-Host (Get-Content -LiteralPath $script:taskLogFile -Raw -Encoding UTF8); throw ('安装未完成，退出码 ' + $taskResult) }
@@ -46,10 +48,10 @@ try {
             Write-InstallLog '安装完成。请按 Win + 空格选择国际音标输入法原型。'
             Write-InstallLog '升级后请保存草稿，并完全退出再打开仍在运行的应用，让它们加载新版输入法。不需要重启电脑。'
         } else {
-            & (Join-Path $PSScriptRoot 'Register-Prototype.ps1') | ForEach-Object { Write-InstallLog ([string]$_) }
+            & (Join-Path $PSScriptRoot 'Register-Prototype.ps1') -UserDataDir $UserDataDir | ForEach-Object { Write-InstallLog ([string]$_) }
             if (!$LogFile) {
-                try { & (Join-Path $PSScriptRoot 'Start-Settings.ps1') -Guide }
-                catch { Write-InstallLog '安装已完成。请双击使用教学启动器查看说明。' }
+                # Never open settings with administrator rights: links opened from it would run elevated.
+                Write-InstallLog '安装已完成。请用普通权限双击使用教学.cmd 查看说明。'
             }
             Write-InstallLog '安装完成。请按 Win + 空格选择国际音标输入法原型。'
             Write-InstallLog '升级后请保存草稿，并完全退出再打开仍在运行的应用，让它们加载新版输入法。不需要重启电脑。'

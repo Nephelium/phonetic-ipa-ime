@@ -22,6 +22,8 @@ struct CandidateViewItem
     bool ipa_can_choose = false;
     bool ipa_reading_option = false;
     bool ipa_primary = false;
+    // Visible reason when a Hanzi candidate has no complete IPA.
+    std::string ipa_hint;
 };
 
 inline std::string EscapeCandidateViewHtml(const std::string &text)
@@ -125,6 +127,8 @@ inline std::string CandidateViewHtml(const CandidateViewItem &item)
     else if (!item.ipa.empty())
         html += "<span class=\"cand-ipa\">" + EscapeCandidateViewHtml(item.ipa) +
                 (item.ipa_committable ? "</span>" : " (preview)</span>");
+    else if (!item.ipa_hint.empty())
+        html += "<span class=\"cand-ipa\">" + EscapeCandidateViewHtml(item.ipa_hint) + "</span>";
     return html;
 }
 

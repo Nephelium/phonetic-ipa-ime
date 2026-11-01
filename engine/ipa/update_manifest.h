@@ -9,10 +9,21 @@
 
 namespace PhoneticIpa::Updates
 {
-inline constexpr char kVersion[] = "0.1.7";
+inline constexpr char kVersion[] = "0.1.8";
 inline constexpr char kServer[] = "https://www.phonetictoolbox.com/releases/phonetic-ipa-ime/update.json";
 inline constexpr char kGithub[] =
     "https://raw.githubusercontent.com/Nephelium/phonetic-ipa-ime/ipa-prototype/updates/latest.json";
+// A check counts as done when either source answered, so a blocked GitHub
+// mirror does not cause hourly retries. After complete failures the retry
+// delay doubles from 10 minutes up to one day. Android and Apple mirror this.
+inline constexpr long long kCheckIntervalSeconds = 86400;
+inline constexpr long long RetryDelaySeconds(long long failures)
+{
+    long long delay = 600;
+    for (long long i = 0; i < failures && delay < kCheckIntervalSeconds; ++i)
+        delay *= 2;
+    return delay < kCheckIntervalSeconds ? delay : kCheckIntervalSeconds;
+}
 using Version = std::array<int, 3>;
 inline std::optional<Version> ParseVersion(const std::string &text)
 {

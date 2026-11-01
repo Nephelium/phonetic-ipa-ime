@@ -18,7 +18,7 @@ CI 刻意构建到 `build-release` 而不是 `build`，为的就是让这条不�
 
 CI 现在会真的跑它：根 `.github/workflows/ci.yml` 的 Server job 在 Build 之后执行 `scripts/ci/test-server.ps1`，那个脚本按 `product-lock.json` 取词库、备好数据根目录，再跑 `ctest --test-dir server/build-release -C Release --timeout 120`。断言失败会让 CI 变红，不再是编译通过就算数。
 
-**关键在于这些测试依赖真实词库，不是 fixture。**引擎从数据根目录读数据，解析顺序是 `METASEQUOIA_IME_DATA_DIR` 环境变量 → 注册表 `HKLM\Software\Metasequoia\MetasequoiaIME` 的 `DataDir`（安装时用户选的位置）→ `%LOCALAPPDATA%\metasequoiaime`。装了正式版的机器上第二项会生效，所以本地跑测试必须用环境变量覆盖，否则会读到安装目录。另有 `METASEQUOIA_IME_CONFIG_DIR` 只改 `config.toml` 的位置、不搬词库，给那些既要真实词库又要隔离配置的测试用。`scripts/ci/test-server.ps1` 往那里放了四样东西，本地跑测试要凑齐同样的：
+**关键在于这些测试依赖真实词库，不是 fixture。**引擎从数据根目录读数据，解析顺序是 `PHONETIC_IPA_DATA_DIR` 环境变量 → 注册表 `HKLM\Software\Metasequoia\MetasequoiaIME` 的 `DataDir`（安装时用户选的位置）→ `%LOCALAPPDATA%\metasequoiaime`。装了正式版的机器上第二项会生效，所以本地跑测试必须用环境变量覆盖，否则会读到安装目录。另有 `PHONETIC_IPA_CONFIG_DIR` 只改 `config.toml` 的位置、不搬词库，给那些既要真实词库又要隔离配置的测试用。`scripts/ci/test-server.ps1` 往那里放了四样东西，本地跑测试要凑齐同样的：
 
 - `msime.db`、`others.db`、`english.db`——从产品锁指定的 `dict-*` release 下载，CI 逐个核对 `SHA256SUMS.txt`。词库损坏要立刻失败，而不是拖到测试里表现成「候选为空」这种难查的样子
 - `helpcodes/`——六套辅助码方案，本仓 `assets/tables` 只有其中一套，得从 `../engine/helpcode/` 取全
@@ -79,7 +79,7 @@ Boost 是静态链接但没有写进 `vcpkg.json`，所以只能用 classic 模�
   配置读写映射只在 `settings_app.cpp`。每个 `native_page_*.cpp` 顶部注明了它当初移植自旧网页设置页的
   哪个 partial / module，那些文件只在 git 历史里（`ui-html/webview2/settings/ime-settings/src/`）。
   本地调试时可设 `METASEQUOIA_IME_SETTINGS_INSTANCE=<任意名>` 让开发版与已安装的设置窗口并存，
-  并用 `METASEQUOIA_IME_CONFIG_DIR` 隔离配置。旧快捷方式传来的 `--d2d` / `--webview2` 参数会被忽略。
+  并用 `PHONETIC_IPA_CONFIG_DIR` 隔离配置。旧快捷方式传来的 `--d2d` / `--webview2` 参数会被忽略。
 
 ### 尺寸、坐标与 DPI
 

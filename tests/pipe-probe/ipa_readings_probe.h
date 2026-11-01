@@ -67,7 +67,8 @@ static void ProbeIpaReadings(Pipe &main, Pipe &replies, Pipe &workers,
     raw.clear();
     for (wchar_t ch : pinyin) {
       raw += ch;
-      send(FanyImePipeEventType::KeyEvent, ch - L'a' + L'A', ch,
+      send(FanyImePipeEventType::KeyEvent,
+           ch == L'\'' ? VK_OEM_7 : static_cast<UINT>(ch - L'a' + L'A'), ch,
            0); // raw preedit: no letter reply
       show();
     }
@@ -179,6 +180,37 @@ static void ProbeIpaReadings(Pipe &main, Pipe &replies, Pipe &workers,
           "Unconsumed zhang lost its candidate page");
   send(FanyImePipeEventType::KeyEvent, VK_ESCAPE, 0, 0);
   raw.clear();
+
+  // 2026-11-01 review H4: a partial IPA selection must keep the apostrophes of
+  // the unconsumed spelling. Replaying them as VK 0x27 (VK_RIGHT) dropped them,
+  // so men'xi'an became menxian and was segmented as 门限.
+  {
+    const std::wstring spelling = L"wo'men'xi'an";
+    type(spelling);
+    numeric(L"我");
+    for (int wait = 0; wait < 100 && commits.empty(); ++wait) {
+      Sleep(10);
+      drain();
+    }
+    Require(commits.size() == 1 &&
+                commits[0].msg_type ==
+                    FanyImeWorkerReplyType::CommitCandidateAndContinue,
+            "Partial selection of 我 did not continue the composition");
+    const std::wstring payload(commits[0].data);
+    const size_t consumed =
+        std::stoul(payload.substr(0, payload.find(L'\t')));
+    Require(consumed > 0 && consumed < spelling.size(),
+            "Partial selection reported an invalid consumed length");
+    commits.clear();
+    raw = spelling.substr(consumed);
+    key(VK_DOWN);
+    key(VK_UP);
+    const auto rest = page();
+    Require(rest.find(L"门限") == std::wstring::npos,
+            "Partial selection dropped apostrophes from the remaining spelling");
+    send(FanyImePipeEventType::KeyEvent, VK_ESCAPE, 0, 0);
+    raw.clear();
+  }
 
   for (UINT digit = L'1'; digit <= L'5'; ++digit) {
     result = key(digit, L'!', 1);

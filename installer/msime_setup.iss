@@ -186,7 +186,7 @@ Root: HKLM; Subkey: "Software\Metasequoia\MetasequoiaIME"; \
     ValueData: "{commonpf64}\metasequoiaime\server\{#MyAppExeName}"; \
     Flags: uninsdeletevalue
 ; 用户数据目录的唯一权威来源。Server、TSF DLL 和引擎都按
-; METASEQUOIA_IME_DATA_DIR → 这个键 → %LOCALAPPDATA%\metasequoiaime 的顺序解析；
+; PHONETIC_IPA_DATA_DIR → 这个键 → %LOCALAPPDATA%\metasequoiaime 的顺序解析；
 ; 32 位 TSF DLL 用 KEY_WOW64_64KEY 读，所以这里必须写在 64 位视图里
 ; （ArchitecturesInstallIn64BitMode 已经保证了这一点）。
 Root: HKLM; Subkey: "Software\Metasequoia\MetasequoiaIME"; \

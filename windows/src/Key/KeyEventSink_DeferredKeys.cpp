@@ -469,7 +469,9 @@ bool CMetasequoiaIME::_ClassifyDeferredKeyDown(_In_ ITfContext *pContext, WPARAM
         _deferredKeyProjectionValid ? _deferredProjectedTemporaryJapanesePolicy : GetTemporaryJapanesePolicy();
     if (projectedImeOpen && !_IsKeyboardDisabled() && (GetAsyncKeyState(VK_LWIN) & 0x8000) == 0 &&
         (GetAsyncKeyState(VK_RWIN) & 0x8000) == 0 &&
-        (PhoneticIpaKey::IsToneShortcut(*classifiedCode, capturedModifiers) ||
+        ((PhoneticIpaKey::IsToneShortcut(*classifiedCode, capturedModifiers) &&
+          PhoneticIpaKey::ToneShortcutApplies((ipaPolicy & FanyImeTemporaryJapanese::EnglishCandidates) != 0,
+                                              (GetKeyState(VK_CAPITAL) & 0x0001) != 0)) ||
          (!projectedInputActive && (ipaPolicy & FanyImeTemporaryJapanese::EnglishCandidates) != 0 &&
           FanyUtils::HasIpaHotkey(capturedModifiers, *classifiedCode))))
     {

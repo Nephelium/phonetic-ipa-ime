@@ -41,7 +41,7 @@ void InputSequence(EngineInputSession &session, const std::string &keys)
 }
 
 // 把 ime 配置重定向到一次性目录：SetConfiguredFuzzyPinyinRule 会真实落盘，
-// 不能写进开发机的用户配置。用 METASEQUOIA_IME_CONFIG_DIR 而不是改 LOCALAPPDATA：
+// 不能写进开发机的用户配置。用 PHONETIC_IPA_CONFIG_DIR 而不是改 LOCALAPPDATA：
 // 后者已经不是配置位置的权威（安装器会把数据目录写进 HKLM），而且它会把引擎词库
 // 一起带走——本用例的候选断言正需要真实词库。
 class ScopedConfigRoot
@@ -50,7 +50,7 @@ class ScopedConfigRoot
     ScopedConfigRoot()
     {
         wchar_t buffer[32768];
-        const DWORD length = GetEnvironmentVariableW(L"METASEQUOIA_IME_CONFIG_DIR", buffer, 32768);
+        const DWORD length = GetEnvironmentVariableW(L"PHONETIC_IPA_CONFIG_DIR", buffer, 32768);
         had_previous_ = length != 0 || GetLastError() != ERROR_ENVVAR_NOT_FOUND;
         previous_.assign(buffer, length);
         root_ = std::filesystem::temp_directory_path() /
@@ -64,11 +64,11 @@ class ScopedConfigRoot
         // 拷贝失败（如仓库路径含非 ASCII 字符被 ACP 转换破坏）必须在源头报出来，
         // 否则后面的 SetConfiguredFuzzyPinyinRule 会以无关断言的形式失败。
         REQUIRE(!ec);
-        SetEnvironmentVariableW(L"METASEQUOIA_IME_CONFIG_DIR", data_dir.c_str());
+        SetEnvironmentVariableW(L"PHONETIC_IPA_CONFIG_DIR", data_dir.c_str());
     }
     ~ScopedConfigRoot()
     {
-        SetEnvironmentVariableW(L"METASEQUOIA_IME_CONFIG_DIR", had_previous_ ? previous_.c_str() : nullptr);
+        SetEnvironmentVariableW(L"PHONETIC_IPA_CONFIG_DIR", had_previous_ ? previous_.c_str() : nullptr);
         std::error_code ec;
         std::filesystem::remove_all(root_, ec);
     }
@@ -1829,7 +1829,7 @@ TEST_CASE(ShuangpinDirectAndMidSentenceHelpcodeAreMutuallyExclusive)
 
     // 互斥之前存下的配置可能两个都是 true：加载时按直接辅助码生效，句中辅助码显示为关。
     wchar_t config_dir[32768];
-    const DWORD length = GetEnvironmentVariableW(L"METASEQUOIA_IME_CONFIG_DIR", config_dir, 32768);
+    const DWORD length = GetEnvironmentVariableW(L"PHONETIC_IPA_CONFIG_DIR", config_dir, 32768);
     REQUIRE(length > 0);
     const std::filesystem::path config_path = std::filesystem::path(std::wstring(config_dir, length)) / L"config.toml";
     std::string text;
