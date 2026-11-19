@@ -382,13 +382,24 @@ bool CMetasequoiaIME::_QueueInputHotkey(_In_ ITfContext *pContext, REFGUID hotke
     if (_pCompositionProcessorEngine != nullptr && !_serverUnavailableFallbackActive &&
         IsEqualGUID(hotkeyGuid, Global::MetasequoiaIMEGuidImeModePreserveKey))
     {
-        // Bare Shift chooses the CIN sub-mode. Keep TSF open so letters and
-        // Shift+digits still reach this input method instead of the host.
-        _pCompositionProcessorEngine->SetIMEMode(_pThreadMgr, _tfClientId, TRUE);
-        _KEYSTROKE_STATE state = {};
-        state.Category = CATEGORY_COMPOSING;
-        state.Function = FUNCTION_TOGGLE_ENGLISH_CANDIDATES;
-        *pIsEaten = _QueueDeferredKeyDown(pContext, VK_SHIFT, 0, L'\0', 0, state) ? TRUE : FALSE;
+        const bool wasOpen = _deferredKeyProjectionValid
+                                 ? _deferredProjectedImeOpen
+                                 : (_pCompositionProcessorEngine->GetIMEMode(_pThreadMgr, _tfClientId) != FALSE);
+        if (!wasOpen)
+        {
+            // Coming back from English mode returns to Pinyin first instead of jumping into IPA.
+            *pIsEaten = _QueueDeferredPreservedKey(pContext, hotkeyGuid) ? TRUE : FALSE;
+        }
+        else
+        {
+            // Bare Shift chooses the CIN sub-mode. Keep TSF open so letters and
+            // Shift+digits still reach this input method instead of the host.
+            _pCompositionProcessorEngine->SetIMEMode(_pThreadMgr, _tfClientId, TRUE);
+            _KEYSTROKE_STATE state = {};
+            state.Category = CATEGORY_COMPOSING;
+            state.Function = FUNCTION_TOGGLE_ENGLISH_CANDIDATES;
+            *pIsEaten = _QueueDeferredKeyDown(pContext, VK_SHIFT, 0, L'\0', 0, state) ? TRUE : FALSE;
+        }
     }
     else if (_pCompositionProcessorEngine != nullptr &&
              _pCompositionProcessorEngine->GetPreservedKeyAction(hotkeyGuid) ==

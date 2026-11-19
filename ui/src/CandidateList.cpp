@@ -27,6 +27,16 @@ constexpr D2D1_DRAW_TEXT_OPTIONS kColorClipTextOptions =
 
 constexpr float kCandidateItemGap = 1.0f;
 
+float TranslationFontScale(const CandidateList::Item &item)
+{
+    return (item.secondaryIsIpa && !item.secondaryIsHint) ? 0.88f : 0.78f;
+}
+
+float TranslationLineFactor(const CandidateList::Item &item)
+{
+    return (item.secondaryIsIpa && !item.secondaryIsHint) ? 1.35f : 1.25f;
+}
+
 // Per-corner radii in top-left, top-right, bottom-right, bottom-left order.
 void FillRoundedRectCorners(DeviceResources &deviceResources, const RectF &bounds, const float (&radii)[4],
                             D2D1_COLOR_F fill)
@@ -102,6 +112,8 @@ void CandidateList::SetItems(std::vector<Item> items)
     }
     pressedIndex_ = static_cast<size_t>(-1);
     hoveredIndex_ = static_cast<size_t>(-1);
+    pressedSecondary_ = false;
+    hoveredSecondary_ = false;
     InvalidateMeasure();
 }
 
@@ -110,6 +122,9 @@ void CandidateList::ClearItems()
     items_.clear();
     selectedIndex_ = 0;
     pressedIndex_ = static_cast<size_t>(-1);
+    hoveredIndex_ = static_cast<size_t>(-1);
+    pressedSecondary_ = false;
+    hoveredSecondary_ = false;
     InvalidateMeasure();
 }
 
@@ -375,7 +390,7 @@ CandidateList::ItemGeometry CandidateList::MeasureItem(size_t index, float width
     }
     if (!item.translation.empty())
     {
-        const float fontSize = appearance_.fontSize * (item.secondaryIsIpa ? 1.0f : 0.78f);
+        const float fontSize = appearance_.fontSize * TranslationFontScale(item);
         const float gap = appearance_.fontSize * 0.65f;
         const float naturalTranslationWidth = EstimateTextWidth(item.translation, fontSize, item.secondaryFontFamily);
         const float translationW = std::min(naturalTranslationWidth, contentWidth);
@@ -384,7 +399,7 @@ CandidateList::ItemGeometry CandidateList::MeasureItem(size_t index, float width
         const float translationH =
             inlineTranslation
                 ? textH
-                : std::max(fontSize * (item.secondaryIsIpa ? 1.6f : 1.25f),
+                : std::max(fontSize * TranslationLineFactor(item),
                            MeasureTextHeight(item.translation, fontSize, translationW, item.secondaryFontFamily));
         geometry.translation = {textX + (inlineTranslation ? lineEnd + gap : 0.0f),
                                 inlineTranslation ? 0.0f : height - padBelow, translationW, translationH};
@@ -464,8 +479,9 @@ SizeF CandidateList::Measure(const SizeF &availableSize)
         const float textSlack = !appearance_.fitContent ? 6.0f : (item.annotation.empty() ? 0.0f : 4.0f);
         const float textWidth = EstimateTextWidth(item.text, appearance_.fontSize, item.textFontFamily) + textSlack +
                                 EstimateTextWidth(item.annotation, appearance_.annotationFontSize);
-        const float translationWidth = EstimateTextWidth(
-            item.translation, appearance_.fontSize * (item.secondaryIsIpa ? 1.0f : 0.78f), item.secondaryFontFamily);
+        const float translationFontSize = appearance_.fontSize * TranslationFontScale(item);
+        const float translationWidth =
+            EstimateTextWidth(item.translation, translationFontSize, item.secondaryFontFamily);
         const float contentWidth =
             (horizontal || item.secondaryIsIpa)
                 ? std::max(textWidth, translationWidth)
@@ -488,6 +504,7 @@ SizeF CandidateList::Measure(const SizeF &availableSize)
     float x = 0.0f;
     float y = 0.0f;
     float rowHeight = 0.0f;
+    size_t lineStart = 0;
     float measuredWidth = horizontal ? 0.0f : verticalWidth;
     for (size_t i = 0; i < items_.size(); ++i)
     {
@@ -495,6 +512,9 @@ SizeF CandidateList::Measure(const SizeF &availableSize)
         // 网格的整列宽度是除出来的，末列可能因为浮点误差多出一点点，不能因此换行。
         if (horizontal && x > 0.0f && x + geometry.bounds.width > availableWidth + (grid ? 0.5f : 0.0f))
         {
+            for (size_t k = lineStart; k < itemGeometry_.size(); ++k)
+                itemGeometry_[k].bounds.height = rowHeight;
+            lineStart = itemGeometry_.size();
             y += rowHeight + gap;
             x = 0.0f;
             rowHeight = 0.0f;
@@ -511,6 +531,11 @@ SizeF CandidateList::Measure(const SizeF &availableSize)
             y += geometry.bounds.height + gap;
             rowHeight = 0.0f;
         }
+    }
+    if (horizontal)
+    {
+        for (size_t k = lineStart; k < itemGeometry_.size(); ++k)
+            itemGeometry_[k].bounds.height = rowHeight;
     }
     layoutWidth_ = measuredWidth;
     const float height = items_.empty() ? appearance_.itemHeight : y + rowHeight;
@@ -531,6 +556,11 @@ void CandidateList::Render(DeviceResources &deviceResources)
     if (!target || !factory || itemGeometry_.size() != items_.size())
     {
         return;
+    }
+    if (cachedRenderTarget_ != target)
+    {
+        textLayoutCache_.clear();
+        cachedRenderTarget_ = target;
     }
 
     const std::wstring &fontFamily = ResolvedFontFamily();
@@ -584,7 +614,11 @@ void CandidateList::Render(DeviceResources &deviceResources)
             if (appearance_.showSelectedBar && (selected || pressed))
             {
                 const float barWidth = (std::max)(appearance_.selectedBarWidth, 3.0f);
-                const float barHeight = (std::max)(appearance_.selectedBarHeight, barWidth * 2.0f);
+                const float minTallHeight =
+                    itemRect.height > appearance_.fontSize * 2.1f ? itemRect.height * 0.56f : 0.0f;
+                const float barHeight =
+                    (std::max)(barWidth * 2.0f, (std::min)(itemRect.height - 6.0f,
+                                                           (std::max)(appearance_.selectedBarHeight, minTallHeight)));
                 const float barY = itemRect.y + std::max((itemRect.height - barHeight) * 0.5f, 0.0f);
                 const float barX = appearance_.selectedBarInside ? itemRect.x : itemRect.x - barWidth * 0.5f;
                 const RectF selectedBar = {barX, barY, barWidth, barHeight};
@@ -593,7 +627,8 @@ void CandidateList::Render(DeviceResources &deviceResources)
             }
         }
 
-        const float translationFontSize = appearance_.fontSize * (items_[index].secondaryIsIpa ? 1.0f : 0.78f);
+        const Item &item = items_[index];
+        const float translationFontSize = appearance_.fontSize * TranslationFontScale(item);
         const auto &geometry = itemGeometry_[index];
         const auto absolute = [&](RectF rect) {
             rect.x += itemRect.x;
@@ -605,7 +640,33 @@ void CandidateList::Render(DeviceResources &deviceResources)
         const RectF annotationRect = absolute(geometry.annotation);
         const RectF translationRect = absolute(geometry.translation);
 
-        const Item &item = items_[index];
+        if (hovered && hoveredSecondary_ && item.secondaryIsIpa && !item.secondaryIsHint &&
+            geometry.translation.width > 0.0f && geometry.translation.height > 0.0f)
+        {
+            D2D1_COLOR_F pillColor = selected ? (appearance_.selectedBarColor.a > 0.001f ? appearance_.selectedBarColor
+                                                                                         : appearance_.textColor)
+                                              : appearance_.rowFillHover;
+            if (selected)
+                pillColor.a = 0.16f;
+            else if (pillColor.a > 0.001f)
+                pillColor.a = (std::min)(1.0f, pillColor.a * 1.15f);
+            if (pillColor.a > 0.001f)
+            {
+                const float subLeft = (std::max)(itemRect.x + 2.0f, translationRect.x - 4.0f);
+                const float subTop = (std::max)(itemRect.y + 1.0f, translationRect.y - 1.0f);
+                const float subRight = itemRect.x + (std::max)(0.0f, itemRect.width - 2.0f);
+                const float subBottom =
+                    (std::min)(itemRect.y + itemRect.height - 1.0f, translationRect.y + translationRect.height + 1.0f);
+                if (subRight > subLeft && subBottom > subTop)
+                {
+                    const RectF pillRect{subLeft, subTop, subRight - subLeft, subBottom - subTop};
+                    const float pillRadius =
+                        appearance_.cornerRadius > 0.0f ? (std::min)(appearance_.cornerRadius, 4.0f) : 0.0f;
+                    FillRoundedRect(deviceResources, pillRect, pillRadius, pillColor, pillColor, 0.0f);
+                }
+            }
+        }
+
         const ComPtr<IDWriteTextLayout> labelLayout =
             TextLayoutFor(factory, fontFamily, item.label, appearance_.labelFontSize, labelRect);
         const ComPtr<IDWriteTextLayout> textLayout =
@@ -638,6 +699,10 @@ void CandidateList::Render(DeviceResources &deviceResources)
         {
             translationColor = annotationColor;
             translationColor.a *= 0.62f;
+        }
+        if (item.secondaryIsHint)
+        {
+            translationColor.a *= 0.72f;
         }
         ID2D1SolidColorBrush *translationBrush = deviceResources.GetSolidColorBrush(translationColor);
         if (translationLayout)
@@ -683,6 +748,10 @@ void CandidateList::Render(DeviceResources &deviceResources)
         {
             target->DrawTextLayout(D2D1::Point2F(translationRect.x, translationRect.y), translationLayout.Get(),
                                    translationBrush, kColorClipTextOptions);
+            if (!item.translationRuns.empty())
+            {
+                translationLayout->SetDrawingEffect(nullptr, {0, static_cast<UINT32>(item.translation.size())});
+            }
         }
     }
 }
@@ -703,6 +772,18 @@ void CandidateList::OnFocusChanged(bool focused)
     InvalidateVisual();
 }
 
+bool CandidateList::HitSecondaryIpa(size_t index, const PointF &dipPoint) const
+{
+    if (index >= items_.size() || index >= itemGeometry_.size())
+        return false;
+    const Item &item = items_[index];
+    if (!item.secondaryIsIpa || item.secondaryIsHint)
+        return false;
+    const RectF itemRect = ItemRect(index);
+    return dipPoint.y >= itemRect.y + itemGeometry_[index].translation.y &&
+           dipPoint.x >= itemRect.x + itemGeometry_[index].text.x;
+}
+
 bool CandidateList::OnMouseDown(const POINT &point, WPARAM keyState)
 {
     (void)keyState;
@@ -720,7 +801,7 @@ bool CandidateList::OnMouseDown(const POINT &point, WPARAM keyState)
 
     pressed_ = true;
     pressedIndex_ = hit;
-    pressedSecondary_ = items_[hit].secondaryIsIpa && dipPoint.y >= ItemRect(hit).y + itemGeometry_[hit].translation.y;
+    pressedSecondary_ = HitSecondaryIpa(hit, dipPoint);
     InvalidateVisual();
     return true;
 }
@@ -742,10 +823,12 @@ bool CandidateList::OnMouseUp(const POINT &point, WPARAM keyState)
     if (hit != static_cast<size_t>(-1) && hit == pressedIndex)
     {
         SetSelectedIndex(hit);
-        const bool secondary =
-            items_[hit].secondaryIsIpa && dipPoint.y >= ItemRect(hit).y + itemGeometry_[hit].translation.y;
+        const bool secondary = HitSecondaryIpa(hit, dipPoint);
         if (secondary != pressedSecondary_)
+        {
+            InvalidateVisual();
             return true;
+        }
         if (secondary && onSecondaryActivated_)
             onSecondaryActivated_(hit);
         else if (!secondary && onItemActivated_)
@@ -790,24 +873,27 @@ bool CandidateList::OnMouseMove(const POINT &point, WPARAM keyState)
 
     const PointF dipPoint = window_->ClientPixelsToDips(point);
     const size_t hit = HitTestItem(dipPoint);
-    if (hoveredIndex_ == hit)
+    const bool nextSecondary = (hit != static_cast<size_t>(-1)) && HitSecondaryIpa(hit, dipPoint);
+    if (hoveredIndex_ == hit && hoveredSecondary_ == nextSecondary)
     {
         return hit != static_cast<size_t>(-1);
     }
 
     hoveredIndex_ = hit;
+    hoveredSecondary_ = nextSecondary;
     InvalidateVisual();
     return hit != static_cast<size_t>(-1);
 }
 
 void CandidateList::OnMouseLeave()
 {
-    if (hoveredIndex_ == static_cast<size_t>(-1))
+    if (hoveredIndex_ == static_cast<size_t>(-1) && !hoveredSecondary_)
     {
         return;
     }
 
     hoveredIndex_ = static_cast<size_t>(-1);
+    hoveredSecondary_ = false;
     InvalidateVisual();
 }
 

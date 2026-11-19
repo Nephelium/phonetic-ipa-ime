@@ -83,6 +83,15 @@ std::string g_candidate_translation_signature;
 bool g_translation_candidates_active = false;
 PhoneticIpa::ReadingSession g_ipa_readings;
 bool g_ipa_reading_page_active = false;
+
+void SetIpaReadingPageActive(bool active)
+{
+    if (g_ipa_reading_page_active == active)
+        return;
+    g_ipa_reading_page_active = active;
+    BroadcastToTsfWorkerThreadViaNamedpipe(Global::DataFromServerMsgTypeToTsfWorkerThread::IpaReadingPageChanged,
+                                           active ? L"1" : L"0");
+}
 bool g_date_time_page_active = false;
 std::string g_date_time_page_keyword;
 std::vector<WordItem> g_translation_saved_items;
@@ -818,7 +827,7 @@ void ClearState()
     // same common words, and its first frame should already carry them.
     g_candidate_translation_signature.clear();
     g_translation_candidates_active = false;
-    g_ipa_reading_page_active = false;
+    SetIpaReadingPageActive(false);
     g_ipa_readings.Clear();
     g_date_time_page_active = false;
     g_date_time_page_keyword.clear();

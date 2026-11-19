@@ -89,6 +89,8 @@ inline std::string ReadRuleIdFile()
         return "invalid";
     std::string id;
     std::getline(file, id);
+    if (id.compare(0, 3, "\xef\xbb\xbf") == 0)
+        id.erase(0, 3);
     if (!id.empty() && id.back() == '\r')
         id.pop_back();
     return id;
@@ -103,13 +105,22 @@ inline std::shared_ptr<const phonetic_ipa::HanziTable::Words> SharedWords()
     }
     const auto path = ResourceRoot() / "word-readings.tsv";
     std::error_code error;
-    std::shared_ptr<const phonetic_ipa::HanziTable::Words> words;
-    if (std::filesystem::exists(path, error))
-        words = phonetic_ipa::HanziTable::ReadWords(path);
-    std::lock_guard lock(cache.mutex);
-    cache.words = words;
-    cache.words_loaded = true;
-    return words;
+    const bool exists = std::filesystem::exists(path, error);
+    if (error || !exists)
+        return {};
+    try
+    {
+        auto words = phonetic_ipa::HanziTable::ReadWords(path);
+        std::lock_guard lock(cache.mutex);
+        cache.words = words;
+        cache.words_loaded = true;
+        return words;
+    }
+    catch (const std::exception &)
+    {
+        // Keep the character transcription table usable even if word-readings.tsv is damaged.
+        return {};
+    }
 }
 inline std::shared_ptr<const phonetic_ipa::HanziTable> BuildTable(phonetic_ipa::HanziTable characters)
 {
@@ -152,6 +163,8 @@ inline void SetRuleId(const std::string &id)
     // preference. An invalid file never changes the current selection. The
     // shared word table is not reparsed, so this stays cheap on UI threads.
     auto characters = phonetic_ipa::LoadTranscriptionRule(ResourceRoot(), id, false);
+    std::error_code dir_error;
+    std::filesystem::create_directories(ResourceRoot(), dir_error);
     static std::atomic<unsigned> serial{0};
     const auto target = ResourceRoot() / "rule-selection.txt";
     const auto temporary = ResourceRoot() / ("rule-selection-" + std::to_string(GetCurrentProcessId()) + "-" +
@@ -213,23 +226,31 @@ inline std::shared_ptr<const phonetic_ipa::HanziTable> Hanzi()
         std::lock_guard lock(cache.mutex);
         if (cache.table && cache.table_id == id)
             return cache.table;
+        if (cache.failed_id == id && detail::Clock::now() - cache.failed_at < detail::kRuleRetryDelay)
+            return detail::EmptyTable();
     }
     try
     {
         auto table = detail::BuildTable(phonetic_ipa::LoadTranscriptionRule(ResourceRoot(), id, false));
         std::lock_guard lock(cache.mutex);
-        cache.table = table;
-        cache.table_id = id;
-        cache.failed_id.clear();
-        cache.error.clear();
+        if (!cache.id_valid || cache.id == id)
+        {
+            cache.table = table;
+            cache.table_id = id;
+            cache.failed_id.clear();
+            cache.error.clear();
+        }
         return table;
     }
     catch (const std::exception &e)
     {
         std::lock_guard lock(cache.mutex);
-        cache.failed_id = id;
-        cache.failed_at = detail::Clock::now();
-        cache.error = e.what();
+        if (!cache.id_valid || cache.id == id)
+        {
+            cache.failed_id = id;
+            cache.failed_at = detail::Clock::now();
+            cache.error = e.what();
+        }
         return detail::EmptyTable();
     }
 }

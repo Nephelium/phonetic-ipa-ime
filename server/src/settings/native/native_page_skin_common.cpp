@@ -116,12 +116,20 @@ CandidateFont ReadCandidateFont(const SettingsModel &model)
     const std::string primary = model.GetString("appearance.english_font_css_family");
     if (!primary.empty())
         font.primary = Widen(primary);
+    const auto pushFallback = [&](const std::wstring &name) {
+        if (!name.empty() && std::find(font.fallbacks.begin(), font.fallbacks.end(), name) == font.fallbacks.end())
+        {
+            font.fallbacks.push_back(name);
+        }
+    };
+    pushFallback(L"PTB IPA Plus");
+    pushFallback(L"Doulos SIL");
     if (const Json *fallbacks = model.Find("appearance.fallback_font_css_families"); fallbacks && fallbacks->is_array())
     {
         for (const auto &item : *fallbacks)
         {
             if (item.is_string() && !item.get<std::string>().empty())
-                font.fallbacks.push_back(Widen(item.get<std::string>()));
+                pushFallback(Widen(item.get<std::string>()));
         }
     }
     return font;

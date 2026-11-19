@@ -1,20 +1,20 @@
 {
   "schema": 1,
   "product": "phonetic-ipa-ime",
-  "version": "0.1.8",
-  "notes": "Windows 改为安装到 Program Files，个人数据按账户保存，升级时自动迁移旧键位与配置；键位文件损坏不再阻止启动。没有音标的候选可直接输入汉字；修正含撇号拼音的部分选词；Caps Lock 输出汉字时 Shift＋1–5 恢复标点；工具栏区分三种模式；切换规则更快。Android 改为 release 构建，只计算当前页读音，打字更流畅。macOS／iOS 仍为 0.1.7。",
+  "version": "0.1.9",
+  "notes": "修复多音字部分选字、跨读音变体误判与儿化 r5↔er 映射，隔离本输入法 TSF GUID 与管道身份；优化 Windows 候选窗 IPA 排版、悬浮工具栏、设置字体/DPI/图标切换、5 套皮肤及安全安装与 WAL 原子迁移；完善 Android JNI 安全与并发锁、按键多指手势与按压反馈、IPA Plus 多字段搜索及设置页生命周期/状态同步；优化官网下载面板窄屏排版与对比度。macOS／iOS 仍为 0.1.7。",
   "platforms": {
     "windows": {
-      "url": "https://www.phonetictoolbox.com/releases/phonetic-ipa-ime/0.1.8/PhoneticIPA-Windows-0.1.8.zip",
-      "githubUrl": "https://github.com/Nephelium/phonetic-ipa-ime/releases/download/ipa-v0.1.8/PhoneticIPA-Windows-0.1.8.zip",
-      "bytes": 97561554,
-      "sha256": "19475375b420a3be16fc3ce12343cf21677f3c54ae4c000a01797fead8451dd0"
+      "url": "https://www.phonetictoolbox.com/releases/phonetic-ipa-ime/0.1.9/PhoneticIPA-Windows-0.1.9.zip",
+      "githubUrl": "https://github.com/Nephelium/phonetic-ipa-ime/releases/download/ipa-v0.1.9/PhoneticIPA-Windows-0.1.9.zip",
+      "bytes": 97605933,
+      "sha256": "598cddbc722b7bed55dd8a5b51fa44eedf75ec0a4f417240d14f12b3892382cb"
     },
     "android": {
-      "url": "https://www.phonetictoolbox.com/releases/phonetic-ipa-ime/0.1.8/PhoneticIPA-Android-0.1.8.apk",
-      "githubUrl": "https://github.com/Nephelium/phonetic-ipa-ime/releases/download/ipa-v0.1.8/PhoneticIPA-Android-0.1.8.apk",
-      "bytes": 121202603,
-      "sha256": "ab122fb8b4f3bade45061e0aa103b94c0c46a09ffef842ec37b07c3f9d1bb5e8"
+      "url": "https://www.phonetictoolbox.com/releases/phonetic-ipa-ime/0.1.9/PhoneticIPA-Android-0.1.9.apk",
+      "githubUrl": "https://github.com/Nephelium/phonetic-ipa-ime/releases/download/ipa-v0.1.9/PhoneticIPA-Android-0.1.9.apk",
+      "bytes": 121683763,
+      "sha256": "78e21f04369430094de5ef53ca364b78ff3637de48778aeebb9fa797acb048fa"
     }
   }
 }

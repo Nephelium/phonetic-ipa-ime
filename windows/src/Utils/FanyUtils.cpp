@@ -112,21 +112,68 @@ std::filesystem::path SharedConfigPath()
     }
     return directory / L"config.toml";
 }
+
+SRWLOCK g_ipaTableLock = SRWLOCK_INIT;
+bool g_ipaTableChecked = false;
+ULONGLONG g_ipaTableCheckedTick = 0;
+std::filesystem::path g_ipaTableDir;
+const phonetic_ipa::CinTable *g_ipaTable = nullptr;
+phonetic_ipa::LiveCinTable g_ipaTableCache;
+
+template <typename Fn> bool QueryCachedIpaTable(bool defaultOnUnavailable, Fn &&fn)
+{
+    AcquireSRWLockExclusive(&g_ipaTableLock);
+    bool result = defaultOnUnavailable;
+    try
+    {
+        const ULONGLONG now = GetTickCount64();
+        const std::filesystem::path dir = SharedDataDirectory() / L"ipa";
+        if (!g_ipaTableChecked || now - g_ipaTableCheckedTick >= 1000 || dir != g_ipaTableDir)
+        {
+            g_ipaTableChecked = true;
+            g_ipaTableCheckedTick = now;
+            g_ipaTableDir = dir;
+            try
+            {
+                g_ipaTable = &g_ipaTableCache.Get(dir);
+            }
+            catch (...)
+            {
+                g_ipaTable = nullptr;
+            }
+        }
+        if (g_ipaTable != nullptr)
+        {
+            result = fn(*g_ipaTable);
+        }
+    }
+    catch (...)
+    {
+        result = defaultOnUnavailable;
+    }
+    ReleaseSRWLockExclusive(&g_ipaTableLock);
+    return result;
+}
 } // namespace
 
 bool HasIpaHotkey(unsigned modifiers, unsigned key)
 {
     if (!PhoneticIpaKey::EditableChord(modifiers, key))
         return false;
-    try
-    {
-        static thread_local phonetic_ipa::LiveCinTable cache;
-        return !cache.Get(SharedDataDirectory() / L"ipa").Hotkey(modifiers, key).empty();
-    }
-    catch (...)
-    {
+    return QueryCachedIpaTable(
+        /*defaultOnUnavailable=*/false,
+        [modifiers, key](const phonetic_ipa::CinTable &table) { return !table.Hotkey(modifiers, key).empty(); });
+}
+
+bool HasIpaStartKey(WCHAR wch)
+{
+    if (wch == L't' || wch == L'c')
+        return true;
+    if (wch < 0x21 || wch > 0x7e)
         return false;
-    }
+    const std::string prefix(1, static_cast<char>(wch));
+    return QueryCachedIpaTable(/*defaultOnUnavailable=*/true,
+                               [&prefix](const phonetic_ipa::CinTable &table) { return table.HasPrefix(prefix); });
 }
 
 BOOL ReadConfiguredDefaultImeModeChinese()

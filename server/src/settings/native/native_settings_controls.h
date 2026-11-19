@@ -727,6 +727,7 @@ class TextField : public msimeui::Container
     explicit TextField(Options options);
 
     void SetText(const std::wstring &text);
+    void ForceSetText(const std::wstring &text);
     std::wstring GetText() const;
     // Every edit.
     void SetOnChanged(std::function<void(const std::wstring &)> handler);

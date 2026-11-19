@@ -11,12 +11,24 @@ parser.add_argument('package', type=Path)
 args = parser.parse_args()
 with zipfile.ZipFile(args.package) as archive:
     assert archive.testzip() is None, 'Corrupt ZIP member'
+    for member in archive.namelist():
+        assert '\\' not in member and not member.startswith('/') and '..' not in Path(member).parts, f'Unsafe member path: {member}'
     hashes = json.loads(archive.read('SHA256.json'))
     assert set(archive.namelist()) == set(hashes) | {'SHA256.json'}, 'Incomplete package hash list'
     for name, expected in hashes.items():
         assert hashlib.sha256(archive.read(name)).hexdigest() == expected, name
     binaries = json.loads(archive.read('output/runtime/build-manifest.json'))
+    required_binaries = {
+        'PhoneticIpaServer.exe',
+        'PhoneticIpaSettings.exe',
+        'PhoneticIpaWatchdog.exe',
+        'tsf-x64\\PhoneticIpaTsf.dll',
+        'tsf-x86\\PhoneticIpaTsf.dll',
+    }
+    normalized_binaries = {name.replace('/', '\\'): digest for name, digest in binaries.items()}
+    assert required_binaries <= set(normalized_binaries), 'Missing core binary in build-manifest.json'
     for name, expected in binaries.items():
+        assert '\\' not in name.replace('\\', '/') or '..' not in Path(name.replace('\\', '/')).parts
         assert hashlib.sha256(archive.read('output/runtime/' + name.replace('\\', '/'))).hexdigest() == expected, name
     for skin in ['bigfish', 'bigfish-peek', 'bigfish-national-day']:
         prefix = 'output/runtime/data/skins/' + skin + '/'

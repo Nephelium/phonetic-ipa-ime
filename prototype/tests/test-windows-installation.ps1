@@ -1,4 +1,4 @@
-$ErrorActionPreference = 'Stop'
+﻿$ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot '..\scripts\Windows-Installation.ps1')
 $script:events = [Collections.Generic.List[string]]::new()
 $script:failRegistration = $false
@@ -33,7 +33,7 @@ Require ($installed -eq $script:target) 'Install did not report the Program File
 Require ($events.IndexOf('stop') -lt $events.IndexOf("unregister:$script:target")) 'Old processes were not stopped before unregistering'
 Require ($events.IndexOf("unregister:$script:target") -lt $events.IndexOf("register:$script:target")) 'Upgrade did not unregister old product first'
 Require ($events -contains "set:$script:target") 'Registration does not point at Program Files'
-Require ($events -match 'property:UninstallString=.*Program Files\\PhoneticIPA\\scripts\\Uninstall-Windows.ps1') 'Uninstall entry still depends on the extraction folder'
+Require ($events -match 'property:UninstallString=.*Program Files\\PhoneticIPA\\app-new\\scripts\\Uninstall-Windows.ps1') 'Uninstall entry does not point to version-scoped scripts'
 Require ($events -contains 'preserve:C:\old\data>C:\Users\me\AppData\Local\phonetic-ipa-prototype') 'Earlier personal data was not copied to the starting account'
 Require ($events.IndexOf('stop') -lt $events.IndexOf('preserve:C:\old\data>C:\Users\me\AppData\Local\phonetic-ipa-prototype')) 'Personal data copied while processes were running'
 Require ($events -contains "clean-old:$script:target") 'Old program folders were not cleaned after success'

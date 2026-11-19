@@ -89,7 +89,7 @@ inline std::filesystem::path data_directory()
         const std::filesystem::path root(home);
         if (root.is_absolute())
         {
-            return root / "Library" / "Application Support" / "metasequoiaime";
+            return root / "Library" / "Application Support" / "phonetic-ipa-prototype";
         }
     }
 #else
@@ -98,7 +98,7 @@ inline std::filesystem::path data_directory()
         const std::filesystem::path root(xdg_data_home);
         if (root.is_absolute())
         {
-            return root / "metasequoiaime";
+            return root / "phonetic-ipa-prototype";
         }
     }
     if (const char *home = std::getenv("HOME"))
@@ -106,7 +106,7 @@ inline std::filesystem::path data_directory()
         const std::filesystem::path root(home);
         if (root.is_absolute())
         {
-            return root / ".local" / "share" / "metasequoiaime";
+            return root / ".local" / "share" / "phonetic-ipa-prototype";
         }
     }
 #endif

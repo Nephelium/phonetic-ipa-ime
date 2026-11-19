@@ -1,3 +1,4 @@
+#include "engine/contracts/ipa_product_guids.h"
 #include "utils/single_instance.h"
 #include "watchdog/watchdog_protocol.h"
 
@@ -20,10 +21,9 @@ constexpr DWORD kMaximumRestartDelayMilliseconds = 30'000;
 constexpr DWORD kProfileReadyTimeoutMilliseconds = 30'000;
 constexpr DWORD kProfileReadyRetryIntervalMilliseconds = 1'000;
 
-// Keep these identifiers in sync with MetasequoiaImeTsf/src/Global/Globals.cpp.
-constexpr CLSID kMetasequoiaImeClsid = {0xe3062e9a, 0xd834, 0x4637, {0x89, 0x58, 0xed, 0x8c, 0xfa, 0x42, 0x7d, 0x01}};
-constexpr GUID kMetasequoiaImeProfileGuid = {
-    0x4d59b1b4, 0xd503, 0x44ae, {0x92, 0x59, 0xba, 0xd9, 0xbb, 0x27, 0x78, 0xab}};
+// Keep these identifiers in sync with windows/src/Global/Globals.cpp.
+constexpr CLSID kMetasequoiaImeClsid = PhoneticIpaProduct::kImeClsid;
+constexpr GUID kMetasequoiaImeProfileGuid = PhoneticIpaProduct::kImeProfileGuid;
 constexpr LANGID kMetasequoiaImeLanguage = MAKELANGID(LANG_CHINESE, SUBLANG_CHINESE_SIMPLIFIED);
 
 bool IsMetasequoiaImeEnabledForCurrentUser()

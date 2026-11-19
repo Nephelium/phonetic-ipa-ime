@@ -1,5 +1,6 @@
 #pragma once
 #include <algorithm>
+#include <cstdint>
 #include <filesystem>
 #include <fstream>
 #include <map>
@@ -135,24 +136,34 @@ class HanziTable
         if (!word_readings.empty())
         {
             ReadingPart phrase{word};
-            bool incomplete = false;
             for (const auto &reading : word_readings)
             {
                 if (reading.size() != chars.size())
                     continue;
                 bool agrees = true;
                 for (size_t i = 0; i < chars.size(); ++i)
-                    if (!syllables.empty() && Base(reading[i]) != syllables[i])
+                    if (!syllables.empty() && ReadingBase(reading[i], chars[i]) != syllables[i])
                         agrees = false;
                 if (!agrees)
                     continue;
                 ReadingOption option;
+                bool ok = true;
                 for (size_t i = 0; i < chars.size(); ++i)
                 {
-                    const auto matches = Match(chars[i], Base(reading[i]), Tone(reading[i]));
+                    const auto base = ReadingBase(reading[i], chars[i]);
+                    const int tone = Tone(reading[i]);
+                    auto matches = Match(chars[i], base, tone);
+                    // When the table lacks a neutral-tone row, fall back only when the
+                    // character has a single base reading for that syllable (never guess).
+                    if (matches.empty() && tone == 0)
+                    {
+                        auto fallback = Match(chars[i], base, -1);
+                        if (fallback.size() == 1)
+                            matches = std::move(fallback);
+                    }
                     if (matches.size() != 1)
                     {
-                        incomplete = true;
+                        ok = false;
                         break;
                     }
                     if (!option.ipa.empty())
@@ -163,9 +174,10 @@ class HanziTable
                     option.ipa += matches[0].ipa;
                     option.pinyin += reading[i];
                 }
-                AddUnique(phrase.options, option);
+                if (ok)
+                    AddUnique(phrase.options, option);
             }
-            if (!incomplete && !phrase.options.empty())
+            if (!phrase.options.empty())
             {
                 phrase.selected = phrase.options.size() == 1 ? 0 : -1;
                 result.parts.push_back(std::move(phrase));
@@ -207,15 +219,25 @@ class HanziTable
     {
         if (field.size() != 1 || field[0] < '0' || field[0] > '5')
             throw std::runtime_error("Invalid tone \"" + field + "\" at line " + std::to_string(number));
-        return field[0] - '0';
+        return (field[0] - '0') % 5;
     }
     static std::vector<std::string> Split(const std::string &text, char separator)
     {
         std::vector<std::string> result;
-        std::istringstream stream(text);
-        std::string piece;
-        while (std::getline(stream, piece, separator))
-            result.push_back(piece);
+        if (text.empty())
+            return result;
+        size_t start = 0;
+        for (;;)
+        {
+            const size_t pos = text.find(separator, start);
+            if (pos == std::string::npos)
+            {
+                result.push_back(text.substr(start));
+                break;
+            }
+            result.push_back(text.substr(start, pos - start));
+            start = pos + 1;
+        }
         return result;
     }
     static std::vector<std::string> Characters(const std::string &word)
@@ -223,9 +245,42 @@ class HanziTable
         std::vector<std::string> result;
         for (size_t i = 0; i < word.size();)
         {
-            const auto first = static_cast<unsigned char>(word[i]);
-            const size_t length = first < 0x80 ? 1 : first < 0xe0 ? 2 : first < 0xf0 ? 3 : 4;
+            const auto b0 = static_cast<unsigned char>(word[i]);
+            size_t length = 0;
+            uint32_t cp = 0;
+            if (b0 < 0x80)
+            {
+                length = 1;
+                cp = b0;
+            }
+            else if ((b0 & 0xe0) == 0xc0)
+            {
+                length = 2;
+                cp = b0 & 0x1f;
+            }
+            else if ((b0 & 0xf0) == 0xe0)
+            {
+                length = 3;
+                cp = b0 & 0x0f;
+            }
+            else if ((b0 & 0xf8) == 0xf0)
+            {
+                length = 4;
+                cp = b0 & 0x07;
+            }
+            else
+                return {};
             if (i + length > word.size())
+                return {};
+            for (size_t j = 1; j < length; ++j)
+            {
+                const auto cont = static_cast<unsigned char>(word[i + j]);
+                if ((cont & 0xc0) != 0x80)
+                    return {};
+                cp = (cp << 6) | (cont & 0x3f);
+            }
+            if ((length == 2 && cp < 0x80) || (length == 3 && cp < 0x800) ||
+                (length == 4 && (cp < 0x10000 || cp > 0x10ffff)) || (cp >= 0xd800 && cp <= 0xdfff))
                 return {};
             result.push_back(word.substr(i, length));
             i += length;
@@ -244,6 +299,13 @@ class HanziTable
         if (!value.empty() && value.back() >= '0' && value.back() <= '5')
             value.pop_back();
         return Normalize(value);
+    }
+    static std::string ReadingBase(const std::string &syllable, const std::string &ch)
+    {
+        std::string base = Base(syllable);
+        if (base == "r" && (ch == u8"儿" || ch == u8"兒"))
+            return "er";
+        return base;
     }
     static int Tone(const std::string &value)
     {

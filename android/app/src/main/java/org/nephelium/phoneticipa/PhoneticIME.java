@@ -15,7 +15,7 @@ public final class PhoneticIME extends InputMethodService {
     private RepeatKey deleteKey;
     private int inputViewGeneration;
     private Session model;
-    private boolean uppercase, symbols, alive = true;
+    private boolean uppercase, symbols, passwordField, alive = true;
     @Override public View onCreateInputView() {
         if (deleteKey != null) deleteKey.cancelRepeat();
         final int generation = ++inputViewGeneration;
@@ -43,7 +43,20 @@ public final class PhoneticIME extends InputMethodService {
         return inputFrame;
     }
     @Override public boolean onEvaluateFullscreenMode() { return false; }
-    @Override public void onStartInput(EditorInfo info, boolean restarting) { super.onStartInput(info, restarting); if (deleteKey != null) deleteKey.cancelRepeat(); dismissSymbols(); if (model != null) model.reload();
+    @Override public void onStartInput(EditorInfo info, boolean restarting) {
+        super.onStartInput(info, restarting);
+        if (deleteKey != null) deleteKey.cancelRepeat();
+        dismissSymbols();
+        int inputType = info == null ? 0 : info.inputType;
+        int cls = inputType & android.text.InputType.TYPE_MASK_CLASS;
+        int variation = inputType & android.text.InputType.TYPE_MASK_VARIATION;
+        passwordField = (cls == android.text.InputType.TYPE_CLASS_TEXT &&
+            (variation == android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD ||
+             variation == android.text.InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD ||
+             variation == android.text.InputType.TYPE_TEXT_VARIATION_WEB_PASSWORD)) ||
+            (cls == android.text.InputType.TYPE_CLASS_NUMBER &&
+             variation == android.text.InputType.TYPE_NUMBER_VARIATION_PASSWORD);
+        if (model != null) { if (passwordField) model.clear(); else model.reload(); }
         Updates.check(this, false, message -> { if (alive) updateNotice(); });
     }
     private void updateNotice() {
@@ -73,6 +86,7 @@ public final class PhoneticIME extends InputMethodService {
                 candidates();
             });
             output.setContentDescription("output-mode"); output.setTextSize(android.util.TypedValue.COMPLEX_UNIT_DIP, 12);
+            output.setBackground(UI.keyBackground(this, model.outputIpa ? 0xffdcebef : 0xffffffff, 0xffc6dceb, UI.dp(this, 7)));
             UI.weighted(header, output, 2, keyHeight(32, 24));
             Button rules = UI.button(this, "规则", () -> {});
             rules.setTextSize(android.util.TypedValue.COMPLEX_UNIT_DIP, 12); rules.setContentDescription("transcription-rules");
@@ -89,8 +103,8 @@ public final class PhoneticIME extends InputMethodService {
                         catch (Exception error) { model.status = error.getMessage(); candidates(); return true; }
                         android.os.Handler ui = new android.os.Handler(android.os.Looper.getMainLooper());
                         java.util.concurrent.CompletableFuture.runAsync(() -> {
-                            try { model.engine.selectRule(id); ui.post(model::refresh); }
-                            catch (Exception error) { ui.post(() -> { model.status = error.getMessage(); candidates(); }); }
+                            try { model.engine.selectRule(id); ui.post(() -> { if (alive) model.refresh(); }); }
+                            catch (Exception error) { ui.post(() -> { if (alive) { model.status = error.getMessage(); candidates(); } }); }
                         });
                         return true;
                     }); menu.show();
@@ -173,6 +187,7 @@ public final class PhoneticIME extends InputMethodService {
         UI.weighted(actions, UI.button(this, "🌐", () -> switchToNextInputMethod(false)), 0.8f, keyHeight(39, 26));
         Button mode = UI.button(this, model.pinyin ? "拼音" : "IPA", () -> { model.toggle(); getSharedPreferences("keyboard", MODE_PRIVATE).edit().putBoolean("pinyin-mode", model.pinyin).apply(); keys(); });
         mode.setContentDescription("keyboard-mode");
+        mode.setBackground(UI.keyBackground(this, model.pinyin ? 0xffffffff : 0xffdcebef, 0xffc6dceb, UI.dp(this, 7)));
         if (android.os.Build.VERSION.SDK_INT >= 30) mode.setStateDescription(model.pinyin ? "当前为拼音查字，点按进入直接音标键盘" : "当前为直接音标键盘，点按进入拼音查字");
         UI.weighted(actions, mode, 1, keyHeight(39, 26));
         UI.weighted(actions, UI.button(this, "说明", this::help), 1, keyHeight(39, 26));
@@ -195,6 +210,7 @@ public final class PhoneticIME extends InputMethodService {
         } }
     }); key.setTypeface(UI.ipa(this)); key.setTextSize(android.util.TypedValue.COMPLEX_UNIT_DIP, 22); key.setContentDescription("backspace"); return key; }
     private void typeKey(String key) {
+        if (passwordField) { InputConnection input = getCurrentInputConnection(); if (input != null) input.commitText(key, 1); return; }
         if (model.pinyin) model.append(key);
         else if (!model.raw.isEmpty()) { model.status = "先确认当前候选，再输入音标"; candidates(); }
         else {
@@ -204,6 +220,7 @@ public final class PhoneticIME extends InputMethodService {
         }
     }
     private void typeDigit(String digit) {
+        if (passwordField) { InputConnection input = getCurrentInputConnection(); if (input != null) input.commitText(digit, 1); return; }
         if (digit.equals("0") && !model.pinyin && model.raw.isEmpty()) typeKey(digit);
         else model.digit(digit);
     }
@@ -213,7 +230,8 @@ public final class PhoneticIME extends InputMethodService {
             dismissSymbols(); symbolPicker = new PlusPanel(this, model.engine.directory, true, output -> { model.commit.accept(output); model.clear(); }, this::dismissSymbols);
             symbolPicker.setPadding(UI.dp(this, 8), UI.dp(this, 6), UI.dp(this, 8), root.getPaddingBottom());
             root.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS);
-            inputFrame.addView(symbolPicker, new FrameLayout.LayoutParams(-1, root.getHeight()));
+            int overlayHeight = root.getHeight() > 0 ? root.getHeight() : FrameLayout.LayoutParams.MATCH_PARENT;
+            inputFrame.addView(symbolPicker, new FrameLayout.LayoutParams(-1, overlayHeight));
         } catch (Exception error) { model.status = error.getMessage(); candidates(); }
     }
     private void dismissSymbols() {
@@ -230,7 +248,8 @@ public final class PhoneticIME extends InputMethodService {
             }, this::dismissSymbols);
             symbolPicker.setPadding(UI.dp(this, 8), UI.dp(this, 6), UI.dp(this, 8), root.getPaddingBottom());
             root.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS);
-            inputFrame.addView(symbolPicker, new FrameLayout.LayoutParams(-1, root.getHeight()));
+            int overlayHeight = root.getHeight() > 0 ? root.getHeight() : FrameLayout.LayoutParams.MATCH_PARENT;
+            inputFrame.addView(symbolPicker, new FrameLayout.LayoutParams(-1, overlayHeight));
             symbolPicker.announceForAccessibility(key + "，选择音标");
         } catch (Exception e) { model.status = e.getMessage(); candidates(); }
     }

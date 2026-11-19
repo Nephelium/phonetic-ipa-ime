@@ -29,16 +29,17 @@ class IpaPageHero : public msimeui::Visual
     {
         const auto &p = CurrentPalette();
         FillRounded(dr, bounds_, 18, p.light ? Hex(0xE9EEF7) : Hex(0x202D42));
+        const bool showArt = bounds_.width > 640;
+        const float textMaxW = bounds_.width - (showArt ? 260.0f : 48.0f);
         auto style = BodyStyle();
-        style.size = 13;
-        style.weight = DWRITE_FONT_WEIGHT_SEMI_BOLD;
         style.size = 25;
-        DrawTextInRect(dr, L"音标键盘工作台", style, {bounds_.x + 24, bounds_.y + 14, bounds_.width - 48, 36}, p.text);
+        style.weight = DWRITE_FONT_WEIGHT_SEMI_BOLD;
+        DrawTextInRect(dr, L"音标键盘工作台", style, {bounds_.x + 24, bounds_.y + 14, textMaxW, 36}, p.text);
         style.size = 15;
         style.weight = DWRITE_FONT_WEIGHT_NORMAL;
         DrawTextInRect(dr, L"选一个键，编辑音标；从 IPA Plus 点选，也能保存和分享整套键位。", style,
-                       {bounds_.x + 26, bounds_.y + 59, bounds_.width - 52, 24}, p.textSecondary);
-        if (bounds_.width > 1080)
+                       {bounds_.x + 26, bounds_.y + 59, textMaxW, 24}, p.textSecondary);
+        if (showArt)
         {
             style.family = L"PTB IPA Plus";
             style.size = 50;
@@ -74,6 +75,7 @@ class IpaKeyboardCanvas : public msimeui::Visual
             hovered_ = -1;
             pressed_ = 0;
             previewPage_ = 0;
+            keyCache_.clear();
         }
         bounds_ = rect;
         arrangedSize_ = size;
@@ -103,29 +105,33 @@ class IpaKeyboardCanvas : public msimeui::Visual
         PreviewGeometry g;
         if (hovered_ < 0 || !outputs)
             return g;
-        const auto values = outputs(HoveredKey());
+        const auto &cached = CachedKey(HoveredKey());
+        const auto &values = cached.outputs;
         if (values.empty())
             return g;
         size_t longest = 1;
         for (const auto &v : values)
             longest = std::max(longest, v.size());
-        const auto labels = outputLabels ? outputLabels(HoveredKey()) : std::vector<std::wstring>{};
+        const auto &labels = cached.labels;
         const bool combined =
             std::any_of(labels.begin(), labels.end(), [](const auto &label) { return !label.empty(); });
         g.rowHeight = combined ? 76.f : 58.f;
         const float cell = std::clamp(26.0f + longest * 22.0f, combined ? 132.0f : 76.0f, 240.0f);
-        const float maxWidth = std::min(700.0f, bounds_.width - 16);
+        const float maxWidth = std::max(120.0f, std::min(700.0f, bounds_.width - 16.0f));
         g.columns =
             std::max(size_t{1}, std::min(values.size(), static_cast<size_t>(std::max(1.0f, (maxWidth - 32) / cell))));
         const size_t rows =
             std::max(size_t{1}, static_cast<size_t>(std::max(1.0f, (bounds_.height - 82) / g.rowHeight)));
         g.capacity = rows * g.columns;
         const size_t usedRows = std::min(rows, (values.size() + g.columns - 1) / g.columns);
-        const float w = std::min(maxWidth, std::max(300.0f, cell * g.columns + 32));
+        const float w = std::min(maxWidth, std::max(std::min(maxWidth, 300.0f), cell * g.columns + 32));
         const float h = usedRows * g.rowHeight + 68;
         const auto key = Rect(keys_[hovered_]);
-        g.box = {std::clamp(key.x - 28, bounds_.x + 8, bounds_.x + bounds_.width - w - 8),
-                 std::clamp(key.y - 42, bounds_.y + 6, bounds_.y + bounds_.height - h - 6), w, h};
+        const float minX = bounds_.x + 8.0f;
+        const float maxX = std::max(minX, bounds_.x + bounds_.width - w - 8.0f);
+        const float minY = bounds_.y + 6.0f;
+        const float maxY = std::max(minY, bounds_.y + bounds_.height - h - 6.0f);
+        g.box = {std::clamp(key.x - 28.0f, minX, maxX), std::clamp(key.y - 42.0f, minY, maxY), w, h};
         return g;
     }
     void Render(msimeui::DeviceResources &dr) override
@@ -146,7 +152,8 @@ class IpaKeyboardCanvas : public msimeui::Visual
                 if (!code.empty())
                     label = PhoneticIpa::KeyLegend(code);
             }
-            const auto values = outputs ? outputs(key.vk) : std::vector<std::wstring>{};
+            const auto &cached = CachedKey(key.vk);
+            const auto &values = cached.outputs;
             auto style = CaptionStyle();
             style.size = 12;
             DrawTextInRect(dr, label, style, {rect.x + 6, rect.y + 4, rect.width - 12, 18}, p.textSecondary);
@@ -158,8 +165,8 @@ class IpaKeyboardCanvas : public msimeui::Visual
             }
             style = BodyStyle();
             style.family = L"PTB IPA Plus";
-            style.size = 28;
-            DrawTextInRect(dr, summary ? summary(key.vk) : L"", style,
+            style.size = std::clamp(rect.width * 0.48f, 12.0f, 24.0f);
+            DrawTextInRect(dr, IpaPreviewText(cached.summary), style,
                            {rect.x + 3, rect.y + 22, rect.width - 6, rect.height - 23}, p.text, true);
         }
         RenderPreview(dr);
@@ -203,7 +210,7 @@ class IpaKeyboardCanvas : public msimeui::Visual
     {
         if (!HoveredKey() || !outputs || delta == 0)
             return false;
-        const auto count = outputs(HoveredKey()).size(), capacity = Preview().capacity;
+        const auto count = CachedKey(HoveredKey()).outputs.size(), capacity = Preview().capacity;
         if (count <= capacity)
             return false;
         const size_t pages = (count + capacity - 1) / capacity;
@@ -217,18 +224,45 @@ class IpaKeyboardCanvas : public msimeui::Visual
     }
     void Refresh()
     {
+        keyCache_.clear();
         InvalidateMeasure();
         RefreshVisual();
     }
 
   private:
+    struct CachedKeyData
+    {
+        std::wstring summary;
+        std::vector<std::wstring> outputs;
+        std::vector<std::wstring> labels;
+    };
     std::string arrangedSize_;
     std::vector<PhoneticIpa::KeyCap> keys_;
     unsigned pressed_ = 0;
     int hovered_ = -1;
     size_t previewPage_ = 0;
+    mutable std::map<unsigned, CachedKeyData> keyCache_;
+    mutable unsigned cachedModifiers_ = ~0u;
     msimeui::Tween entrance_{1.0f};
     msimeui::ShadowCache shadow_;
+    const CachedKeyData &CachedKey(unsigned vk) const
+    {
+        if (cachedModifiers_ != modifiers)
+        {
+            keyCache_.clear();
+            cachedModifiers_ = modifiers;
+        }
+        auto it = keyCache_.find(vk);
+        if (it != keyCache_.end())
+            return it->second;
+        CachedKeyData entry;
+        entry.summary = summary ? summary(vk) : L"";
+        if (outputs)
+            entry.outputs = outputs(vk);
+        if (outputLabels)
+            entry.labels = outputLabels(vk);
+        return keyCache_.emplace(vk, std::move(entry)).first->second;
+    }
     void RefreshVisual()
     {
         InvalidateVisual();
@@ -247,8 +281,9 @@ class IpaKeyboardCanvas : public msimeui::Visual
     {
         if (hovered_ < 0 || !outputs)
             return;
-        const auto values = outputs(HoveredKey());
-        const auto labels = outputLabels ? outputLabels(HoveredKey()) : std::vector<std::wstring>{};
+        const auto &cached = CachedKey(HoveredKey());
+        const auto &values = cached.outputs;
+        const auto &labels = cached.labels;
         if (values.empty())
             return;
         const auto g = Preview();

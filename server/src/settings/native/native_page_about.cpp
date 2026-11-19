@@ -1,5 +1,6 @@
 #include "settings/native/native_page_help_widgets.h"
 
+#include "resource/resource.h"
 #include "utils/ipa_update.h"
 #include "utils/ipa_app_icon.h"
 #include "msimeui/DeviceResources.h"
@@ -299,6 +300,7 @@ VisualPtr BuildAboutPage(PageContext &context)
         try
         {
             PhoneticIpa::AppIcon::Import(path);
+            PhoneticIpa::AppIcon::Refresh(ctx->host.Hwnd(), IDI_IME_ICON);
             ctx->host.ShowToast(L"图标已更换。", true);
             ctx->host.Window()->Invalidate();
         }
@@ -313,6 +315,7 @@ VisualPtr BuildAboutPage(PageContext &context)
         try
         {
             PhoneticIpa::AppIcon::Reset();
+            PhoneticIpa::AppIcon::Refresh(ctx->host.Hwnd(), IDI_IME_ICON);
             ctx->host.ShowToast(L"已恢复默认图标。", true);
             ctx->host.Window()->Invalidate();
         }

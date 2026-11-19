@@ -105,6 +105,28 @@ bool PostToPage(const std::wstring &message)
     return true;
 }
 
+bool LoadPrivateIpaFonts()
+{
+    bool loaded = false;
+    const std::filesystem::path user_root = PhoneticIpa::ResourceRoot();
+    const std::filesystem::path factory_root = std::filesystem::path(CommonUtils::get_factory_data_path_w()) / L"ipa";
+    for (const wchar_t *file : {L"DoulosSIL-Regular.ttf", L"PTBIPAPlus-Regular.ttf"})
+    {
+        std::error_code error;
+        std::filesystem::path candidate = user_root / file;
+        if (!std::filesystem::is_regular_file(candidate, error))
+        {
+            error.clear();
+            const std::filesystem::path fallback = factory_root / file;
+            if (std::filesystem::is_regular_file(fallback, error))
+                candidate = fallback;
+        }
+        if (msimeui::LoadPrivateIpaFont(candidate.wstring()))
+            loaded = true;
+    }
+    return loaded;
+}
+
 // 冷启动打点：设置 METASEQUOIA_IME_SETTINGS_TRACE=1 后，各阶段距进程启动的毫秒数追加到
 // %TEMP%\metasequoia-settings-startup.log。UI 线程和 worker 都会调用。
 void TraceStartup(const char *stage)
@@ -1716,7 +1738,11 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM w_param, LPARAM l_pa
     {
         LRESULT result = 0;
         if (g_native->HandleMessage(message, w_param, l_param, result))
+        {
+            if (message == WM_DPICHANGED)
+                PhoneticIpa::AppIcon::Refresh(hwnd, IDI_IME_ICON);
             return result;
+        }
     }
     switch (message)
     {
@@ -1762,6 +1788,9 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM w_param, LPARAM l_pa
             });
         }
         break;
+    case WM_DPICHANGED:
+        PhoneticIpa::AppIcon::Refresh(hwnd, IDI_IME_ICON);
+        break;
     case WM_NCCALCSIZE:
         if (w_param)
         {
@@ -1794,8 +1823,6 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM w_param, LPARAM l_pa
         break;
     }
     case WM_TIMER:
-        if (w_param == kConfigReloadTimer)
-            PhoneticIpa::AppIcon::Refresh(hwnd, IDI_IME_ICON);
         if (w_param == kLingerTimer)
         {
             CloseSettings(hwnd);
@@ -1858,8 +1885,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM w_param, LPARAM l_pa
 int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR command_line, int show_command)
 {
     TraceStartup("wWinMain");
-    msimeui::LoadPrivateIpaFont((PhoneticIpa::ResourceRoot() / "DoulosSIL-Regular.ttf").wstring());
-    msimeui::LoadPrivateIpaFont((PhoneticIpa::ResourceRoot() / "PTBIPAPlus-Regular.ttf").wstring());
+    LoadPrivateIpaFonts();
     // The elevated half of the game-compat switch: write HKLM and exit, no window, no single-instance check.
     if (const int elevated_result = game_compat_name::RunElevatedApplyIfRequested(command_line); elevated_result >= 0)
         return elevated_result;
@@ -1940,11 +1966,18 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR command_line, int show_
     g_worker->Submit([initial_config] {
         g_worker_com_initialized = SUCCEEDED(CoInitializeEx(nullptr, COINIT_MULTITHREADED));
         PhoneticIpa::UserData::Seed(); // Same per-account copy as the Server.
+        const bool fonts_loaded = LoadPrivateIpaFonts();
         TraceStartup("worker: InitImeConfig begin");
         InitImeConfig();
         TraceStartup("worker: InitImeConfig end");
         initial_config->set_value(ResolveConfiguredTheme(GetConfiguredThemeSettings()) == "light");
-        return ConfigCompletion();
+        auto completion = ConfigCompletion();
+        return [completion = std::move(completion), fonts_loaded] {
+            if (completion)
+                completion();
+            if (fonts_loaded && g_settings_hwnd)
+                InvalidateRect(g_settings_hwnd, nullptr, FALSE);
+        };
     });
     // 配置加载通常只要几毫秒，先等它拿到主题再画窗口，免得浅色主题先闪一下深色。
     // 等不到就按深色先亮出来，之后由 ConfigCompletion 切换。

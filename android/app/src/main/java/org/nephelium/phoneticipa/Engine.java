@@ -74,13 +74,21 @@ final class Engine implements AutoCloseable {
             String name = it.next();
             if (name.contains("/") || name.contains("\\") || name.startsWith(".")) throw new IOException("无效资料名称");
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            File dest = new File(target, name);
             File part = new File(target, name + ".part");
-            try (InputStream in = context.getAssets().open("IPA/" + name); OutputStream out = new FileOutputStream(part)) {
-                byte[] bytes = new byte[65536]; int n;
-                while ((n = in.read(bytes)) != -1) { digest.update(bytes, 0, n); out.write(bytes, 0, n); }
+            try {
+                try (InputStream in = context.getAssets().open("IPA/" + name); OutputStream out = new FileOutputStream(part)) {
+                    byte[] bytes = new byte[65536]; int n;
+                    while ((n = in.read(bytes)) != -1) { digest.update(bytes, 0, n); out.write(bytes, 0, n); }
+                }
+                if (!hex(digest.digest()).equals(files.getString(name))) throw new IOException("音标资料校验失败：" + name);
+                if (dest.exists()) //noinspection ResultOfMethodCallIgnored
+                    dest.delete();
+                if (!part.renameTo(dest)) throw new IOException("无法保存音标资料：" + name);
+            } finally {
+                if (part.exists()) //noinspection ResultOfMethodCallIgnored
+                    part.delete();
             }
-            if (!hex(digest.digest()).equals(files.getString(name))) throw new IOException("音标资料校验失败：" + name);
-            if (!part.renameTo(new File(target, name))) throw new IOException("无法保存音标资料：" + name);
         }
         Files.write(ready.toPath(), manifestBytes);
         removeStaleResources(context.getFilesDir(), target);
@@ -102,9 +110,11 @@ final class Engine implements AutoCloseable {
     private static String hex(byte[] bytes) {
         StringBuilder result = new StringBuilder(); for (byte b : bytes) result.append(String.format(Locale.ROOT, "%02x", b & 255)); return result.toString();
     }
-    synchronized JSONArray rules() throws JSONException { return new JSONArray(nativeRules(handle)); }
+    private void ensureOpen() { if (handle == 0) throw new IllegalStateException("引擎已关闭"); }
+    synchronized JSONArray rules() throws JSONException { ensureOpen(); return new JSONArray(nativeRules(handle)); }
     synchronized String ruleId() { return ruleId; }
     synchronized void selectRule(String id) throws Exception {
+        ensureOpen();
         nativeSetRule(handle, id);
         if (!preferences.edit().putString("rule", id).commit()) { nativeSetRule(handle, ruleId); throw new IOException("无法保存转写规则"); }
         ruleId = id; ruleError = "";
@@ -124,8 +134,9 @@ final class Engine implements AutoCloseable {
         if (next != null && next.startsWith(key)) return null;
         return values == null ? key : values.optString(0, key);
     }
-    synchronized JSONArray symbols(String code) throws JSONException { return new JSONArray(nativeSymbols(handle, code)); }
+    synchronized JSONArray symbols(String code) throws JSONException { ensureOpen(); return new JSONArray(nativeSymbols(handle, code)); }
     synchronized JSONObject reading(String word, String canonical) throws JSONException {
+        ensureOpen();
         List<String> variants = new ArrayList<>();
         try (Cursor rows = db.rawQuery("SELECT reading FROM readings WHERE word=?", new String[]{word})) {
             while (rows.moveToNext()) variants.add(rows.getString(0));
@@ -196,20 +207,24 @@ final class Engine implements AutoCloseable {
         return out.append("%chardef end\n").toString();
     }
     synchronized void loadProfile(JSONObject next, boolean persist) throws Exception {
+        ensureOpen();
         JSONObject validated = normalize(next);
         byte[] serialized = validated.toString(2).getBytes(StandardCharsets.UTF_8);
         if (serialized.length > 8 * 1024 * 1024) throw new IOException("方案不能超过 8 MB");
         File temporary = new File(profileFile.getParentFile(), "validated.cin");
-        Files.write(temporary.toPath(), cin(validated).getBytes(StandardCharsets.UTF_8));
-        nativeReadCIN(temporary.getPath()); // Validate before publishing or changing the active engine.
-        if (persist) {
-            AtomicFile file = new AtomicFile(profileFile); FileOutputStream out = null;
-            try { out = file.startWrite(); out.write(serialized); file.finishWrite(out); }
-            catch (IOException e) { file.failWrite(out); throw e; }
+        try {
+            Files.write(temporary.toPath(), cin(validated).getBytes(StandardCharsets.UTF_8));
+            nativeReadCIN(temporary.getPath()); // Validate before publishing or changing the active engine.
+            if (persist) {
+                AtomicFile file = new AtomicFile(profileFile); FileOutputStream out = null;
+                try { out = file.startWrite(); out.write(serialized); file.finishWrite(out); }
+                catch (IOException e) { file.failWrite(out); throw e; }
+            }
+            nativeLoadCIN(handle, temporary.getPath()); profile = validated; codes = null; profileError = "";
+        } finally {
+            //noinspection ResultOfMethodCallIgnored
+            temporary.delete();
         }
-        nativeLoadCIN(handle, temporary.getPath()); profile = validated; codes = null; profileError = "";
-        //noinspection ResultOfMethodCallIgnored
-        temporary.delete();
     }
     synchronized void importBytes(byte[] bytes, boolean json) throws Exception {
         if (bytes.length > 8 * 1024 * 1024) throw new IOException("方案不能超过 8 MB");

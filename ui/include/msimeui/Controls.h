@@ -618,6 +618,7 @@ class CandidateList : public Visual
         // Optional per-field fonts; labels/annotations keep the list's UI font.
         std::wstring textFontFamily;
         std::wstring secondaryFontFamily;
+        bool secondaryIsHint = false;
     };
 
     enum class Orientation
@@ -766,6 +767,7 @@ class CandidateList : public Visual
     Microsoft::WRL::ComPtr<IDWriteTextLayout> TextLayoutFor(IDWriteFactory *factory, const std::wstring &fontFamily,
                                                             const std::wstring &text, float fontSize, const RectF &box);
     size_t HitTestItem(const PointF &point) const;
+    bool HitSecondaryIpa(size_t index, const PointF &point) const;
     float EstimateTextWidth(const std::wstring &text, float fontSize, const std::wstring &family = {}) const;
     RectF ItemRect(size_t index) const;
     const std::wstring &ResolvedFontFamily(const std::wstring &overrideFamily = {}) const;
@@ -796,6 +798,8 @@ class CandidateList : public Visual
     ItemActivatedHandler onItemActivated_;
     ItemActivatedHandler onSecondaryActivated_;
     bool pressedSecondary_ = false;
+    bool hoveredSecondary_ = false;
+    const void *cachedRenderTarget_ = nullptr;
     ContextMenuHandler onContextMenu_;
 };
 

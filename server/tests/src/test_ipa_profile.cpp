@@ -92,12 +92,16 @@ int main(int argc, char **argv)
         invalid.HotkeysForEdit()[{3, 'I'}] = "x";
         Reject([&] { PhoneticIpa::ValidateProfile(invalid); }, "Reserved toggle accepted");
         invalid = original;
+        invalid.HotkeysForEdit()[{9, '1'}] = u8"˩";
+        Reject([&] { PhoneticIpa::ValidateProfile(invalid); }, "Out-of-range modifier mask accepted");
+        invalid = original;
         invalid.EntriesForEdit()["bad"] = {std::string("\xff", 1)};
         Reject([&] { PhoneticIpa::ValidateProfile(invalid); }, "Malformed UTF8 accepted");
         PhoneticIpa::WriteProfileFile(scratch / "bad.json", "{\"version\":999}");
         Reject([&] { PhoneticIpa::ImportProfile(scratch / "bad.json"); }, "Bad import accepted");
         PhoneticIpa::WriteProfileFile(scratch / "active.cin", "broken");
-        Require(live.Get(scratch).Hotkey(6, 'A') == u8"ɾ", "Malformed external edit replaced live map");
+        Require(live.Get(scratch).Hotkey(6, 'A') == u8"ɾ" && live.ActiveFailed(),
+                "Malformed external edit replaced live map or hid failure status");
         {
             // 2026-11-01 review H3/M11/L1: a damaged active.cin that never loaded
             // falls back to default.cin instead of failing, and empty outputs are dropped.
@@ -182,12 +186,17 @@ int main(int argc, char **argv)
                 Require(read(account / "msime.db") == "learned" && read(account / "factory-stamp.txt") == "app-4\n",
                         "Upgrade without a new dictionary replaced the engine database");
                 write(factory / "dictionary-manifest.json", "dict-2");
+                write(account / "msime.db-wal", "stale-wal");
+                write(account / "msime.db-shm", "stale-shm");
                 write(factory / "factory-stamp.txt", "app-5\n");
                 PhoneticIpa::UserData::SeedFrom(factory, account);
                 Require(read(account / "msime.db") == "db-2" &&
                             read(account / "msime.db.before-upgrade-app-5") == "learned" &&
+                            read(account / "msime.db.before-upgrade-app-5-wal") == "stale-wal" &&
+                            !std::filesystem::exists(account / "msime.db-wal") &&
+                            !std::filesystem::exists(account / "msime.db-shm") &&
                             read(account / "dictionary-manifest.json") == "dict-2",
-                        "New dictionary was not installed or the old database was not kept");
+                        "New dictionary was not installed or stale WAL files remained");
             }
             // L9: host clipboard and undo shortcuts cannot become IPA chords.
             for (const unsigned key : {'A', 'C', 'S', 'V', 'X', 'Y', 'Z'})

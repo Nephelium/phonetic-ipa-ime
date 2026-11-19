@@ -33,6 +33,10 @@ class IpaCandidateCards : public msimeui::Visual
     std::vector<std::wstring> values;
     size_t selected = 0, page = 0;
     std::function<void(size_t)> choose;
+    bool IsFocusable() const override
+    {
+        return true;
+    }
     size_t Columns(float width) const
     {
         return std::max(size_t{1}, static_cast<size_t>(std::max(1.f, width / 112)));
@@ -153,18 +157,20 @@ class IpaCandidateEditor : public Column
         field_ = std::make_shared<TextField>(options);
         field_->SetMinWidth(240);
         row->Add(field_, 1);
-        auto action = [&](const wchar_t *text, std::function<void()> fn) {
+        auto action = [&](const wchar_t *text, std::function<void()> fn) -> Button * {
             auto button = std::make_shared<Button>(text);
             button->SetOnClick(std::move(fn));
             row->Add(button);
+            return button.get();
         };
-        action(L"＋ 新增", [this] { AddCandidate(); });
-        action(L"删除此项", [this] { RemoveCandidate(); });
-        action(L"← 前移", [this] { MoveCandidate(-1); });
-        action(L"后移 →", [this] { MoveCandidate(1); });
+        addBtn_ = action(L"＋ 新增", [this] { AddCandidate(); });
+        removeBtn_ = action(L"删除此项", [this] { RemoveCandidate(); });
+        moveLeftBtn_ = action(L"← 前移", [this] { MoveCandidate(-1); });
+        moveRightBtn_ = action(L"后移 →", [this] { MoveCandidate(1); });
         Add(row);
         cards_->choose = [this](size_t i) { Select(i); };
         field_->SetOnChanged([this](const std::wstring &value) { SetSelectedOutput(value); });
+        UpdateButtons();
     }
     const std::vector<std::wstring> &Values() const
     {
@@ -233,7 +239,7 @@ class IpaCandidateEditor : public Column
         else
             cards_->values[Selected()] = value;
         if (field_->GetText() != value)
-            field_->SetText(value);
+            field_->ForceSetText(value);
         Changed();
     }
     void AddCandidate()
@@ -271,30 +277,49 @@ class IpaCandidateEditor : public Column
     void SetSingle(bool single)
     {
         single_ = single;
+        UpdateButtons();
     }
     void SetDisabled(bool disabled)
     {
         disabled_ = disabled;
         field_->SetDisabled(disabled);
+        UpdateButtons();
     }
 
   private:
     std::shared_ptr<IpaCandidateCards> cards_;
     std::shared_ptr<TextField> field_;
     std::shared_ptr<Label> selectedLabel_;
+    Button *addBtn_ = nullptr;
+    Button *removeBtn_ = nullptr;
+    Button *moveLeftBtn_ = nullptr;
+    Button *moveRightBtn_ = nullptr;
     std::function<void(const std::wstring &)> onChanged_;
     std::function<void()> onSelected_;
     bool single_ = false;
     bool disabled_ = false;
+    void UpdateButtons()
+    {
+        if (addBtn_)
+            addBtn_->SetDisabled(disabled_ || (single_ && !Values().empty()) || Values().size() >= 200);
+        if (removeBtn_)
+            removeBtn_->SetDisabled(disabled_ || Values().empty());
+        if (moveLeftBtn_)
+            moveLeftBtn_->SetDisabled(disabled_ || Values().size() <= 1 || Selected() == 0);
+        if (moveRightBtn_)
+            moveRightBtn_->SetDisabled(disabled_ || Values().size() <= 1 || Selected() + 1 >= Values().size());
+    }
     void Sync()
     {
         selectedLabel_->SetText(L"编辑第 " + std::to_wstring(Selected() + 1) + L" 项");
-        field_->SetText(SelectedOutput());
+        field_->ForceSetText(SelectedOutput());
+        UpdateButtons();
         cards_->Refresh();
     }
     void Changed()
     {
         selectedLabel_->SetText(L"编辑第 " + std::to_wstring(Selected() + 1) + L" 项");
+        UpdateButtons();
         cards_->Refresh();
         if (onChanged_)
             onChanged_(GetText());

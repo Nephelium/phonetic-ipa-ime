@@ -521,9 +521,12 @@ BOOL CMetasequoiaIME::_IsKeyEaten(         //
         // Ctrl+Enter commits the translation shown next to the highlighted candidate, Ctrl+1..9
         // the translation of the candidate at that position. Shift+Enter commits the Server's
         // converted spelling, including compositions without candidates.
+        const auto ipaPolicy = GetTemporaryJapanesePolicy();
+        const bool ipaDirectMode = (ipaPolicy & FanyImeTemporaryJapanese::EnglishCandidates) != 0;
         if (!freshCompositionState &&
-            ((_candidateMode != CANDIDATE_NONE && (IsTranslationCommitShortcut(*pCodeOut, shortcutModifiers) ||
-                                                   IsTranslationDigitShortcut(*pCodeOut, shortcutModifiers))) ||
+            ((!ipaDirectMode && _candidateMode != CANDIDATE_NONE &&
+              (IsTranslationCommitShortcut(*pCodeOut, shortcutModifiers) ||
+               IsTranslationDigitShortcut(*pCodeOut, shortcutModifiers))) ||
              (!_serverUnavailableFallbackActive && pCompositionProcessorEngine->GetVirtualKeyLength() > 0 &&
               IsPinyinCommitShortcut(*pCodeOut, shortcutModifiers))))
         {
@@ -537,11 +540,8 @@ BOOL CMetasequoiaIME::_IsKeyEaten(         //
 
         if ((GetAsyncKeyState(VK_LWIN) & 0x8000) == 0 && (GetAsyncKeyState(VK_RWIN) & 0x8000) == 0 &&
             ((PhoneticIpaKey::IsToneShortcut(*pCodeOut, shortcutModifiers) &&
-              PhoneticIpaKey::ToneShortcutApplies(
-                  (GetTemporaryJapanesePolicy() & FanyImeTemporaryJapanese::EnglishCandidates) != 0,
-                  (GetKeyState(VK_CAPITAL) & 0x0001) != 0)) ||
-             ((GetTemporaryJapanesePolicy() & FanyImeTemporaryJapanese::EnglishCandidates) != 0 &&
-              (freshCompositionState || pCompositionProcessorEngine->GetVirtualKeyLength() == 0) &&
+              PhoneticIpaKey::ToneShortcutApplies(ipaDirectMode, (GetKeyState(VK_CAPITAL) & 0x0001) != 0)) ||
+             (ipaDirectMode && (freshCompositionState || pCompositionProcessorEngine->GetVirtualKeyLength() == 0) &&
               FanyUtils::HasIpaHotkey(shortcutModifiers, *pCodeOut))))
         {
             if (pKeyState)
@@ -575,13 +575,26 @@ BOOL CMetasequoiaIME::_IsKeyEaten(         //
         const bool isComposing = freshCompositionState ? false : _IsComposing() != FALSE;
         const CANDIDATE_MODE candidateMode = freshCompositionState ? CANDIDATE_NONE : _candidateMode;
 
+        if (!freshCompositionState && (isComposing || candidateMode != CANDIDATE_NONE) &&
+            Global::IpaReadingPageActive.load(std::memory_order_acquire) &&
+            (*pCodeOut == VK_BACK || *pCodeOut == VK_RETURN || *pCodeOut == VK_LEFT || *pCodeOut == VK_RIGHT ||
+             *pCodeOut == VK_HOME || *pCodeOut == VK_END))
+        {
+            if (pKeyState)
+            {
+                pKeyState->Category = CATEGORY_CANDIDATE;
+                pKeyState->Function = FUNCTION_SERVER_CANDIDATE_KEY;
+            }
+            return TRUE;
+        }
+
         const auto &ipaBuffer = pCompositionProcessorEngine->GetKeystrokeBuffer();
         const std::wstring_view ipaRaw = !freshCompositionState && ipaBuffer.Get()
                                              ? std::wstring_view(ipaBuffer.Get(), ipaBuffer.GetLength())
                                              : std::wstring_view{};
-        if (PhoneticIpaKey::IsInput((GetTemporaryJapanesePolicy() & FanyImeTemporaryJapanese::EnglishCandidates) != 0,
-                                    wch, freshCompositionState ? 0 : pCompositionProcessorEngine->GetVirtualKeyLength(),
-                                    PhoneticIpaKey::IsNumericEntry(ipaRaw)))
+        const size_t ipaRawLength = freshCompositionState ? 0 : pCompositionProcessorEngine->GetVirtualKeyLength();
+        if (PhoneticIpaKey::IsInput(ipaDirectMode, wch, ipaRawLength, PhoneticIpaKey::IsNumericEntry(ipaRaw)) &&
+            (ipaRawLength > 0 || FanyUtils::HasIpaStartKey(wch)))
         {
             if (pKeyState)
             {

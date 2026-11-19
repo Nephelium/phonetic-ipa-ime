@@ -43,7 +43,10 @@ bool IsUsableAbsolutePath(const std::wstring &path)
     {
         return false;
     }
-    if (path.size() >= 2 && path[1] == L':')
+    const bool has_drive = path.size() >= 3 &&
+                           ((path[0] >= L'A' && path[0] <= L'Z') || (path[0] >= L'a' && path[0] <= L'z')) &&
+                           path[1] == L':' && (path[2] == L'\\' || path[2] == L'/');
+    if (has_drive)
     {
         return true;
     }
@@ -72,34 +75,20 @@ std::wstring QueryEnvironmentW(const wchar_t *name)
 // where the 64-bit setup never wrote anything.
 std::wstring QueryFactoryDataDir()
 {
-    HKEY key = nullptr;
-    if (RegOpenKeyExW(HKEY_LOCAL_MACHINE, L"Software\\PhoneticIpa\\Prototype", 0, KEY_QUERY_VALUE | KEY_WOW64_64KEY,
-                      &key) != ERROR_SUCCESS)
-    {
-        return {};
-    }
-
-    DWORD type = 0;
     DWORD bytes = 0;
-    if (RegQueryValueExW(key, L"FactoryDataDir", nullptr, &type, nullptr, &bytes) != ERROR_SUCCESS || type != REG_SZ ||
-        bytes < sizeof(wchar_t))
-    {
-        RegCloseKey(key);
-        return {};
-    }
-
-    std::wstring value(bytes / sizeof(wchar_t), L'\0');
-    const LSTATUS status =
-        RegQueryValueExW(key, L"FactoryDataDir", nullptr, &type, reinterpret_cast<LPBYTE>(value.data()), &bytes);
-    RegCloseKey(key);
-    if (status != ERROR_SUCCESS)
+    if (RegGetValueW(HKEY_LOCAL_MACHINE, L"Software\\PhoneticIpa\\Prototype", L"FactoryDataDir",
+                     RRF_RT_REG_SZ | RRF_SUBKEY_WOW6464KEY, nullptr, nullptr, &bytes) != ERROR_SUCCESS ||
+        bytes < sizeof(wchar_t) || bytes > 32768 * sizeof(wchar_t))
     {
         return {};
     }
-    // REG_SZ is not required to carry a terminator, and the stored length may or may not include
-    // one; cut at the first NUL that is actually there.
-    value.resize(std::wcslen(value.c_str()));
-    return value;
+    std::vector<wchar_t> buffer(bytes / sizeof(wchar_t) + 1, L'\0');
+    if (RegGetValueW(HKEY_LOCAL_MACHINE, L"Software\\PhoneticIpa\\Prototype", L"FactoryDataDir",
+                     RRF_RT_REG_SZ | RRF_SUBKEY_WOW6464KEY, nullptr, buffer.data(), &bytes) != ERROR_SUCCESS)
+    {
+        return {};
+    }
+    return std::wstring(buffer.data());
 }
 
 std::wstring QueryKnownFolder(REFKNOWNFOLDERID folder_id)
@@ -200,18 +189,34 @@ bool HasMediumNoWriteUpLabel(const std::wstring &path, PSID medium_sid)
     return found;
 }
 
-void ApplyUsersModifyAndMediumIntegrity(const std::wstring &path)
+void ApplyOwnerAccessAndMediumIntegrity(const std::wstring &path)
 {
-    PSID users_sid = nullptr;
-    if (ConvertStringSidToSidW(L"S-1-5-32-545", &users_sid))
+    HANDLE token = nullptr;
+    std::vector<BYTE> token_user_buf;
+    PSID owner_sid = nullptr;
+    if (OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &token))
+    {
+        DWORD needed = 0;
+        GetTokenInformation(token, TokenUser, nullptr, 0, &needed);
+        if (needed > 0 && GetLastError() == ERROR_INSUFFICIENT_BUFFER)
+        {
+            token_user_buf.resize(needed);
+            if (GetTokenInformation(token, TokenUser, token_user_buf.data(), needed, &needed))
+            {
+                owner_sid = reinterpret_cast<const TOKEN_USER *>(token_user_buf.data())->User.Sid;
+            }
+        }
+        CloseHandle(token);
+    }
+    if (owner_sid)
     {
         EXPLICIT_ACCESSW access{};
         access.grfAccessPermissions = GENERIC_ALL;
         access.grfAccessMode = GRANT_ACCESS;
         access.grfInheritance = SUB_CONTAINERS_AND_OBJECTS_INHERIT;
         access.Trustee.TrusteeForm = TRUSTEE_IS_SID;
-        access.Trustee.TrusteeType = TRUSTEE_IS_WELL_KNOWN_GROUP;
-        access.Trustee.ptstrName = static_cast<LPWSTR>(users_sid);
+        access.Trustee.TrusteeType = TRUSTEE_IS_USER;
+        access.Trustee.ptstrName = static_cast<LPWSTR>(owner_sid);
 
         PACL old_dacl = nullptr;
         PSECURITY_DESCRIPTOR descriptor = nullptr;
@@ -219,7 +224,7 @@ void ApplyUsersModifyAndMediumIntegrity(const std::wstring &path)
         if (GetNamedSecurityInfoW(path.c_str(), SE_FILE_OBJECT, DACL_SECURITY_INFORMATION, nullptr, nullptr, &old_dacl,
                                   nullptr, &descriptor) == ERROR_SUCCESS)
         {
-            if (!HasUsersFullAccessAce(old_dacl, users_sid) &&
+            if (!HasUsersFullAccessAce(old_dacl, owner_sid) &&
                 SetEntriesInAclW(1, &access, old_dacl, &new_dacl) == ERROR_SUCCESS)
             {
                 SetNamedSecurityInfoW(const_cast<wchar_t *>(path.c_str()), SE_FILE_OBJECT, DACL_SECURITY_INFORMATION,
@@ -228,7 +233,6 @@ void ApplyUsersModifyAndMediumIntegrity(const std::wstring &path)
             }
             LocalFree(descriptor);
         }
-        LocalFree(users_sid);
     }
 
     PSID medium_sid = nullptr;
@@ -258,7 +262,7 @@ void EnsureMediumIntegrityWritableDirectory(const std::wstring &path)
     std::error_code ec;
     std::filesystem::create_directories(path, ec);
     ClearReadOnlyAttribute(path);
-    ApplyUsersModifyAndMediumIntegrity(path);
+    ApplyOwnerAccessAndMediumIntegrity(path);
 }
 
 void EnsureMediumIntegrityWritableExistingPath(const std::wstring &path)
@@ -268,7 +272,7 @@ void EnsureMediumIntegrityWritableExistingPath(const std::wstring &path)
         return;
     }
     ClearReadOnlyAttribute(path);
-    ApplyUsersModifyAndMediumIntegrity(path);
+    ApplyOwnerAccessAndMediumIntegrity(path);
 }
 } // namespace
 
@@ -303,7 +307,12 @@ std::wstring get_ime_data_path_w()
         return from_env;
     }
 
-    return get_local_appdata_path_w() + L"\\" + kAppName;
+    const std::wstring local = get_local_appdata_path_w();
+    if (local.empty())
+    {
+        return {};
+    }
+    return (std::filesystem::path(local) / kAppName).wstring();
 }
 
 std::wstring get_factory_data_path_w()

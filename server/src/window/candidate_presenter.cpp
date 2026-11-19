@@ -299,15 +299,25 @@ void CandidatePresenter::ApplySkin()
     settings.horizontal = GetConfiguredCandidateWindowLayout() == "horizontal";
     settings.fontSize = static_cast<float>((std::max)(12, GetConfiguredCandidateFontSize()));
     settings.preeditFontSize = static_cast<float>((std::max)(12, GetConfiguredCandidateWindowPreeditFontSize()));
-    settings.fontFamily = string_to_wstring(ResolveSystemFontFamilyForCss(GetConfiguredCandidateFont()));
+    const std::string &configuredPrimary = GetConfiguredCandidateEnglishFont();
+    settings.fontFamily = string_to_wstring(
+        ResolveSystemFontFamilyForCss(configuredPrimary.empty() ? GetConfiguredCandidateFont() : configuredPrimary));
     settings.resolveFontFamily = [](const std::string &family) {
         if (family == "Doulos SIL" || family == "PTB IPA Plus")
             return string_to_wstring(family);
         return string_to_wstring(ResolveSystemFontFamilyForCss(family));
     };
-    settings.fallbackFontFamilies.push_back(L"PTB IPA Plus");
+    const auto pushFallback = [&](const std::wstring &name) {
+        if (!name.empty() && std::find(settings.fallbackFontFamilies.begin(), settings.fallbackFontFamilies.end(),
+                                       name) == settings.fallbackFontFamilies.end())
+        {
+            settings.fallbackFontFamilies.push_back(name);
+        }
+    };
+    pushFallback(L"PTB IPA Plus");
+    pushFallback(L"Doulos SIL");
     for (const auto &font : GetConfiguredCandidateFallbackFontFamilies())
-        settings.fallbackFontFamilies.push_back(string_to_wstring(font));
+        pushFallback(string_to_wstring(font));
     settings.textColor = GetConfiguredCandidateTextColor();
     settings.preeditHidden = GetConfiguredCandidateWindowPreeditStyle() == "empty";
     settings.fitContent = GetConfiguredCandidateWindowFitContent();
@@ -377,17 +387,20 @@ std::uint64_t CandidatePresenter::FillItemsFromUi()
         {
             item.translation = L"选择读音 · 数字键或点击";
             item.secondaryIsIpa = true;
+            item.secondaryIsHint = true;
         }
         else if (!view.ipa.empty())
         {
             item.translation = string_to_wstring(view.ipa);
             item.secondaryFontFamily = L"PTB IPA Plus";
             item.secondaryIsIpa = true;
+            item.secondaryIsHint = false;
         }
         else if (!view.ipa_hint.empty())
         {
             item.translation = string_to_wstring(view.ipa_hint);
-            item.secondaryIsIpa = true;
+            item.secondaryIsIpa = false;
+            item.secondaryIsHint = true;
         }
         else if (translationsEnabled)
         {
@@ -619,11 +632,16 @@ void CandidatePresenter::ShowItemContextMenu(size_t pageIndex, POINT clientPoint
     if (pageIndex < page->page_views.size() && page->page_views[pageIndex].ipa_can_choose)
     {
         const auto generation = page->generation;
-        stack->AddChild(makeItem(L"切换读音", false, [this, oneBased, generation] {
+        auto chooseReading = makeItem(L"切换读音", false, [this, oneBased, generation] {
             CloseContextMenu(true);
             FanyNamedPipe::EnqueueCandidateUiAction(FanyNamedPipe::CandidateUiAction::ChooseIpaReading,
                                                     static_cast<int>(oneBased), 0, generation);
-        }));
+        });
+        chooseReading->SetOnHover([this](bool hovered) {
+            if (hovered)
+                CloseFixSubmenu();
+        });
+        stack->AddChild(std::move(chooseReading));
     }
     auto pin = makeItem(L"置顶", false, [this, oneBased]() {
         CloseContextMenu(true);
@@ -1013,6 +1031,7 @@ void CandidatePresenter::ShowFromGlobalState(POINT caret)
             caretIndex = preedit.size();
         }
     }
+    const bool hasPreedit = !preedit.empty();
     const auto inputHint = Global::LoadCandidatePageSnapshot()->input_hint;
     if (!inputHint.empty())
         preedit += (preedit.empty() ? L"" : L"\n") + inputHint;
@@ -1025,7 +1044,10 @@ void CandidatePresenter::ShowFromGlobalState(POINT caret)
     else
     {
         impl_->preedit->ClearHeight();
-        impl_->preedit->SetCaretIndex(caretIndex);
+        if (hasPreedit)
+            impl_->preedit->SetCaretIndex(caretIndex);
+        else
+            impl_->preedit->ClearCaret();
     }
     const std::uint64_t renderedGeneration = FillItemsFromUi();
     impl_->list->SetHoverEnabled(hoverArmed_);
@@ -1421,6 +1443,37 @@ bool CandidatePresenter::HandleMessage(UINT message, WPARAM wParam, LPARAM lPara
             ScrollExpanded(GET_WHEEL_DELTA_WPARAM(wParam));
             return true;
         }
+        if (!::is_global_wnd_cand_shown)
+        {
+            wheelDeltaAccumulator_ = 0;
+            return GetConfiguredPagingMouseWheelEnabled();
+        }
+        if (impl_->contextMenuOpen)
+        {
+            wheelDeltaAccumulator_ = 0;
+            CloseContextMenu(true);
+            return true;
+        }
+        if (!expanded_ && impl_->scene.BodyScroller())
+        {
+            const float maxScroll = impl_->scene.BodyScroller()->GetMaxScrollOffset();
+            if (maxScroll > 0.5f)
+            {
+                const float before = impl_->scene.BodyScroller()->GetScrollOffset();
+                const short delta = GET_WHEEL_DELTA_WPARAM(wParam);
+                const float step = (std::max)(32.0f, static_cast<float>(GetConfiguredCandidateFontSize()) * 1.8f);
+                const float next = (std::clamp)(
+                    before - static_cast<float>(delta) / static_cast<float>(WHEEL_DELTA) * step, 0.0f, maxScroll);
+                if (std::abs(next - before) > 0.5f)
+                {
+                    wheelDeltaAccumulator_ = 0;
+                    impl_->scene.BodyScroller()->SetScrollOffset(next);
+                    Present();
+                    ValidateRect(hwnd_, nullptr);
+                    return true;
+                }
+            }
+        }
         if (!GetConfiguredPagingMouseWheelEnabled())
         {
             // Leave the message to DefWindowProc, exactly as before the feature
@@ -1428,20 +1481,6 @@ bool CandidatePresenter::HandleMessage(UINT message, WPARAM wParam, LPARAM lPara
             // this early-out only keeps a disabled wheel from being swallowed.
             wheelDeltaAccumulator_ = 0;
             return false;
-        }
-        if (!::is_global_wnd_cand_shown)
-        {
-            // Hide() only parks the host off-screen, so a wheel message posted
-            // just before the page went away can still arrive here.
-            wheelDeltaAccumulator_ = 0;
-            return true;
-        }
-        if (impl_->contextMenuOpen)
-        {
-            // Scrolling dismisses the open context menu and consumes the event.
-            wheelDeltaAccumulator_ = 0;
-            CloseContextMenu(true);
-            return true;
         }
         const CandidateWheel::PagingSteps steps =
             CandidateWheel::ConsumeWheelDelta(wheelDeltaAccumulator_, GET_WHEEL_DELTA_WPARAM(wParam), WHEEL_DELTA);

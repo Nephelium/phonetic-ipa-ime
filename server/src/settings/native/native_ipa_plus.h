@@ -9,7 +9,20 @@ struct Symbol
 {
     std::wstring display, name;
     std::string output, system, section, id;
+    std::wstring nameEn{}, codePoints{};
+    std::vector<std::wstring> aliases{};
 };
+
+inline bool ContainsAsciiI(const std::wstring &haystack, const std::wstring &needle)
+{
+    if (needle.empty())
+        return true;
+    if (haystack.size() < needle.size())
+        return false;
+    const auto lower = [](wchar_t c) { return (c >= L'A' && c <= L'Z') ? static_cast<wchar_t>(c + (L'a' - L'A')) : c; };
+    return std::search(haystack.begin(), haystack.end(), needle.begin(), needle.end(),
+                       [&](wchar_t a, wchar_t b) { return lower(a) == lower(b); }) != haystack.end();
+}
 
 // The catalog owns the chart positions and symbol identities. This canvas only
 // lays them out and dispatches insertText from the exact clicked entry.
@@ -38,8 +51,37 @@ class SymbolCanvas : public msimeui::Visual
         symbolWidths_.clear();
         charts = catalog.at("charts");
         for (const auto &e : catalog.at("entries"))
-            symbols.push_back({Widen(e.at("display")), Widen(e.at("nameZh")), e.at("insertText"), e.at("system"),
-                               e.at("section"), e.at("id")});
+        {
+            Symbol sym{Widen(e.at("display")),
+                       Widen(e.at("nameZh")),
+                       e.at("insertText"),
+                       e.at("system"),
+                       e.at("section"),
+                       e.at("id"),
+                       Widen(e.value("nameEn", std::string())),
+                       L"",
+                       {}};
+            if (e.contains("codePoints") && e.at("codePoints").is_array())
+            {
+                for (const auto &cp : e.at("codePoints"))
+                {
+                    if (!cp.is_string())
+                        continue;
+                    if (!sym.codePoints.empty())
+                        sym.codePoints += L' ';
+                    sym.codePoints += Widen(cp.get<std::string>());
+                }
+            }
+            if (e.contains("aliases") && e.at("aliases").is_array())
+            {
+                for (const auto &al : e.at("aliases"))
+                {
+                    if (al.is_string())
+                        sym.aliases.push_back(Widen(al.get<std::string>()));
+                }
+            }
+            symbols.push_back(std::move(sym));
+        }
         Filter();
     }
     void Filter()
@@ -48,10 +90,35 @@ class SymbolCanvas : public msimeui::Visual
         scrollX_ = scrollY_ = 0;
         visible.clear();
         for (const auto &s : symbols)
-            if (s.system == system && (section == "all" || charts.contains(system) || s.section == section) &&
-                (query.empty() || s.name.find(query) != std::wstring::npos ||
-                 s.display.find(query) != std::wstring::npos))
+        {
+            if (s.system != system)
+                continue;
+            const bool sectionMatch =
+                section == "all" || (query.empty() && charts.contains(system)) || s.section == section;
+            if (!sectionMatch)
+                continue;
+            if (query.empty())
+            {
                 visible.push_back(s);
+                continue;
+            }
+            bool matched = ContainsAsciiI(s.name, query) || ContainsAsciiI(s.nameEn, query) ||
+                           ContainsAsciiI(s.display, query) || ContainsAsciiI(Widen(s.output), query) ||
+                           ContainsAsciiI(s.codePoints, query);
+            if (!matched)
+            {
+                for (const auto &alias : s.aliases)
+                {
+                    if (ContainsAsciiI(alias, query))
+                    {
+                        matched = true;
+                        break;
+                    }
+                }
+            }
+            if (matched)
+                visible.push_back(s);
+        }
         Layout();
         InvalidateVisual();
     }
@@ -124,10 +191,25 @@ class SymbolCanvas : public msimeui::Visual
     bool OnMouseWheel(const POINT &, short delta, WPARAM keys) override
     {
         pressed_ = hovered_ = -1;
+        if (delta == 0)
+            return false;
+        const float step = delta / 120.f * 100.f;
         if (keys & MK_SHIFT)
-            scrollX_ = std::clamp(scrollX_ - delta / 120.f * 100, 0.f, std::max(0.f, contentWidth_ - bounds_.width));
+        {
+            const float maxX = std::max(0.f, contentWidth_ - bounds_.width);
+            const float nextX = std::clamp(scrollX_ - step, 0.f, maxX);
+            if (std::abs(nextX - scrollX_) <= 0.5f)
+                return false;
+            scrollX_ = nextX;
+        }
         else
-            ScrollTo(scrollY_ - delta / 120.f * 100);
+        {
+            const float maxY = std::max(0.f, contentHeight_ - bounds_.height);
+            const float nextY = std::clamp(scrollY_ - step, 0.f, maxY);
+            if (std::abs(nextY - scrollY_) <= 0.5f)
+                return false;
+            scrollY_ = nextY;
+        }
         InvalidateVisual();
         return true;
     }
@@ -280,7 +362,7 @@ class SymbolCanvas : public msimeui::Visual
         float x = box.x + 4, y = box.y + 3;
         for (size_t i : ids)
         {
-            const float w = std::min(SymbolWidth(i), box.width - 8);
+            const float w = std::min(SymbolWidth(i), std::max(1.0f, box.width - 8.0f));
             if (x + w > box.x + box.width - 4 && x > box.x + 4)
             {
                 x = box.x + 4;
@@ -408,9 +490,9 @@ class SymbolCanvas : public msimeui::Visual
         chartOffsets_.clear();
         for (size_t i = 0; i < visible.size(); ++i)
             byId_[visible[i].id] = i;
-        contentWidth_ = std::max(bounds_.width - 12, 1080 * zoom);
+        contentWidth_ = std::max(bounds_.width - 12, query.empty() ? 1080 * zoom : 0.0f);
         float y = 0;
-        if (charts.contains(system))
+        if (query.empty() && charts.contains(system))
         {
             std::vector<nlohmann::json> selected;
             for (const auto &chart : charts.at(system))

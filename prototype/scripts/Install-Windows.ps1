@@ -41,8 +41,12 @@ try {
             $taskUserData = Join-Path $env:LOCALAPPDATA 'phonetic-ipa-prototype'
             $taskArguments = '-NoProfile -ExecutionPolicy Bypass -File "' + $PSCommandPath + '" -LogFile "' + $script:taskLogFile + '" -UserDataDir "' + $taskUserData + '"'
             $taskChild = Start-Process -FilePath (Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe') -Verb RunAs -ArgumentList $taskArguments -Wait -PassThru
-            $taskResult = $taskChild.ExitCode
-            if ($taskResult -ne 0) { Write-Host (Get-Content -LiteralPath $script:taskLogFile -Raw -Encoding UTF8); throw ('安装未完成，退出码 ' + $taskResult) }
+            if (!$taskChild -or $taskChild.ExitCode -ne 0) {
+                $taskResult = if ($taskChild) { $taskChild.ExitCode } else { 1 }
+                if (Test-Path -LiteralPath $script:taskLogFile -PathType Leaf) { Write-Host (Get-Content -LiteralPath $script:taskLogFile -Raw -Encoding UTF8) }
+                throw ('安装未完成，退出码 ' + $taskResult)
+            }
+            $taskResult = 0
             try { & (Join-Path $PSScriptRoot 'Start-Settings.ps1') -Guide }
             catch { Write-InstallLog '安装已完成。教学窗口未能打开，请双击设置启动器查看使用说明。' }
             Write-InstallLog '安装完成。请按 Win + 空格选择国际音标输入法原型。'

@@ -23,20 +23,50 @@ final class PlusPanel extends LinearLayout {
         LinearLayout header = UI.row(context); UI.weighted(header, label(compact ? "IPA Plus" : "IPA Plus · 点选音标", 15), 3, 30);
         Button done = control(compact ? "返回键盘" : "完成", close); done.setContentDescription("plus-close"); UI.weighted(header, done, 1.5f, 30); UI.full(this, header, -2);
         LinearLayout tabs = UI.row(context); UI.full(this, tabs, -2);
-        EditText search = new EditText(context); search.setSingleLine(); search.setTextSize(android.util.TypedValue.COMPLEX_UNIT_DIP, 12); search.setPadding(4, 0, 4, 0); search.setHint("搜索音标或中文名称"); search.setContentDescription("plus-search");
+        EditText search = new EditText(context); search.setSingleLine(); search.setTextSize(android.util.TypedValue.COMPLEX_UNIT_DIP, 12); search.setPadding(4, 0, 4, 0); search.setHint("搜索音标、中英文名、别名或编码"); search.setContentDescription("plus-search");
         if (compact) { search.setFocusable(false); search.setFocusableInTouchMode(false); search.setVisibility(GONE); }
         UI.full(this, search, 32);
         LinearLayout tools = UI.row(context); if (!compact) UI.full(this, tools, -2);
         TextView hint = label(compact ? "上下滑动分类 · 点选直接输入" : "左右滑动表格 · 上下浏览分类", 10); hint.setTextColor(UI.MUTED); UI.full(this, hint, -2);
         ScrollView scroll = new ScrollView(context); scroll.setContentDescription("plus-page"); LinearLayout charts = UI.column(context); scroll.addView(charts); addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1));
         String[] system = {"ipa"}; float[] scale = {0.5f}; Runnable redraw = () -> drawCharts(charts, catalog, entries, system[0], scale[0]);
-        for (String name : new String[]{"ipa", "extipa", "voqs"}) UI.weighted(tabs, control(name.equals("ipa") ? "IPA" : name.equals("extipa") ? "extIPA" : "VoQS", () -> { system[0] = name; scroll.scrollTo(0, 0); redraw.run(); }), 1, 30);
+        Map<String, Button> tabButtons = new LinkedHashMap<>();
+        Runnable highlightTabs = () -> {
+            for (Map.Entry<String, Button> entry : tabButtons.entrySet())
+                entry.getValue().setBackground(UI.keyBackground(context, entry.getKey().equals(system[0]) ? 0xffdcebef : 0xffffffff, 0xffcbe0ea, UI.dp(context, 7)));
+        };
+        for (String name : new String[]{"ipa", "extipa", "voqs"}) {
+            Button tab = control(name.equals("ipa") ? "IPA" : name.equals("extipa") ? "extIPA" : "VoQS", () -> { system[0] = name; scroll.scrollTo(0, 0); highlightTabs.run(); redraw.run(); });
+            tabButtons.put(name, tab);
+            UI.weighted(tabs, tab, 1, 30);
+        }
+        highlightTabs.run();
         TextView size = label("50%", 11); size.setGravity(Gravity.CENTER);
         UI.weighted(tools, control("字号 −", () -> { scale[0] = Math.max(0.2f, scale[0] - 0.1f); size.setText(Math.round(scale[0] * 100) + "%"); redraw.run(); }), 1, 28);
         UI.weighted(tools, size, 1, 28);
         UI.weighted(tools, control("字号 ＋", () -> { scale[0] = Math.min(1.3f, scale[0] + 0.1f); size.setText(Math.round(scale[0] * 100) + "%"); redraw.run(); }), 1, 28);
-        search.addTextChangedListener(new TextWatcher() { public void beforeTextChanged(CharSequence s, int start, int count, int after) {} public void onTextChanged(CharSequence s, int start, int before, int count) { query = s.toString(); redraw.run(); } public void afterTextChanged(Editable e) {} });
+        search.addTextChangedListener(new TextWatcher() { public void beforeTextChanged(CharSequence s, int start, int count, int after) {} public void onTextChanged(CharSequence s, int start, int before, int count) { query = s.toString(); scroll.scrollTo(0, 0); redraw.run(); } public void afterTextChanged(Editable e) {} });
         redraw.run();
+    }
+    private static boolean containsIgnoreCase(String value, String needle) {
+        return value != null && !value.isEmpty() && value.toLowerCase(Locale.ROOT).contains(needle);
+    }
+    private static boolean matchesField(Object field, String needle) {
+        if (field instanceof JSONArray) {
+            JSONArray items = (JSONArray)field;
+            for (int i = 0; i < items.length(); i++)
+                if (containsIgnoreCase(items.optString(i), needle)) return true;
+            return false;
+        }
+        return field != null && field != JSONObject.NULL && containsIgnoreCase(String.valueOf(field), needle);
+    }
+    private static boolean matchesQuery(JSONObject entry, String query) {
+        String trimmed = query == null ? "" : query.trim();
+        if (trimmed.isEmpty()) return true;
+        String needle = trimmed.toLowerCase(Locale.ROOT);
+        for (String key : new String[]{"display", "insertText", "nameZh", "nameEn", "aliases", "codePoints"})
+            if (matchesField(entry.opt(key), needle)) return true;
+        return false;
     }
     private void drawCharts(LinearLayout target, JSONObject catalog, Map<String, JSONObject> entries, String system, float scale) {
         target.removeAllViews(); Set<String> shown = new HashSet<>();
@@ -82,7 +112,13 @@ final class PlusPanel extends LinearLayout {
                 HorizontalScrollView horizontal = new HorizontalScrollView(getContext()); horizontal.setContentDescription("plus-matrix-" + chart.getString("id")); horizontal.setHorizontalScrollBarEnabled(true); horizontal.setScrollbarFadingEnabled(false); horizontal.addView(table, new HorizontalScrollView.LayoutParams(-2, -2)); UI.full(target, horizontal, -2);
             }
             Map<String, List<JSONObject>> groups = new LinkedHashMap<>();
-            for (JSONObject entry : entries.values()) if (entry.getString("system").equals(system) && !shown.contains(entry.getString("id")) && (query.isEmpty() || entry.getString("display").contains(query) || entry.optString("nameZh").contains(query))) groups.computeIfAbsent(entry.getString("section"), k -> new ArrayList<>()).add(entry);
+            for (JSONObject entry : entries.values()) if (entry.getString("system").equals(system) && !shown.contains(entry.getString("id")) && matchesQuery(entry, query)) groups.computeIfAbsent(entry.getString("section"), k -> new ArrayList<>()).add(entry);
+            if (shown.isEmpty() && groups.isEmpty()) {
+                TextView empty = label("没有匹配的符号", 13);
+                empty.setTextColor(UI.MUTED);
+                empty.setPadding(0, UI.dp(getContext(), 16), 0, UI.dp(getContext(), 8));
+                UI.full(target, empty, -2);
+            }
             Map<String, String> titles = new HashMap<>();
             for (int i = 0; i < charts.length(); i++) titles.put(charts.getJSONObject(i).getString("id"), charts.getJSONObject(i).getString("title"));
             String[] names = {"vowels", "元音", "diacritics", "附加符号", "suprasegmentals", "超音段", "other", "其他符号", "tones", "声调", "nonpulmonic", "非肺部气流辅音", "combinations", "组合符号"};

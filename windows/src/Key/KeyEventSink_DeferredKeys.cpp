@@ -170,6 +170,7 @@ void ApplyDeferredKeyState(DeferredShadowState &shadow, const _KEYSTROKE_STATE &
         break;
     }
     case FUNCTION_TOGGLE_ENGLISH_CANDIDATES:
+        shadow.imeOpen = true;
         shadow.temporaryJapanesePolicy = FanyImeTemporaryJapanese::ToggleEnglish(shadow.temporaryJapanesePolicy);
         clearComposition();
         break;
@@ -454,9 +455,13 @@ bool CMetasequoiaIME::_ClassifyDeferredKeyDown(_In_ ITfContext *pContext, WPARAM
     const bool projectedInputActive = _deferredKeyProjectionValid
                                           ? _deferredProjectedInputLength > 0
                                           : _pCompositionProcessorEngine->GetVirtualKeyLength() > 0;
+    const auto ipaPolicy =
+        _deferredKeyProjectionValid ? _deferredProjectedTemporaryJapanesePolicy : GetTemporaryJapanesePolicy();
+    const bool ipaDirectMode = (ipaPolicy & FanyImeTemporaryJapanese::EnglishCandidates) != 0;
     if (projectedImeOpen && !_IsKeyboardDisabled() &&
-        ((projectedCandidateActive && (IsTranslationCommitShortcut(*classifiedCode, capturedModifiers) ||
-                                       IsTranslationDigitShortcut(*classifiedCode, capturedModifiers))) ||
+        ((!ipaDirectMode && projectedCandidateActive &&
+          (IsTranslationCommitShortcut(*classifiedCode, capturedModifiers) ||
+           IsTranslationDigitShortcut(*classifiedCode, capturedModifiers))) ||
          (!_serverUnavailableFallbackActive && projectedInputActive &&
           IsPinyinCommitShortcut(*classifiedCode, capturedModifiers))))
     {
@@ -465,15 +470,11 @@ bool CMetasequoiaIME::_ClassifyDeferredKeyDown(_In_ ITfContext *pContext, WPARAM
         return true;
     }
 
-    const auto ipaPolicy =
-        _deferredKeyProjectionValid ? _deferredProjectedTemporaryJapanesePolicy : GetTemporaryJapanesePolicy();
     if (projectedImeOpen && !_IsKeyboardDisabled() && (GetAsyncKeyState(VK_LWIN) & 0x8000) == 0 &&
         (GetAsyncKeyState(VK_RWIN) & 0x8000) == 0 &&
         ((PhoneticIpaKey::IsToneShortcut(*classifiedCode, capturedModifiers) &&
-          PhoneticIpaKey::ToneShortcutApplies((ipaPolicy & FanyImeTemporaryJapanese::EnglishCandidates) != 0,
-                                              (GetKeyState(VK_CAPITAL) & 0x0001) != 0)) ||
-         (!projectedInputActive && (ipaPolicy & FanyImeTemporaryJapanese::EnglishCandidates) != 0 &&
-          FanyUtils::HasIpaHotkey(capturedModifiers, *classifiedCode))))
+          PhoneticIpaKey::ToneShortcutApplies(ipaDirectMode, (GetKeyState(VK_CAPITAL) & 0x0001) != 0)) ||
+         (!projectedInputActive && ipaDirectMode && FanyUtils::HasIpaHotkey(capturedModifiers, *classifiedCode))))
     {
         keyState->Category = CATEGORY_CANDIDATE;
         keyState->Function = FUNCTION_SERVER_CANDIDATE_KEY;
@@ -569,10 +570,19 @@ bool CMetasequoiaIME::_ClassifyDeferredKeyDown(_In_ ITfContext *pContext, WPARAM
         return setKeyState(CATEGORY_COMPOSING, FUNCTION_BACKSPACE);
     }
 
+    if (shadow.imeOpen && (shadow.inputLength > 0 || shadow.candidateActive) &&
+        Global::IpaReadingPageActive.load(std::memory_order_acquire) &&
+        (*classifiedCode == VK_BACK || *classifiedCode == VK_RETURN || *classifiedCode == VK_LEFT ||
+         *classifiedCode == VK_RIGHT || *classifiedCode == VK_HOME || *classifiedCode == VK_END))
+    {
+        return setKeyState(CATEGORY_CANDIDATE, FUNCTION_SERVER_CANDIDATE_KEY);
+    }
+
     if (shadow.imeOpen && (capturedModifiers & 0x0eu) == 0 &&
         PhoneticIpaKey::IsInput((shadow.temporaryJapanesePolicy & FanyImeTemporaryJapanese::EnglishCandidates) != 0,
                                 *classifiedWch, shadow.rawInput.size(),
-                                PhoneticIpaKey::IsNumericEntry(shadow.rawInput)))
+                                PhoneticIpaKey::IsNumericEntry(shadow.rawInput)) &&
+        (!shadow.rawInput.empty() || FanyUtils::HasIpaStartKey(*classifiedWch)))
         return setKeyState(CATEGORY_COMPOSING, FUNCTION_INPUT);
     _KEYSTROKE_STATE inputState = {};
     WCHAR inputWch = *classifiedWch;

@@ -63,8 +63,40 @@ inline std::string KeyCode(unsigned vk, bool shift)
     WCHAR buffer[8]{};
     const HKL layout = GetKeyboardLayout(0);
     const int length = ToUnicodeEx(vk, MapVirtualKeyExW(vk, MAPVK_VK_TO_VSC, layout), state, buffer, 8, 4, layout);
-    if (length == 1 && buffer[0] >= 33 && buffer[0] <= 126)
+    if ((length == 1 || length == -1) && buffer[0] >= 33 && buffer[0] <= 126)
         return std::string(1, static_cast<char>(buffer[0]));
+    if (!shift)
+    {
+        if ((vk >= '0' && vk <= '9') || (vk >= 'A' && vk <= 'Z'))
+            return std::string(1, static_cast<char>(vk >= 'A' ? (vk - 'A' + 'a') : vk));
+        switch (vk)
+        {
+        case VK_OEM_1:
+            return ";";
+        case VK_OEM_PLUS:
+            return "=";
+        case VK_OEM_COMMA:
+            return ",";
+        case VK_OEM_MINUS:
+            return "-";
+        case VK_OEM_PERIOD:
+            return ".";
+        case VK_OEM_2:
+            return "/";
+        case VK_OEM_3:
+            return "`";
+        case VK_OEM_4:
+            return "[";
+        case VK_OEM_5:
+            return "\\";
+        case VK_OEM_6:
+            return "]";
+        case VK_OEM_7:
+            return "'";
+        default:
+            break;
+        }
+    }
     return {};
 }
 
@@ -137,15 +169,12 @@ inline std::vector<KeyCap> KeyboardKeys(const std::string &size)
         add(VK_DELETE, L"Del", x, top + 1);
         add(VK_PRIOR, L"PgUp", x + 1, top + 1);
         add(VK_NEXT, L"PgDn", x + 2, top + 1);
-        if (size == "104" || size == "87")
-        {
-            add(VK_INSERT, L"Ins", x, top);
-            add(VK_HOME, L"Home", x + 1, top);
-            add(VK_END, L"End", x + 2, top);
-            add(VK_SNAPSHOT, L"Prt", x, 0);
-            add(VK_SCROLL, L"Scr", x + 1, 0);
-            add(VK_PAUSE, L"Pause", x + 2, 0);
-        }
+        add(VK_INSERT, L"Ins", x, top);
+        add(VK_HOME, L"Home", x + 1, top);
+        add(VK_END, L"End", x + 2, top);
+        add(VK_SNAPSHOT, L"Prt", x, 0);
+        add(VK_SCROLL, L"Scr", x + 1, 0);
+        add(VK_PAUSE, L"Pause", x + 2, 0);
     }
     if (size == "104")
     {

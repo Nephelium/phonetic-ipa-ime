@@ -13,7 +13,7 @@ if ($installed -and $installed.ServerPath -and (Test-Path -LiteralPath $installe
     $env:PHONETIC_IPA_CONFIG_DIR = $env:PHONETIC_IPA_DATA_DIR
 }
 $executable = Join-Path $runtime 'PhoneticIpaSettings.exe'
-if (!(Test-Path -LiteralPath $executable)) { throw 'Build and stage the prototype before opening settings.' }
+if (!(Test-Path -LiteralPath $executable -PathType Leaf)) { throw 'Build and stage the prototype before opening settings.' }
 # The user opens this launcher to interact with the settings window.
 if ($Guide) {
     Start-Process -FilePath $executable -WorkingDirectory $runtime -ArgumentList '--guide' -WindowStyle Normal

@@ -397,7 +397,6 @@ void CCompositionProcessorEngine::OnPreservedKey( //
     {
         *pIsEaten = FALSE;
     }
-    *pIsEaten = TRUE;
 }
 
 //////////////////////////////////////////////////////////////////////

@@ -2,7 +2,7 @@
 
 输入拼音，选择带声调的国际音标；也可以按键位直接查找和点选 IPA、extIPA、VoQS 符号。支持 Windows、macOS、Android 和 iOS。
 
-当前版本 **Windows / Android 0.1.8，macOS / iOS 0.1.7 测试版**。[官网下载](https://www.phonetictoolbox.com/#ipa-ime-download) · [GitHub 下载 0.1.8](https://github.com/Nephelium/phonetic-ipa-ime/releases/tag/ipa-v0.1.8) · [macOS / iOS 0.1.7](https://github.com/Nephelium/phonetic-ipa-ime/releases/tag/ipa-v0.1.7)。Mac 版双击安装，无需命令行工具。iOS 为待签名 IPA。
+当前版本 **Windows / Android 0.1.9，macOS / iOS 0.1.7 测试版**。[官网下载](https://www.phonetictoolbox.com/#ipa-ime-download) · [GitHub 下载 0.1.9](https://github.com/Nephelium/phonetic-ipa-ime/releases/tag/ipa-v0.1.9) · [macOS / iOS 0.1.7](https://github.com/Nephelium/phonetic-ipa-ime/releases/tag/ipa-v0.1.7)。Mac 版双击安装，无需命令行工具。iOS 为待签名 IPA。
 
 [![官网使用说明 · 分步图解](assets/buttons/usage-guide.svg)](https://www.phonetictoolbox.com/ipa-ime-guide/)
 
@@ -136,6 +136,6 @@ Mac 当前为本地签名、尚未公证。如果系统阻止打开，请按 [Ap
 
 ## 开发与验证
 
-0.1.8 修正记录：[代码审查修复](docs/testing/2026-11-01-代码审查修复进度.md)，[更新说明](docs/releases/0.1.8.md)。0.1.7 修正记录：[IPA Plus、规则全称与 Windows 安装升级](docs/testing/2026-10-25-IPA-Plus与安装升级修复.md)，[更新说明](docs/releases/0.1.7.md)。
+0.1.9 修正记录：[更新说明](docs/releases/0.1.9.md)，[Apple 待修审阅清单](docs/testing/2026-11-19-apple-待修审阅清单.md)。0.1.8 修正记录：[代码审查修复](docs/testing/2026-11-01-代码审查修复进度.md)，[更新说明](docs/releases/0.1.8.md)。0.1.7 修正记录：[IPA Plus、规则全称与 Windows 安装升级](docs/testing/2026-10-25-IPA-Plus与安装升级修复.md)，[更新说明](docs/releases/0.1.7.md)。
 
 构建入口：[Windows](prototype/README.md)、[Apple](apple/README.md)、[Android](android/README.md)。本版记录见 [0.1.6 安装与教学验证](docs/testing/2026-10-25-016-review.md)。分别记录原生控件、两种 TSF 架构、Mac 专用 NSTextView 实际输入和 Android / iOS 模拟器键盘测试。iPhone 实机签名、物理 Intel Mac 和各厂商 Android 实机尚未逐一验证。

@@ -26,11 +26,17 @@ public final class SettingsActivity extends Activity {
     private byte[] exporting;
     private TextView status, updateStatus;
     private LinearLayout updateLinks;
-    private Dialog onboarding;
+    private final List<LinearLayout> outputCards = new ArrayList<>();
+    private final Button[] navTabs = new Button[3];
+    private Dialog onboarding, plusDialog;
     private void showOnboarding(boolean force) {
         if (onboarding == null || !onboarding.isShowing()) onboarding = Onboarding.show(this, force);
     }
-    @Override protected void onDestroy() { if (onboarding != null) onboarding.dismiss(); super.onDestroy(); }
+    @Override protected void onDestroy() {
+        if (onboarding != null) onboarding.dismiss();
+        if (plusDialog != null) plusDialog.dismiss();
+        super.onDestroy();
+    }
     @Override public void onCreate(Bundle saved) {
         super.onCreate(saved);
         root = UI.column(this); root.setBackgroundColor(0xfff5f8fa);
@@ -41,15 +47,31 @@ public final class SettingsActivity extends Activity {
         });
         setContentView(root); root.addView(UI.text(this, "正在准备音标资料…", 17));
         Engine.get(this).whenComplete((value, error) -> runOnUiThread(() -> {
-            if (isDestroyed()) return;
+            if (isFinishing() || isDestroyed()) return;
             root.removeAllViews();
             if (error != null) { root.addView(UI.text(this, "资料载入失败：" + error.getMessage(), 15)); return; }
             engine = value; LinearLayout nav = UI.row(this);
-            UI.weighted(nav, UI.button(this, "键位设置", this::settings), 1, 44); UI.weighted(nav, UI.button(this, "试打", this::typing), 1, 44); UI.weighted(nav, UI.button(this, "说明", () -> { body.removeAllViews(); UI.full(body, UI.button(this, "打开完整图文教程（网页） ↗", () -> download("https://www.phonetictoolbox.com/ipa-ime-guide/?platform=android")), 44); UI.full(body, UI.button(this, "重新查看上手教学", () -> showOnboarding(true)), 44); UI.full(body, UI.guide(this), -1); }), 1, 44); UI.full(root, nav, -2);
+            navTabs[0] = UI.button(this, "键位设置", this::settings);
+            navTabs[1] = UI.button(this, "试打", this::typing);
+            navTabs[2] = UI.button(this, "说明", this::guide);
+            UI.weighted(nav, navTabs[0], 1, 44); UI.weighted(nav, navTabs[1], 1, 44); UI.weighted(nav, navTabs[2], 1, 44); UI.full(root, nav, -2);
             body = UI.column(this); UI.full(root, body, -1); settings(); showOnboarding(false);
         }));
     }
+    private void selectNav(int active) {
+        for (int i = 0; i < navTabs.length; i++)
+            if (navTabs[i] != null)
+                navTabs[i].setBackground(UI.keyBackground(this, i == active ? 0xffdcebef : 0xffffffff, 0xffcbe0ea, UI.dp(this, 7)));
+    }
+    private void guide() {
+        selectNav(2);
+        body.removeAllViews();
+        UI.full(body, UI.button(this, "打开完整图文教程（网页） ↗", () -> download("https://www.phonetictoolbox.com/ipa-ime-guide/?platform=android")), 44);
+        UI.full(body, UI.button(this, "重新查看上手教学", () -> showOnboarding(true)), 44);
+        UI.full(body, UI.guide(this), -1);
+    }
     private void settings() {
+        selectNav(0);
         body.removeAllViews(); ScrollView scroll = new ScrollView(this); scroll.setContentDescription("settings-page"); LinearLayout content = UI.column(this); int pad = UI.dp(this, 16); content.setPadding(pad, pad, pad, pad); scroll.addView(content); UI.full(body, scroll, -1);
         TextView title = UI.text(this, "让每个音，都有自己的键位。", 23); title.setPadding(0, 0, 0, pad); UI.full(content, title, -2);
         UI.full(content, UI.text(this, "点击按键编辑，长按查看组合输入。数字 1–9 用于选词，上划 1–5 输入调值。", 13), -2);
@@ -82,7 +104,7 @@ public final class SettingsActivity extends Activity {
     }
     @Override protected void onResume() {
         super.onResume();
-        Updates.check(this, false, message -> { if (!isDestroyed()) { refreshUpdates(message); notice(); } });
+        Updates.check(this, false, message -> { if (!isFinishing() && !isDestroyed()) { refreshUpdates(message); notice(); } });
     }
     private void updateCard(LinearLayout content) {
         LinearLayout card = UI.column(this); int pad = UI.dp(this, 12); card.setPadding(pad, pad, pad, pad);
@@ -91,7 +113,7 @@ public final class SettingsActivity extends Activity {
         CheckBox automatic = new CheckBox(this); automatic.setText("自动检查新版本"); automatic.setChecked(Updates.automatic(this));
         automatic.setOnCheckedChangeListener((button, checked) -> Updates.automatic(this, checked)); UI.full(card, automatic, -2);
         updateStatus = UI.text(this, "", 13); updateStatus.setContentDescription("update-status"); UI.full(card, updateStatus, -2);
-        UI.full(card, UI.button(this, "检查更新", () -> Updates.check(this, true, message -> { if (!isDestroyed()) refreshUpdates(message); })), 40);
+        UI.full(card, UI.button(this, "检查更新", () -> Updates.check(this, true, message -> { if (!isFinishing() && !isDestroyed()) refreshUpdates(message); })), 40);
         updateLinks = UI.row(this); UI.full(card, updateLinks, -2); UI.full(content, card, -2); refreshUpdates(Updates.status(this));
     }
     private void refreshUpdates(String message) {
@@ -117,15 +139,20 @@ public final class SettingsActivity extends Activity {
         try { JSONArray values = engine.profile().getJSONObject("sequences").optJSONArray(key); if (values != null) for (int i = 0; i < values.length(); i++) outputs.add(values.getString(i)); }
         catch (Exception e) { report(e); } renderOutputs();
     }
+    private void updateOutputSelection() {
+        for (int i = 0; i < outputCards.size(); i++)
+            outputCards.get(i).setBackground(UI.background(selected == i ? 0xffdcebef : 0xffedf2f4, UI.dp(this, 8)));
+    }
     private void renderOutputs() {
-        editor.removeAllViews(); HorizontalScrollView scroll = new HorizontalScrollView(this); scroll.setContentDescription("output-list"); LinearLayout row = UI.row(this); scroll.addView(row);
+        editor.removeAllViews(); outputCards.clear(); HorizontalScrollView scroll = new HorizontalScrollView(this); scroll.setContentDescription("output-list"); LinearLayout row = UI.row(this); scroll.addView(row);
         for (int i = 0; i < outputs.size(); i++) {
-            int index = i; LinearLayout card = UI.column(this); card.setPadding(UI.dp(this, 6), UI.dp(this, 3), UI.dp(this, 6), 0); card.setBackground(UI.background(selected == i ? 0xffdcebef : 0xffedf2f4, UI.dp(this, 8)));
+            int index = i; LinearLayout card = UI.column(this); card.setPadding(UI.dp(this, 6), UI.dp(this, 3), UI.dp(this, 6), 0); card.setBackground(UI.background(selected == i ? 0xffdcebef : 0xffedf2f4, UI.dp(this, 8))); outputCards.add(card);
             card.addView(UI.text(this, "候选 " + (i + 1), 11));
             TextView preview = UI.text(this, UI.displaySymbol(outputs.get(i)), 32); preview.setTypeface(UI.ipa(this)); preview.setGravity(Gravity.CENTER); preview.setMinHeight(UI.dp(this, UI.fontHeight(this, 32, 64))); preview.setPadding(UI.dp(this, 6), UI.dp(this, 4), UI.dp(this, 6), UI.dp(this, 4)); preview.setContentDescription("output-preview-" + i); UI.full(card, preview, -2);
             TextView points = UI.text(this, UI.codePoints(outputs.get(i)), 10); points.setTextColor(UI.MUTED); points.setContentDescription("output-codepoints-" + i); UI.full(card, points, -2);
             EditText output = new EditText(this); output.setSingleLine(); output.setText(outputs.get(i)); output.setTextSize(24); output.setTypeface(UI.ipa(this)); output.setContentDescription("output-" + i); output.setSelectAllOnFocus(true);
-            output.setOnFocusChangeListener((v, focused) -> { if (focused) selected = index; });
+            output.setOnFocusChangeListener((v, focused) -> { if (focused) { selected = index; updateOutputSelection(); } });
+            card.setOnClickListener(v -> { selected = index; updateOutputSelection(); output.requestFocus(); });
             output.addTextChangedListener(new TextWatcher() { public void beforeTextChanged(CharSequence s, int start, int count, int after) {} public void onTextChanged(CharSequence s, int start, int before, int count) { if (index < outputs.size()) outputs.set(index, s.toString()); preview.setText(UI.displaySymbol(s.toString())); points.setText(UI.codePoints(s.toString())); } public void afterTextChanged(Editable e) {} });
             card.addView(output, new LinearLayout.LayoutParams(UI.dp(this, 116), -2)); LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(-2, -2); p.setMargins(UI.dp(this, 3), UI.dp(this, 5), UI.dp(this, 3), UI.dp(this, 5)); row.addView(card, p);
         }
@@ -135,7 +162,7 @@ public final class SettingsActivity extends Activity {
         try {
             JSONObject profile = engine.profile(); JSONObject entries = profile.getJSONObject("sequences"); JSONArray values = new JSONArray(); for (String text : outputs) if (!text.isEmpty()) values.put(text);
             String key = code.getText().toString(); if (values.length() == 0) entries.remove(key); else entries.put(key, values);
-            profile.put("pageSize", pages.getSelectedItemPosition() + 3); engine.loadProfile(profile, true); choose(key); status.setText("方案已保存");
+            profile.put("pageSize", pages.getSelectedItemPosition() + 3); engine.loadProfile(profile, true); choose(key); status.setText("方案已保存"); Toast.makeText(this, "方案已保存", Toast.LENGTH_SHORT).show();
         } catch (Exception e) { report(e); }
     }
     private void combinations(String prefix) {
@@ -146,6 +173,7 @@ public final class SettingsActivity extends Activity {
         } catch (Exception e) { report(e); }
     }
     private void typing() {
+        selectNav(1);
         body.removeAllViews(); LinearLayout panel = UI.column(this); panel.setPadding(UI.dp(this, 16), UI.dp(this, 16), UI.dp(this, 16), 0); UI.full(body, panel, -1);
         trialControls = UI.column(this); UI.full(panel, trialControls, -2);
         UI.full(trialControls, UI.text(this, "点选汉字或下方音标分别输入。", 14), -2);
@@ -162,8 +190,15 @@ public final class SettingsActivity extends Activity {
         try {
             if (request == 10) {
                 byte[] bytes; try (InputStream in = getContentResolver().openInputStream(data.getData())) { bytes = readLimited(in, 8 * 1024 * 1024); }
-                String text = new String(bytes, StandardCharsets.UTF_8); engine.importBytes(bytes, text.trim().startsWith("{")); settings(); status.setText("方案已导入");
-            } else if (request == 11 && exporting != null) { try (OutputStream out = getContentResolver().openOutputStream(data.getData(), "wt")) { out.write(exporting); } status.setText("方案已导出"); }
+                String text = new String(bytes, StandardCharsets.UTF_8); engine.importBytes(bytes, text.trim().startsWith("{")); settings(); status.setText("方案已导入"); Toast.makeText(this, "方案已导入", Toast.LENGTH_SHORT).show();
+            } else if (request == 11 && exporting != null) {
+                try (OutputStream out = getContentResolver().openOutputStream(data.getData(), "wt")) {
+                    if (out == null) throw new IOException("无法写入文件");
+                    out.write(exporting);
+                }
+                if (status != null) status.setText("方案已导出");
+                Toast.makeText(this, "方案已导出", Toast.LENGTH_SHORT).show();
+            }
         } catch (Exception e) { report(e); }
     }
     static byte[] readLimited(InputStream input, int limit) throws IOException {
@@ -177,14 +212,19 @@ public final class SettingsActivity extends Activity {
     }
     private void plus(String initial) {
         try {
+            if (plusDialog != null && plusDialog.isShowing()) plusDialog.dismiss();
             android.app.Dialog dialog = new android.app.Dialog(this);
+            plusDialog = dialog;
+            dialog.setOnDismissListener(d -> { if (plusDialog == dialog) plusDialog = null; });
             PlusPanel panel = new PlusPanel(this, engine.directory, false, value -> {
                 if (outputs.isEmpty()) { outputs.add(""); selected = 0; }
                 selected = Math.min(selected, outputs.size() - 1); outputs.set(selected, appendSymbol ? outputs.get(selected) + value : value); renderOutputs();
             }, dialog::dismiss);
             dialog.setContentView(panel); dialog.show();
-            dialog.getWindow().setBackgroundDrawable(UI.background(0xffffffff, UI.dp(this, 14)));
-            dialog.getWindow().setLayout(getResources().getDisplayMetrics().widthPixels - UI.dp(this, 16), Math.round(getResources().getDisplayMetrics().heightPixels * 0.88f));
+            if (dialog.getWindow() != null) {
+                dialog.getWindow().setBackgroundDrawable(UI.background(0xffffffff, UI.dp(this, 14)));
+                dialog.getWindow().setLayout(getResources().getDisplayMetrics().widthPixels - UI.dp(this, 16), Math.round(getResources().getDisplayMetrics().heightPixels * 0.88f));
+            }
         } catch (Exception e) { report(e); }
     }
 }

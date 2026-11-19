@@ -39,9 +39,13 @@ class CCaretStateSwitchEditSession : public CEditSessionBase
     {
         if (!_pTextService->_IsFocusSessionCurrent(focusToken_, _pContext))
             return S_OK;
-        POINT anchor{};
+        POINT anchor{0, Global::INVALID_Y};
         if (!ResolveCollapsedSelectionAnchor(_pContext, ec, &anchor))
-            return S_OK;
+        {
+            if (trigger_ != FanyImeCaretStateTrigger::CapsLockEdge)
+                return S_OK;
+            anchor = {0, Global::INVALID_Y};
+        }
         SendCaretStateSwitchEventToUIProcessViaNamedPipe(eventType_, enabled_, anchor, trigger_, capsLockEnabled_,
                                                          imeOpen_);
         return S_OK;
@@ -597,33 +601,67 @@ void CCompositionProcessorEngine::SendCaretStateSwitchEvent(UINT eventType, bool
     // field. Compartment writes from the Server, the
     // host's conversion mode or activation never do, so none of those can
     // surface a badge the user did not ask for.
-    if (!_pOwnerThreadMgr || !_pTextService || !Global::g_connected || !SupportsCaretStateIndicator())
+    const bool isCapsLockEdge = trigger == FanyImeCaretStateTrigger::CapsLockEdge;
+    if (!_pOwnerThreadMgr || !_pTextService || !Global::g_connected)
         return;
-    const uint64_t focusToken = _pTextService->_CaptureFocusSessionToken();
-    if (focusToken == 0)
+    if (!SupportsCaretStateIndicator())
+    {
+        if (isCapsLockEdge)
+        {
+            SendIMEStatusSnapshotToUIProcessViaNamedPipe(GetIMEMode(_pOwnerThreadMgr, _tfClientId) != FALSE,
+                                                         GetDoubleSingleByteMode(_pOwnerThreadMgr, _tfClientId) !=
+                                                             FALSE,
+                                                         GetPunctuationMode(_pOwnerThreadMgr, _tfClientId) != FALSE);
+        }
         return;
-    ITfDocumentMgr *document = nullptr;
-    if (FAILED(_pOwnerThreadMgr->GetFocus(&document)) || !document)
-        return;
-    ITfContext *context = nullptr;
-    const HRESULT topResult = document->GetTop(&context);
-    document->Release();
-    if (FAILED(topResult) || !context)
-        return;
+    }
     if (trigger == FanyImeCaretStateTrigger::UserToggle)
         capsLockEnabled = Global::CapsLockEnabled.load(std::memory_order_relaxed);
     // Captured now so the punctuation badge's mode slot reflects this moment,
     // not whatever the toolbar snapshot says when the event is rendered.
     const bool imeOpen = GetIMEMode(_pOwnerThreadMgr, _tfClientId) != FALSE;
+    const auto sendCapsLockWithoutAnchor = [&]() {
+        if (isCapsLockEdge)
+        {
+            const POINT unresolvedAnchor{0, Global::INVALID_Y};
+            SendCaretStateSwitchEventToUIProcessViaNamedPipe(eventType, enabled, unresolvedAnchor, trigger,
+                                                             capsLockEnabled, imeOpen);
+        }
+    };
+    const uint64_t focusToken = _pTextService->_CaptureFocusSessionToken();
+    if (focusToken == 0)
+    {
+        sendCapsLockWithoutAnchor();
+        return;
+    }
+    ITfDocumentMgr *document = nullptr;
+    if (FAILED(_pOwnerThreadMgr->GetFocus(&document)) || !document)
+    {
+        sendCapsLockWithoutAnchor();
+        return;
+    }
+    ITfContext *context = nullptr;
+    const HRESULT topResult = document->GetTop(&context);
+    document->Release();
+    if (FAILED(topResult) || !context)
+    {
+        sendCapsLockWithoutAnchor();
+        return;
+    }
+    bool queued = false;
     auto *session = new (std::nothrow) CCaretStateSwitchEditSession(_pTextService, context, eventType, enabled,
                                                                     focusToken, trigger, capsLockEnabled, imeOpen);
     if (session)
     {
         HRESULT sessionResult = E_FAIL;
-        context->RequestEditSession(_tfClientId, session, TF_ES_ASYNCDONTCARE | TF_ES_READ, &sessionResult);
+        const HRESULT requestHr =
+            context->RequestEditSession(_tfClientId, session, TF_ES_ASYNCDONTCARE | TF_ES_READ, &sessionResult);
+        queued = SUCCEEDED(requestHr) && sessionResult != E_FAIL;
         session->Release();
     }
     context->Release();
+    if (!queued)
+        sendCapsLockWithoutAnchor();
 }
 
 //+---------------------------------------------------------------------------

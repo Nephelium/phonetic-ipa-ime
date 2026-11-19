@@ -11,6 +11,7 @@
 #include <algorithm>
 #include <cmath>
 #include <limits>
+#include <mutex>
 #include <utility>
 
 namespace msimeui
@@ -134,15 +135,19 @@ ComPtr<IDWriteTextLayout> CreateCachedTextLayout(IDWriteFactory *factory, const 
         DWRITE_WORD_WRAPPING wordWrapping = DWRITE_WORD_WRAPPING_NO_WRAP;
         ComPtr<IDWriteTextFormat> format;
     };
+    static std::mutex formatCacheMutex;
     static std::vector<TextFormatKey> formatCache;
-    for (auto &entry : formatCache)
     {
-        if (entry.family == fontFamily && entry.fallbackFamilies == fallbackFamilies && entry.size == fontSize &&
-            entry.weight == fontWeight && entry.textAlignment == textAlignment &&
-            entry.paragraphAlignment == paragraphAlignment && entry.wordWrapping == wordWrapping && entry.format)
+        std::lock_guard<std::mutex> lock(formatCacheMutex);
+        for (auto &entry : formatCache)
         {
-            format = entry.format;
-            break;
+            if (entry.family == fontFamily && entry.fallbackFamilies == fallbackFamilies && entry.size == fontSize &&
+                entry.weight == fontWeight && entry.textAlignment == textAlignment &&
+                entry.paragraphAlignment == paragraphAlignment && entry.wordWrapping == wordWrapping && entry.format)
+            {
+                format = entry.format;
+                break;
+            }
         }
     }
     if (!format)
@@ -170,6 +175,11 @@ ComPtr<IDWriteTextLayout> CreateCachedTextLayout(IDWriteFactory *factory, const 
         entry.paragraphAlignment = paragraphAlignment;
         entry.wordWrapping = wordWrapping;
         entry.format = format;
+        std::lock_guard<std::mutex> lock(formatCacheMutex);
+        if (formatCache.size() >= 512)
+        {
+            formatCache.clear();
+        }
         formatCache.push_back(std::move(entry));
     }
 

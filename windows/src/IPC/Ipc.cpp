@@ -961,6 +961,7 @@ int CloseNamedpipe()
     negotiatedServerCapabilities = 0;
     if (boundTemporaryJapanesePolicy)
         boundTemporaryJapanesePolicy->store(0, std::memory_order_relaxed);
+    Global::IpaReadingPageActive.store(false, std::memory_order_relaxed);
     ClosePipeHandleIfValid(hPipe);
     ClosePipeHandleIfValid(hFromServerPipe);
     ClosePipeHandleIfValid(hToTsfWorkerThreadPipe);

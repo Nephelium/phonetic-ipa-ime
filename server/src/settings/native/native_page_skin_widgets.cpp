@@ -67,6 +67,15 @@ const ToolbarIcon kToolbarIcons[] = {
 };
 } // namespace
 
+float RulePillWidth(const std::wstring &ruleLabel, float s)
+{
+    TextStyle style;
+    style.size = 14.0f * s;
+    TextLayout layout;
+    layout.Set(ruleLabel + L" ▴", style);
+    return std::clamp(layout.Measure(2000.0f).width + 20.0f * s, 108.0f * s, 236.0f * s);
+}
+
 // ---------------------------------------------------------------------------------
 // ToolbarPreview
 // ---------------------------------------------------------------------------------
@@ -92,11 +101,12 @@ float ToolbarPreview::BarWidth() const
 {
     const float s = options_.scale * options_.iconSize / 24.0f;
     const float icon = 26.0f * s;
+    const float ruleW = RulePillWidth(ruleLabel_, s);
     int count = 0;
     for (const auto &entry : kToolbarIcons)
         count += entry.item < 0 || options_.items[entry.item] ? 1 : 0;
     const float b = CssBorder(1.4f);
-    return b + (18.0f + 1.2f + 2.0f + 5.0f + 48.0f + 5.0f + 232.0f + 4.0f) * s + count * (icon + 5.0f * s) + b;
+    return b + (18.0f + 1.2f + 2.0f + 5.0f + 84.0f + 5.0f + 4.0f) * s + ruleW + count * (icon + 5.0f * s) + b;
 }
 
 SizeF ToolbarPreview::Measure(const SizeF &availableSize)
@@ -142,15 +152,17 @@ void ToolbarPreview::Render(msimeui::DeviceResources &dr)
     FillRect(dr, {cx, bar.y + b, 1.2f * s, height - b * 2.0f}, look_.divider);
     cx += (1.2f + 2.0f + 5.0f) * s;
 
-    TextStyle labelStyle;
-    labelStyle.size = 16.0f * s;
-    DrawCentered(dr, L"IPA", labelStyle, {cx, bar.y, 48.0f * s, height}, look_.icon);
-    cx += (48.0f + 5.0f) * s;
-    labelStyle.size = 14.0f * s;
-    DrawCentered(dr, ruleLabel_ + L" ▴", labelStyle, {cx, bar.y, 232.0f * s, height}, look_.icon);
-    cx += 232.0f * s;
-
     const float icon = 26.0f * s;
+    const RectF modeRect = {cx, cy - icon * 0.5f, 84.0f * s, icon};
+    FillRounded(dr, modeRect, std::min(look_.iconRadius * s, icon * 0.5f),
+                {look_.icon.r, look_.icon.g, look_.icon.b, 0.08f});
+    TextStyle labelStyle;
+    labelStyle.size = 14.0f * s;
+    DrawCentered(dr, L"拼音→IPA", labelStyle, modeRect, look_.icon);
+    cx += (84.0f + 5.0f) * s;
+    const float ruleW = RulePillWidth(ruleLabel_, s);
+    DrawCentered(dr, ruleLabel_ + L" ▴", labelStyle, {cx, bar.y, ruleW, height}, look_.icon);
+    cx += ruleW;
     for (const auto &entry : kToolbarIcons)
     {
         if (entry.item >= 0 && !options_.items[entry.item])

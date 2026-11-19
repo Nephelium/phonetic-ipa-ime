@@ -638,7 +638,7 @@ void ExitCandidateSubPage()
         return;
     }
     g_translation_candidates_active = false;
-    g_ipa_reading_page_active = false;
+    SetIpaReadingPageActive(false);
     g_ipa_readings.Cancel();
     g_date_time_page_active = false;
     g_date_time_page_keyword.clear();
@@ -703,7 +703,10 @@ void HandleIpaCommitKey(uint64_t client_id, uint64_t activation_epoch, uint64_t 
     WaitForCandidateRenderSync(Global::Keycode);
     EnsureCandidatePageReady();
     const int index = forced_index_in_page >= 0 ? forced_index_in_page : Global::candidate_ui.selected_index_in_page;
-    ProcessIpaSelection(index, client_id, activation_epoch);
+    if (!ProcessIpaSelection(index, client_id, activation_epoch))
+    {
+        ShowCandidateTransientHint(L"当前候选暂无完整音标，请直接选字输入汉字");
+    }
     Global::MsgTypeToTsf = Global::DataFromServerMsgType::OutofRange;
     SendCurrentDataToClient(client_id, activation_epoch, request_id);
 }
@@ -912,8 +915,14 @@ void HandleToolbarLanguageToggle(bool from_ime_enabled)
     if (g_inputSession && !g_inputSession->get_pinyin_sequence_with_cases().empty())
         return;
     if (!from_ime_enabled)
+    {
         SendToTsfWorkerThreadViaNamedpipe(Global::DataFromServerMsgTypeToTsfWorkerThread::SwitchToCn, L"");
-    SetEnglishInputMode(!g_english_input_mode);
+        SetEnglishInputMode(false);
+    }
+    else
+    {
+        SetEnglishInputMode(!g_english_input_mode);
+    }
     PostMessage(::global_hwnd, WM_HIDE_MAIN_WINDOW, 0, 0);
     ClearState();
 }
@@ -1042,7 +1051,10 @@ void HandleImeKey(uint64_t client_id, uint64_t activation_epoch, uint64_t reques
             // Resolve an explicit chord as one output. A pending code stays in the
             // composition until selected/cancelled; never silently discard it.
             if (!g_inputSession->get_pinyin_sequence().empty())
+            {
+                ShowCandidateTransientHint(L"请先选定或清除当前编码，再按快捷键");
                 Global::MsgTypeToTsf = Global::DataFromServerMsgType::NavigationIgnored;
+            }
             else
             {
                 Global::candidate_ui.selected_text = string_to_wstring(output);
@@ -1060,8 +1072,15 @@ void HandleImeKey(uint64_t client_id, uint64_t activation_epoch, uint64_t reques
             ExitCandidateSubPage();
         else
             EnterIpaReadingPage(Global::candidate_ui.selected_index_in_page);
-        Global::MsgTypeToTsf = Global::DataFromServerMsgType::NavigationIgnored;
-        SendCurrentDataToClient(client_id, activation_epoch, request_id);
+        if (IsUiLessMode())
+        {
+            SendUiLessCompositionToClient(client_id, activation_epoch, request_id);
+        }
+        else
+        {
+            Global::MsgTypeToTsf = Global::DataFromServerMsgType::NavigationIgnored;
+            SendCurrentDataToClient(client_id, activation_epoch, request_id);
+        }
         return;
     }
     if (FanyImeIpc::IsTranslationCommitKey(Global::Keycode, Global::ModifiersDown))
@@ -1092,6 +1111,89 @@ void HandleImeKey(uint64_t client_id, uint64_t activation_epoch, uint64_t reques
         arrow_moves_selection = FanyImeIpc::ShouldArrowMoveCandidateSelection(
             Global::Keycode, composition.caret_position >= composition.raw_input_with_cases.size(),
             ui.current_page_start() + ui.selected_index_in_page, ui.item_total_count);
+    }
+
+    if (g_ipa_reading_page_active && (Global::ModifiersDown & 0b00000110u) == 0)
+    {
+        auto &ui = Global::candidate_ui;
+        if (Global::Keycode == VK_BACK)
+        {
+            ExitCandidateSubPage();
+            if (IsUiLessMode())
+            {
+                SendUiLessCompositionToClient(client_id, activation_epoch, request_id);
+            }
+            else
+            {
+                RefreshCandidatePageUi(true);
+                Global::MsgTypeToTsf = Global::DataFromServerMsgType::NavigationIgnored;
+                SendCurrentDataToClient(client_id, activation_epoch, request_id);
+            }
+            return;
+        }
+        if (Global::Keycode == VK_RETURN)
+        {
+            ProcessSelectionKey(VK_SPACE, client_id, activation_epoch);
+            if (IsUiLessMode())
+            {
+                SendUiLessCompositionToClient(client_id, activation_epoch, request_id);
+            }
+            else
+            {
+                SendCurrentDataToClient(client_id, activation_epoch, request_id);
+            }
+            return;
+        }
+        if (Global::Keycode == VK_HOME || Global::Keycode == VK_END || Global::Keycode == VK_LEFT ||
+            Global::Keycode == VK_RIGHT)
+        {
+            bool moved = false;
+            UINT replyType = Global::DataFromServerMsgType::NavigationIgnored;
+            if (!ui.items.empty() && ui.page_size > 0)
+            {
+                if (Global::Keycode == VK_HOME)
+                {
+                    moved = ui.page_index != 0 || ui.selected_index_in_page != 0;
+                    ui.page_index = 0;
+                    ui.selected_index_in_page = 0;
+                    ui.begin_selection();
+                    replyType = Global::DataFromServerMsgType::MoveSelectionPrevious;
+                }
+                else if (Global::Keycode == VK_END)
+                {
+                    const int lastAbs = static_cast<int>(ui.items.size()) - 1;
+                    const int targetPage = lastAbs / ui.page_size;
+                    const int targetInPage = lastAbs % ui.page_size;
+                    moved = ui.page_index != targetPage || ui.selected_index_in_page != targetInPage;
+                    ui.page_index = targetPage;
+                    ui.selected_index_in_page = targetInPage;
+                    ui.begin_selection();
+                    replyType = Global::DataFromServerMsgType::MoveSelectionNext;
+                }
+                else
+                {
+                    ui.begin_selection();
+                    const int offset = Global::Keycode == VK_LEFT ? -1 : 1;
+                    moved = ui.move_selection(offset);
+                    replyType = Global::Keycode == VK_LEFT ? Global::DataFromServerMsgType::MoveSelectionPrevious
+                                                           : Global::DataFromServerMsgType::MoveSelectionNext;
+                }
+            }
+            if (IsUiLessMode())
+            {
+                if (moved)
+                    RefreshCandidatePageUi(false);
+                SendUiLessCompositionToClient(client_id, activation_epoch, request_id);
+            }
+            else
+            {
+                Global::MsgTypeToTsf = replyType;
+                SendCurrentDataToClient(client_id, activation_epoch, request_id);
+                if (moved)
+                    RefreshCandidatePageUi(true);
+            }
+            return;
+        }
     }
 
     // 译文页、日期页只认选词和翻页/移动高亮。其它任何键都先把候选框换回原来那一屏，然后照常处理，
@@ -1371,9 +1473,13 @@ void HandleImeKey(uint64_t client_id, uint64_t activation_epoch, uint64_t reques
         const auto &table = PhoneticIpa::Cin();
         const auto &code = GlobalIme::composition.raw_input_with_cases;
         const auto &values = table.Lookup(code);
-        if (ipa_input_key && phonetic_ipa::MayAutoCommit(table, code))
+        if (ipa_input_key &&
+            (phonetic_ipa::MayAutoCommit(table, code) ||
+             (input_before_key.empty() && values.empty() && !table.HasPrefix(code) && code != "t" && code != "c")))
         {
-            const auto payload = std::to_wstring(code.size()) + L"\t" + string_to_wstring(values.front());
+            const std::wstring committed =
+                !values.empty() ? string_to_wstring(values.front()) : string_to_wstring(code);
+            const auto payload = std::to_wstring(code.size()) + L"\t" + committed;
             if (SendToTsfWorkerThreadClientViaNamedpipe(
                     client_id, activation_epoch,
                     Global::DataFromServerMsgTypeToTsfWorkerThread::CommitCandidateAndContinue, payload))

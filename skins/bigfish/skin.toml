@@ -15,6 +15,10 @@ themes = ["dark", "light"]
 [candidate_window]
 min_width_dip = 176
 corner_radius_dip = 12
+item_gap = 5
+item_extra_height = 7
+number_scale = 0.75
+number_gap = 6
 
 [candidate_window.decoration]
 image = "assets/character.png"
@@ -36,12 +40,19 @@ surface = "#141B33"
 border = "rgba(91, 155, 255, 0.38)"
 text = "#E3EAFF"
 number = "#E0C07A"
-translation = "#529E72"
-translation_pos = "#529CCA80"
-translation_separator = "#529E7273"
-selected_translation = "#7FB797"
-selected_translation_pos = "#529CCA80"
-selected_translation_separator = "#7FB79773"
+translation = "#72D098"
+translation_pos = "#6CB5E399"
+translation_separator = "#72D09873"
+selected_translation = "#A5E7BF"
+selected_translation_pos = "#6CB5E399"
+selected_translation_separator = "#A5E7BF73"
+preedit_divider = "rgba(91, 155, 255, 0.24)"
+
+[candidate.dark.menu]
+background = "#141B33"
+border = "rgba(91, 155, 255, 0.38)"
+text = "#E3EAFF"
+hover = "rgba(74, 144, 226, 0.24)"
 
 [candidate.light]
 accent = "#2F5BD3"
@@ -50,13 +61,20 @@ hover = "rgba(47, 91, 211, 0.09)"
 surface = "#F4F8FF"
 border = "rgba(42, 53, 112, 0.24)"
 text = "#1C2550"
-number = "#A67C2E"
-translation = "#448361"
-translation_pos = "#0B6E9980"
-translation_separator = "#44836173"
-selected_translation = "#386D51"
-selected_translation_pos = "#0B6E9980"
-selected_translation_separator = "#386D5173"
+number = "#946A1E"
+translation = "#286C4A"
+translation_pos = "#0B6E9999"
+translation_separator = "#286C4A73"
+selected_translation = "#1F573B"
+selected_translation_pos = "#0B6E9999"
+selected_translation_separator = "#1F573B73"
+preedit_divider = "rgba(42, 53, 112, 0.20)"
+
+[candidate.light.menu]
+background = "#F4F8FF"
+border = "rgba(42, 53, 112, 0.24)"
+text = "#1C2550"
+hover = "rgba(47, 91, 211, 0.12)"
 
 [toolbar]
 corner_radius_dip = 8

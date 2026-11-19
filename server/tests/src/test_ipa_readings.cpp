@@ -56,9 +56,38 @@ int main(int argc, char **argv)
                 named = std::string(e.what()).find("line 2") != std::string::npos;
             }
             Require(named, "Invalid tone did not report its line");
+            {
+                std::ofstream out(scratch / "trailing-empty.tsv", std::ios::binary);
+                out << u8"好\thao\txau\t\n";
+            }
+            bool trailing_rejected = false;
+            try
+            {
+                phonetic_ipa::HanziTable bad_trailing;
+                bad_trailing.Load(scratch / "trailing-empty.tsv", false);
+            }
+            catch (const std::runtime_error &)
+            {
+                trailing_rejected = true;
+            }
+            Require(trailing_rejected, "Trailing empty tone column was accepted");
             std::error_code ignored;
             std::filesystem::remove_all(scratch, ignored);
         }
+        for (const auto &word_case : std::vector<std::pair<std::string, std::string>>{
+                 {u8"喜欢", "xi'huan"}, {u8"一下儿", "yi'xia'er"}, {u8"个头", "ge'tou"}})
+        {
+            const auto resolved = table.Convert(word_case.first, word_case.second);
+            Require(resolved.word_matched && !resolved.ambiguous && !resolved.text.empty(),
+                    "Neutral-tone fallback or erhua word reading failed");
+        }
+        Require(table.Convert(u8"一个", "yi'ge").ambiguous, "Ambiguous base-tone neutral word guessed a tone");
+        const auto partial_reading =
+            table.ConvertWithWordReadings(u8"个头", "ge'tou", {{"ge4", "tou2"}, {"ge5", "tou2"}});
+        Require(partial_reading.word_matched && !partial_reading.ambiguous &&
+                    partial_reading.parts.at(0).options.size() == 1 &&
+                    partial_reading.parts.at(0).options[0].pinyin == "ge4 tou2",
+                "Missing variant vetoed valid reading or recorded a partial option");
         const auto disgust = table.Convert(u8"厌恶", "yan'wu");
         phonetic_ipa::HanziTable indexedTable;
         indexedTable.Load(std::filesystem::u8path(argv[1]) / "beijing-toned.tsv", false);

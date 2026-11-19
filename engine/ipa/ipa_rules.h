@@ -22,18 +22,26 @@ inline std::vector<TranscriptionRule> LoadTranscriptionRules(const std::filesyst
     std::vector<TranscriptionRule> rules;
     std::set<std::string> ids;
     std::string line;
+    bool first = true;
     while (std::getline(input, line))
     {
         if (!line.empty() && line.back() == '\r')
             line.pop_back();
+        if (first)
+        {
+            first = false;
+            if (line.compare(0, 3, "\xef\xbb\xbf") == 0)
+                line.erase(0, 3);
+        }
         if (line.empty() || line[0] == '#')
             continue;
         std::istringstream fields(line);
         TranscriptionRule rule;
+        std::string extra;
         if (!std::getline(fields, rule.id, '\t') || !std::getline(fields, rule.name, '\t') ||
-            !std::getline(fields, rule.short_name, '\t') || !std::getline(fields, rule.file, '\t') || rule.id.empty() ||
-            rule.id.size() > 64 || rule.name.empty() || rule.name.size() > 256 || rule.short_name.empty() ||
-            rule.short_name.size() > 96 || rules.size() >= 64 ||
+            !std::getline(fields, rule.short_name, '\t') || !std::getline(fields, rule.file, '\t') ||
+            std::getline(fields, extra, '\t') || rule.id.empty() || rule.id.size() > 64 || rule.name.empty() ||
+            rule.name.size() > 256 || rule.short_name.empty() || rule.short_name.size() > 96 || rules.size() >= 64 ||
             !std::all_of(
                 rule.id.begin(), rule.id.end(),
                 [](unsigned char c) { return (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '-'; }) ||

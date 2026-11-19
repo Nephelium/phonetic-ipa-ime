@@ -54,7 +54,9 @@ constexpr bool EditableChord(unsigned modifiers, unsigned key)
                               (key >= 0xdb && key <= 0xde);
     return modifiers >= 2 && modifiers <= 7 && printableKey && !(modifiers == 3 && (key == 'I' || key == 'F')) &&
            !(modifiers == 2 && ((key >= '1' && key <= '9') || (key >= 0x61 && key <= 0x69))) &&
-           !(modifiers == 4 && key == 0x73) && // Alt+F4 closes the foreground window.
+           !(modifiers == 4 && key == 0x73) &&                     // Alt+F4 closes the foreground window.
+           !(modifiers == 2 && key == 0xbe) &&                     // Ctrl+. toggles Chinese/English punctuation.
+           !((modifiers == 2 || modifiers == 3) && key == 0x78) && // Ctrl+F9 / Ctrl+Shift+F9 voice input.
            // Ctrl+A/C/S/V/X/Y/Z are the hosts' select-all, clipboard, save and undo keys.
            !(modifiers == 2 &&
              (key == 'A' || key == 'C' || key == 'S' || key == 'V' || key == 'X' || key == 'Y' || key == 'Z'));

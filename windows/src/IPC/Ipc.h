@@ -289,6 +289,8 @@ inline std::atomic<unsigned> EnumerationCommaKeys{FanyImeEnumerationComma::kLega
 // 横排候选时左右方向键移动高亮（Server 发 HorizontalArrowSelectionChanged）。开着时候选态下的左右键交给 Server
 // 决定移高亮还是移光标，TSF 只应用回复；Server 连上之前和旧 Server 都是关，左右键照旧本地移光标。
 inline std::atomic_bool HorizontalArrowSelectionEnabled{false};
+// True while the Server holds the multi-pronunciation IPA reading disambiguation page open.
+inline std::atomic_bool IpaReadingPageActive{false};
 inline std::atomic_bool MicrosoftShuangpinEnabled{false};
 // 双拼句中辅助码开着、勾了反引号且当前是双拼：组合中的反引号按
 // engine/contracts/mid_sentence_helpcode.h 的形状规则当编码键吃掉，见 CompositionProcessorEngine_KeyClassify.cpp。

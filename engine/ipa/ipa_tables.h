@@ -62,21 +62,26 @@ class CinTable
         hotkeys_.clear();
         layout = "104";
         bool body = false;
+        bool first = true;
         std::string line;
         while (ReadCinLine(in, line))
         {
-            if (line.compare(0, 3, "\xef\xbb\xbf") == 0)
-                line.erase(0, 3);
-            if (line.compare(0, 12, "%ipa_layout ") == 0)
+            if (first)
+            {
+                first = false;
+                if (line.compare(0, 3, "\xef\xbb\xbf") == 0)
+                    line.erase(0, 3);
+            }
+            if (!body && line.compare(0, 12, "%ipa_layout ") == 0)
             {
                 layout = line.substr(12);
                 continue;
             }
-            if (line.compare(0, 12, "%ipa_hotkey ") == 0)
+            if (!body && line.compare(0, 12, "%ipa_hotkey ") == 0)
             {
                 std::istringstream row(line.substr(12));
                 unsigned modifiers = 0, key = 0;
-                if (!(row >> modifiers >> key) || row.get() != '\t')
+                if (!(row >> modifiers >> key) || modifiers < 1 || modifiers > 7 || row.get() != '\t')
                     throw std::runtime_error("Invalid IPA hotkey");
                 std::string output;
                 std::getline(row, output);
@@ -182,10 +187,10 @@ class LiveCinTable
                 return table_;
             if (!KnownFailure(path, stamp) && TryLoad(path, stamp))
                 return table_;
-            if (path == path_)
-                return table_; // Keep the last good version of the same file.
             if (std::string_view(name) == "active.cin")
                 active_failed_ = true;
+            if (path == path_)
+                return table_; // Keep the last good version of the same file.
         }
         if (!path_.empty())
             return table_;

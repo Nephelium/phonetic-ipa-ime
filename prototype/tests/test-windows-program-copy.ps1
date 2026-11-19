@@ -1,4 +1,4 @@
-$ErrorActionPreference = 'Stop'
+﻿$ErrorActionPreference = 'Stop'
 # Real-file checks for the Program Files layout (2026-11-01 review H1/H2) inside a scratch folder.
 . (Join-Path $PSScriptRoot '..\scripts\Windows-Installation.ps1')
 function Require($condition, $message) { if (!$condition) { throw $message } }
@@ -29,8 +29,8 @@ foreach ($personal in @('data\ipa\active.cin', 'data\msime_user.db', 'data\ipa\o
     Require (!(Test-Path -LiteralPath (Join-Path $fresh $personal))) "Personal file shared through factory data: $personal"
 }
 Require (Test-Path -LiteralPath (Join-Path $fresh 'data\factory-stamp.txt')) 'Factory stamp missing'
-Require (Test-Path -LiteralPath (Join-Path $script:IpaProgramRoot 'scripts\Uninstall-Windows.ps1')) 'Uninstaller not copied to Program Files'
-Write-Host 'PASS factory copy excludes personal files and keeps the uninstaller outside the extraction folder'
+Require (Test-Path -LiteralPath (Join-Path $fresh 'scripts\Uninstall-Windows.ps1')) 'Uninstaller not copied to versioned Program Files scripts'
+Write-Host 'PASS factory copy excludes personal files and keeps the uninstaller in the versioned app folder'
 
 Start-Sleep -Seconds 1
 $live = Copy-IpaProgram $source $scripts -SourceWasLive
@@ -55,15 +55,41 @@ Set-Content -LiteralPath (Join-Path $account 'ipa\rule-selection.txt') -Value 'n
 (Get-Item -LiteralPath (Join-Path $source 'data\ipa\active.cin')).LastWriteTimeUtc = [DateTime]::UtcNow.AddDays(-1)
 Set-Content -LiteralPath (Join-Path $source 'data\ipa\rule-selection.txt') -Value 'older-choice' -Encoding UTF8
 (Get-Item -LiteralPath (Join-Path $source 'data\ipa\rule-selection.txt')).LastWriteTimeUtc = [DateTime]::UtcNow.AddDays(-2)
+Set-Content -LiteralPath (Join-Path $source 'data\msime_user.db') -Value 'db-from-source' -Encoding ASCII
+Set-Content -LiteralPath (Join-Path $account 'msime_user.db') -Value 'db-older' -Encoding ASCII
+Set-Content -LiteralPath (Join-Path $account 'msime_user.db-wal') -Value 'stale-wal' -Encoding ASCII
+(Get-Item -LiteralPath (Join-Path $account 'msime_user.db')).LastWriteTimeUtc = [DateTime]::UtcNow.AddDays(-3)
+(Get-Item -LiteralPath (Join-Path $account 'msime_user.db-wal')).LastWriteTimeUtc = [DateTime]::UtcNow.AddDays(-3)
 Copy-IpaPreferences @((Join-Path $source 'data')) $account -KeepNewerDestination
 Require ((Get-Content -LiteralPath (Join-Path $account 'ipa\active.cin') -Raw).Trim() -eq 'someone-elses-keys') 'Earlier keymap not migrated'
 Require ((Get-Content -LiteralPath (Join-Path $account 'ipa\rule-selection.txt') -Raw).Trim() -eq 'newer-choice') 'Migration replaced a newer personal file'
-Write-Host 'PASS migration copies earlier personal files and keeps newer ones'
+Require ((Get-Content -LiteralPath (Join-Path $account 'msime_user.db') -Raw).Trim() -eq 'db-from-source') 'Newer user DB not copied'
+Require (!(Test-Path -LiteralPath (Join-Path $account 'msime_user.db-wal'))) 'Stale destination WAL stayed next to replaced user DB'
+Write-Host 'PASS migration copies earlier personal files, keeps newer ones, and clears stale WAL pairs'
 
-$uninstall = Join-Path $script:IpaProgramRoot 'scripts'
-Remove-IpaPath $uninstall
-Require (!(Test-Path -LiteralPath $uninstall)) 'Program scripts folder not removed'
+$badManifest = $manifest | ConvertTo-Json | ConvertFrom-Json
+$badManifest.PSObject.Properties.Remove('PhoneticIpaWatchdog.exe')
+$manifestBackup = Get-Content -LiteralPath (Join-Path $source 'build-manifest.json') -Raw -Encoding UTF8
+$manifestRejected = $false
+try {
+    $badManifest | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $source 'build-manifest.json') -Encoding UTF8
+    Assert-IpaRuntime $source
+} catch { $manifestRejected = $true }
+finally { Set-Content -LiteralPath (Join-Path $source 'build-manifest.json') -Value $manifestBackup -Encoding UTF8 }
+Require $manifestRejected 'Assert-IpaRuntime accepted manifest missing a core binary'
+
+$junctionParent = Join-Path $script:IpaProgramRoot 'app-junction-test'
+$outsideTarget = Join-Path $testRoot 'outside-victim'
+New-Item -ItemType Directory -Path $junctionParent, $outsideTarget -Force | Out-Null
+Set-Content -LiteralPath (Join-Path $outsideTarget 'keep.txt') -Value 'keep' -Encoding ASCII
+cmd /c mklink /J "`"$junctionParent\link`"" "`"$outsideTarget`"" | Out-Null
+$reparseRefused = $false
+try { Remove-IpaPath $junctionParent } catch { $reparseRefused = $true }
+Require ($reparseRefused -and (Test-Path -LiteralPath (Join-Path $outsideTarget 'keep.txt'))) 'Remove-IpaPath traversed or failed to reject a junction'
+cmd /c rmdir "`"$junctionParent\link`"" | Out-Null
+Remove-IpaPath $junctionParent
+Require (!(Test-Path -LiteralPath $junctionParent)) 'Program test folder not removed after clearing junction'
 Remove-IpaPath $source
 Require (Test-Path -LiteralPath $source) 'Remove-IpaPath deleted a folder outside Program Files'
-Write-Host 'PASS removal is limited to Program Files'
+Write-Host 'PASS manifest core-binary check, reparse refusal, and Program Files removal scope'
 Remove-Item -LiteralPath $testRoot -Recurse -Force

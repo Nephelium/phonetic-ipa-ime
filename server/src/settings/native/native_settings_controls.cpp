@@ -369,20 +369,27 @@ BlinkFontMetrics RoundedFontMetrics(const std::wstring &family, float size, DWRI
     if (!entry)
     {
         Entry created{family, weight, false, {}};
-        ComPtr<IDWriteFontCollection> fonts;
         UINT32 index = 0;
         BOOL exists = FALSE;
         ComPtr<IDWriteFontFamily> fontFamily;
         ComPtr<IDWriteFont> font;
-        if (DWriteFactory() && SUCCEEDED(DWriteFactory()->GetSystemFontCollection(fonts.GetAddressOf())) &&
-            SUCCEEDED(fonts->FindFamilyName(family.c_str(), &index, &exists)) && exists &&
-            SUCCEEDED(fonts->GetFontFamily(index, fontFamily.GetAddressOf())) &&
+        ComPtr<IDWriteFontCollection> sysFonts;
+        IDWriteFontCollection *collection = msimeui::PrivateIpaFontCollection(family);
+        if (!collection && DWriteFactory() &&
+            SUCCEEDED(DWriteFactory()->GetSystemFontCollection(sysFonts.GetAddressOf())))
+        {
+            collection = sysFonts.Get();
+        }
+        if (collection && SUCCEEDED(collection->FindFamilyName(family.c_str(), &index, &exists)) && exists &&
+            SUCCEEDED(collection->GetFontFamily(index, fontFamily.GetAddressOf())) &&
             SUCCEEDED(fontFamily->GetFirstMatchingFont(weight, DWRITE_FONT_STRETCH_NORMAL, DWRITE_FONT_STYLE_NORMAL,
                                                        font.GetAddressOf())))
         {
             font->GetMetrics(&created.metrics);
             created.found = created.metrics.designUnitsPerEm > 0;
         }
+        if (!created.found)
+            return BlinkFontMetrics{};
         cache.push_back(created);
         entry = &cache.back();
     }
@@ -2863,6 +2870,12 @@ void TextField::SetText(const std::wstring &text)
 {
     if (box_->IsFocused())
         return;
+    committed_ = text;
+    box_->SetText(text);
+}
+
+void TextField::ForceSetText(const std::wstring &text)
+{
     committed_ = text;
     box_->SetText(text);
 }

@@ -575,7 +575,7 @@ bool EnterIpaReadingPage(int index_in_page)
     g_translation_saved_page_index = ui.page_index;
     g_translation_saved_selected_index = index_in_page;
     g_translation_saved_selection_started = true;
-    g_ipa_reading_page_active = true;
+    SetIpaReadingPageActive(true);
     PopulateIpaReadingPage();
     return true;
 }

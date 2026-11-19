@@ -3,7 +3,9 @@
 #include "engine/contracts/ipa_input.h"
 #include <nlohmann/json.hpp>
 #include <windows.h>
+#include <algorithm>
 #include <atomic>
+#include <cwctype>
 
 namespace PhoneticIpa
 {
@@ -34,8 +36,9 @@ inline void ValidateProfile(const phonetic_ipa::CinTable &table)
     }
     for (const auto &[key, value] : table.AllHotkeys())
     {
-        if (!PhoneticIpaKey::EditableChord(key.first, key.second) &&
-            !PhoneticIpaKey::IsToneShortcut(key.second, key.first))
+        if (key.first < 1 || key.first > 7 ||
+            (!PhoneticIpaKey::EditableChord(key.first, key.second) &&
+             !PhoneticIpaKey::IsToneShortcut(key.second, key.first)))
             throw std::runtime_error("此组合键属于系统或输入法控制键，请选择其他组合");
         ValidateOutput(value);
     }
@@ -57,9 +60,14 @@ inline phonetic_ipa::CinTable ImportProfile(const std::filesystem::path &file)
     if (std::filesystem::file_size(file) > 4 * 1024 * 1024)
         throw std::runtime_error("文件超过 4 MB，请缩小码表");
     phonetic_ipa::CinTable table;
-    if (file.extension() == L".json" || file.extension() == L".JSON")
+    std::wstring extension = file.extension().wstring();
+    std::transform(extension.begin(), extension.end(), extension.begin(),
+                   [](wchar_t ch) { return static_cast<wchar_t>(::towlower(ch)); });
+    if (extension == L".json")
     {
         std::ifstream input(file, std::ios::binary);
+        if (!input)
+            throw std::runtime_error("无法读取方案文件");
         const auto json = nlohmann::json::parse(input);
         if (json.at("format") != "phonetic-ipa-keymap" || json.at("version") != 1)
             throw std::runtime_error("不支持的方案格式或版本");
@@ -89,6 +97,11 @@ enum class ProfileBackup
 inline void WriteProfileFile(const std::filesystem::path &path, const std::string &text,
                              ProfileBackup backup_mode = ProfileBackup::None)
 {
+    if (path.has_parent_path())
+    {
+        std::error_code dir_error;
+        std::filesystem::create_directories(path.parent_path(), dir_error);
+    }
     static std::atomic<unsigned> sequence{0};
     const auto suffix = std::to_wstring(GetCurrentProcessId()) + L"-" + std::to_wstring(GetTickCount64()) + L"-" +
                         std::to_wstring(++sequence);
@@ -102,15 +115,32 @@ inline void WriteProfileFile(const std::filesystem::path &path, const std::strin
                     written == text.size() && FlushFileBuffers(handle);
     CloseHandle(handle);
     if (!ok)
-        throw std::runtime_error("写入失败，原方案保留");
-    if (std::filesystem::exists(path))
     {
-        const auto backup = std::filesystem::path(path.wstring() + L".previous");
-        if (!ReplaceFileW(path.c_str(), temporary.c_str(),
-                          backup_mode == ProfileBackup::Previous ? backup.c_str() : nullptr, 0, nullptr, nullptr))
-            throw std::runtime_error("保存失败，原方案与临时文件均保留");
+        DeleteFileW(temporary.c_str());
+        throw std::runtime_error("写入失败，原方案保留");
     }
-    else if (!MoveFileExW(temporary.c_str(), path.c_str(), MOVEFILE_WRITE_THROUGH))
-        throw std::runtime_error("保存失败，临时文件保留");
+    if (backup_mode == ProfileBackup::None)
+    {
+        if (!MoveFileExW(temporary.c_str(), path.c_str(), MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH))
+        {
+            DeleteFileW(temporary.c_str());
+            throw std::runtime_error("保存失败，原方案保留");
+        }
+        return;
+    }
+    const auto backup = std::filesystem::path(path.wstring() + L".previous");
+    if (!ReplaceFileW(path.c_str(), temporary.c_str(), backup.c_str(), 0, nullptr, nullptr))
+    {
+        if (GetLastError() == ERROR_FILE_NOT_FOUND)
+        {
+            if (MoveFileExW(temporary.c_str(), path.c_str(), MOVEFILE_WRITE_THROUGH))
+                return;
+            if (GetLastError() == ERROR_ALREADY_EXISTS &&
+                ReplaceFileW(path.c_str(), temporary.c_str(), backup.c_str(), 0, nullptr, nullptr))
+                return;
+        }
+        DeleteFileW(temporary.c_str());
+        throw std::runtime_error("保存失败，原方案保留");
+    }
 }
 } // namespace PhoneticIpa

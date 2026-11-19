@@ -51,8 +51,11 @@ final class Onboarding {
         };
         render[0].run(); dialog.setContentView(root); dialog.setCanceledOnTouchOutside(false); dialog.show();
         android.util.DisplayMetrics metrics = activity.getResources().getDisplayMetrics();
-        dialog.getWindow().setBackgroundDrawableResource(android.R.color.transparent);
-        dialog.getWindow().setLayout(Math.min(UI.dp(activity, 480), metrics.widthPixels - UI.dp(activity, 24)), Math.min(UI.dp(activity, 500), metrics.heightPixels - UI.dp(activity, 100)));
+        android.view.Window window = dialog.getWindow();
+        if (window != null) {
+            window.setBackgroundDrawableResource(android.R.color.transparent);
+            window.setLayout(Math.min(UI.dp(activity, 480), metrics.widthPixels - UI.dp(activity, 24)), Math.min(UI.dp(activity, 500), metrics.heightPixels - UI.dp(activity, 100)));
+        }
         return dialog;
     }
 }

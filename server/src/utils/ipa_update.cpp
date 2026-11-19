@@ -2,17 +2,92 @@
 #include "resource/resource.h"
 #include <shellapi.h>
 #include <winhttp.h>
+#include <algorithm>
+#include <atomic>
 #include <chrono>
 #include <future>
+#include <memory>
+#include <mutex>
 #include <thread>
+#include <utility>
+#include <vector>
 
 namespace PhoneticIpa::Updates
 {
 namespace
 {
 constexpr wchar_t kKey[] = L"Software\\PhoneticIpa\\Updates";
+constexpr wchar_t kDownloadPageUrl[] = L"https://www.phonetictoolbox.com/#ipa-ime-download";
+constexpr UINT kUpdateCheckDoneMessage = WM_APP + 2;
 std::thread monitor;
 HWND monitor_window = nullptr;
+std::thread check_thread;
+std::atomic<bool> check_in_flight{false};
+std::atomic<bool> stop_requested{false};
+
+struct ActiveHandle
+{
+    std::mutex mutex;
+    HINTERNET value = nullptr;
+    explicit ActiveHandle(HINTERNET handle) : value(handle)
+    {
+    }
+    void Close()
+    {
+        HINTERNET raw = nullptr;
+        {
+            std::lock_guard lock(mutex);
+            raw = std::exchange(value, nullptr);
+        }
+        if (raw)
+            WinHttpCloseHandle(raw);
+    }
+    HINTERNET Raw()
+    {
+        std::lock_guard lock(mutex);
+        return value;
+    }
+    ~ActiveHandle()
+    {
+        Close();
+    }
+};
+
+std::mutex g_requests_mutex;
+std::vector<std::weak_ptr<ActiveHandle>> g_active_requests;
+
+std::shared_ptr<ActiveHandle> TrackRequestHandle(HINTERNET raw)
+{
+    if (!raw)
+        return {};
+    auto tracked = std::make_shared<ActiveHandle>(raw);
+    std::lock_guard lock(g_requests_mutex);
+    if (stop_requested.load())
+    {
+        tracked->Close();
+        return {};
+    }
+    g_active_requests.erase(std::remove_if(g_active_requests.begin(), g_active_requests.end(),
+                                           [](const std::weak_ptr<ActiveHandle> &entry) { return entry.expired(); }),
+                            g_active_requests.end());
+    g_active_requests.push_back(tracked);
+    return tracked;
+}
+
+void AbortActiveRequests()
+{
+    std::vector<std::shared_ptr<ActiveHandle>> snapshot;
+    {
+        std::lock_guard lock(g_requests_mutex);
+        for (const auto &weak : g_active_requests)
+            if (auto locked = weak.lock())
+                snapshot.push_back(std::move(locked));
+        g_active_requests.clear();
+    }
+    for (const auto &handle : snapshot)
+        handle->Close();
+}
+
 std::wstring Wide(const std::string &text)
 {
     int size = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, text.data(), (int)text.size(), nullptr, 0);
@@ -53,21 +128,10 @@ int64_t Time(const wchar_t *name)
         return 0;
     }
 }
-class Internet
-{
-  public:
-    HINTERNET value;
-    explicit Internet(HINTERNET handle) : value(handle)
-    {
-    }
-    ~Internet()
-    {
-        if (value)
-            WinHttpCloseHandle(value);
-    }
-};
 std::optional<Feed> Fetch(const char *endpoint)
 {
+    if (stop_requested.load())
+        return {};
     std::wstring url = Wide(endpoint);
     URL_COMPONENTS parts{sizeof(parts)};
     wchar_t host[256]{}, path[2048]{};
@@ -78,23 +142,25 @@ std::optional<Feed> Fetch(const char *endpoint)
     if (!WinHttpCrackUrl(url.c_str(), 0, 0, &parts) || parts.nScheme != INTERNET_SCHEME_HTTPS)
         return {};
     const auto agent = L"PhoneticIPA/" + Wide(kVersion);
-    Internet session(WinHttpOpen(agent.c_str(), WINHTTP_ACCESS_TYPE_AUTOMATIC_PROXY, nullptr, nullptr, 0));
-    if (!session.value)
+    auto session =
+        TrackRequestHandle(WinHttpOpen(agent.c_str(), WINHTTP_ACCESS_TYPE_AUTOMATIC_PROXY, nullptr, nullptr, 0));
+    if (!session || !session->Raw())
         return {};
-    WinHttpSetTimeouts(session.value, 5000, 5000, 8000, 8000);
-    Internet connection(WinHttpConnect(session.value, host, parts.nPort, 0));
-    if (!connection.value)
+    WinHttpSetTimeouts(session->Raw(), 5000, 5000, 8000, 8000);
+    auto connection = TrackRequestHandle(WinHttpConnect(session->Raw(), host, parts.nPort, 0));
+    if (!connection || !connection->Raw())
         return {};
-    Internet request(WinHttpOpenRequest(connection.value, L"GET", path, nullptr, WINHTTP_NO_REFERER,
-                                        WINHTTP_DEFAULT_ACCEPT_TYPES, WINHTTP_FLAG_SECURE));
-    if (!request.value)
+    auto request = TrackRequestHandle(WinHttpOpenRequest(connection->Raw(), L"GET", path, nullptr, WINHTTP_NO_REFERER,
+                                                         WINHTTP_DEFAULT_ACCEPT_TYPES, WINHTTP_FLAG_SECURE));
+    if (!request || !request->Raw())
         return {};
     DWORD disabled = WINHTTP_DISABLE_REDIRECTS | WINHTTP_DISABLE_COOKIES;
-    WinHttpSetOption(request.value, WINHTTP_OPTION_DISABLE_FEATURE, &disabled, sizeof(disabled));
+    WinHttpSetOption(request->Raw(), WINHTTP_OPTION_DISABLE_FEATURE, &disabled, sizeof(disabled));
     DWORD status = 0, size = sizeof(status);
-    if (!WinHttpSendRequest(request.value, L"Accept: application/json\r\n", -1, nullptr, 0, 0, 0) ||
-        !WinHttpReceiveResponse(request.value, nullptr) ||
-        !WinHttpQueryHeaders(request.value, WINHTTP_QUERY_STATUS_CODE | WINHTTP_QUERY_FLAG_NUMBER, nullptr, &status,
+    if (!WinHttpSendRequest(request->Raw(), L"Accept: application/json\r\n", static_cast<DWORD>(-1L), nullptr, 0, 0,
+                            0) ||
+        !WinHttpReceiveResponse(request->Raw(), nullptr) ||
+        !WinHttpQueryHeaders(request->Raw(), WINHTTP_QUERY_STATUS_CODE | WINHTTP_QUERY_FLAG_NUMBER, nullptr, &status,
                              &size, nullptr) ||
         status != 200)
         return {};
@@ -102,9 +168,9 @@ std::optional<Feed> Fetch(const char *endpoint)
     char buffer[4096];
     DWORD count;
     auto start = std::chrono::steady_clock::now();
-    while (true)
+    while (!stop_requested.load())
     {
-        if (!WinHttpReadData(request.value, buffer, sizeof(buffer), &count))
+        if (!WinHttpReadData(request->Raw(), buffer, sizeof(buffer), &count))
             return {};
         if (!count)
             return Parse(body);
@@ -112,41 +178,84 @@ std::optional<Feed> Fetch(const char *endpoint)
             return {};
         body.append(buffer, count);
     }
+    return {};
+}
+UINT NextCheckDelayMs()
+{
+    const auto now =
+        std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+    const auto last_success = Time(L"Success");
+    const auto last_attempt = Time(L"Attempt");
+    const auto failures = Time(L"Failures");
+    long long wait_seconds = 0;
+    if (last_success > 0 && last_success <= now)
+    {
+        wait_seconds = (std::max)(wait_seconds, kCheckIntervalSeconds - (now - last_success));
+    }
+    if (failures > 0 && last_attempt > 0 && last_attempt <= now)
+    {
+        wait_seconds = (std::max)(wait_seconds, RetryDelaySeconds(failures - 1) - (now - last_attempt));
+    }
+    const long long ms = std::clamp(wait_seconds * 1000LL, 15000LL, 3600000LL);
+    return static_cast<UINT>(ms);
 }
 LRESULT CALLBACK MonitorProc(HWND window, UINT message, WPARAM w, LPARAM l)
 {
     if (message == WM_TIMER)
     {
-        SetTimer(window, 1, 3600000, nullptr);
-        auto result = Check(false);
-        if (Automatic() && result.latest && Read(L"Notified") != result.latest->version)
+        KillTimer(window, 1);
+        if (stop_requested.load())
+            return 0;
+        if (!check_in_flight.exchange(true))
         {
-            NOTIFYICONDATAW icon{sizeof(icon)};
-            icon.hWnd = window;
-            icon.uID = 1;
-            icon.uFlags = NIF_MESSAGE | NIF_ICON | NIF_TIP;
-            icon.uCallbackMessage = WM_APP + 1;
-            icon.hIcon = LoadIconW(GetModuleHandleW(nullptr), MAKEINTRESOURCEW(IDI_IME_ICON));
-            wcscpy_s(icon.szTip, L"国际音标输入法 · 更新");
-            if (Shell_NotifyIconW(NIM_ADD, &icon))
+            if (check_thread.joinable())
+                check_thread.join();
+            check_thread = std::thread([window] {
+                auto *result = new Result(Check(false));
+                if (!PostMessageW(window, kUpdateCheckDoneMessage, 0, reinterpret_cast<LPARAM>(result)))
+                    delete result;
+            });
+        }
+        return 0;
+    }
+    if (message == kUpdateCheckDoneMessage)
+    {
+        std::unique_ptr<Result> result(reinterpret_cast<Result *>(l));
+        check_in_flight.store(false);
+        if (check_thread.joinable())
+            check_thread.join();
+        if (!stop_requested.load() && result)
+        {
+            if (Automatic() && result->latest && Read(L"Notified") != result->latest->version)
             {
-                icon.uFlags = NIF_INFO;
-                icon.dwInfoFlags = NIIF_INFO | NIIF_RESPECT_QUIET_TIME;
-                wcscpy_s(icon.szInfoTitle, L"国际音标输入法有新版本");
-                std::wstring text = L"版本 " + Wide(result.latest->version) + L" 已发布。点击前往官网下载。";
-                wcsncpy_s(icon.szInfo, text.c_str(), _TRUNCATE);
-                if (Shell_NotifyIconW(NIM_MODIFY, &icon))
-                    Write(L"Notified", result.latest->version);
+                NOTIFYICONDATAW icon{sizeof(icon)};
+                icon.hWnd = window;
+                icon.uID = 1;
+                icon.uFlags = NIF_MESSAGE | NIF_ICON | NIF_TIP;
+                icon.uCallbackMessage = WM_APP + 1;
+                icon.hIcon = LoadIconW(GetModuleHandleW(nullptr), MAKEINTRESOURCEW(IDI_IME_ICON));
+                wcscpy_s(icon.szTip, L"国际音标输入法 · 更新");
+                if (Shell_NotifyIconW(NIM_ADD, &icon))
+                {
+                    icon.uFlags = NIF_INFO;
+                    icon.dwInfoFlags = NIIF_INFO | NIIF_RESPECT_QUIET_TIME;
+                    wcscpy_s(icon.szInfoTitle, L"国际音标输入法有新版本");
+                    std::wstring text = L"版本 " + Wide(result->latest->version) + L" 已发布。点击前往官网下载。";
+                    wcsncpy_s(icon.szInfo, text.c_str(), _TRUNCATE);
+                    if (Shell_NotifyIconW(NIM_MODIFY, &icon))
+                        Write(L"Notified", result->latest->version);
+                }
             }
+            SetTimer(window, 1, NextCheckDelayMs(), nullptr);
         }
         return 0;
     }
     if (message == WM_APP + 1)
     {
         if (l == NIN_BALLOONUSERCLICK || l == WM_LBUTTONUP)
-            if (auto feed = Available())
-                ShellExecuteW(nullptr, L"open", Wide(feed->url).c_str(), nullptr, nullptr, SW_SHOWNORMAL);
-        if (l == NIN_BALLOONUSERCLICK || l == NIN_BALLOONTIMEOUT || l == NIN_BALLOONHIDE)
+            if (Available())
+                ShellExecuteW(nullptr, L"open", kDownloadPageUrl, nullptr, nullptr, SW_SHOWNORMAL);
+        if (l == NIN_BALLOONUSERCLICK || l == WM_LBUTTONUP || l == NIN_BALLOONTIMEOUT || l == NIN_BALLOONHIDE)
         {
             NOTIFYICONDATAW icon{sizeof(icon)};
             icon.hWnd = window;
@@ -158,6 +267,14 @@ LRESULT CALLBACK MonitorProc(HWND window, UINT message, WPARAM w, LPARAM l)
     if (message == WM_CLOSE)
     {
         KillTimer(window, 1);
+        stop_requested.store(true);
+        AbortActiveRequests();
+        if (check_thread.joinable())
+            check_thread.join();
+        check_in_flight.store(false);
+        MSG pending{};
+        while (PeekMessageW(&pending, window, kUpdateCheckDoneMessage, kUpdateCheckDoneMessage, PM_REMOVE))
+            delete reinterpret_cast<Result *>(pending.lParam);
         NOTIFYICONDATAW icon{sizeof(icon)};
         icon.hWnd = window;
         icon.uID = 1;
@@ -188,9 +305,22 @@ Result Check(bool manual)
     auto now =
         std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
     Result cached{latest, latest ? L"发现新版本 " + Wide(latest->version) : L"自动检查官网与 GitHub 的新版本"};
+    auto last_success = Time(L"Success");
+    auto last_attempt = Time(L"Attempt");
     const auto failures = Time(L"Failures");
-    if (!manual && (!Automatic() || now - Time(L"Success") < kCheckIntervalSeconds ||
-                    now - Time(L"Attempt") < RetryDelaySeconds(failures)))
+    if (last_success > now)
+    {
+        last_success = 0;
+        Write(L"Success", "0");
+    }
+    if (last_attempt > now)
+    {
+        last_attempt = 0;
+        Write(L"Attempt", "0");
+    }
+    const long long retry_delay = failures > 0 ? RetryDelaySeconds(failures - 1) : 0;
+    if (!manual && (!Automatic() || (last_success > 0 && now - last_success < kCheckIntervalSeconds) ||
+                    (retry_delay > 0 && last_attempt > 0 && now - last_attempt < retry_delay)))
         return cached;
     HANDLE mutex = CreateMutexW(nullptr, FALSE, L"Local\\PhoneticIpa_UpdateCheck");
     if (!mutex)
@@ -220,7 +350,7 @@ Result Check(bool manual)
         Write(L"Success", std::to_string(now));
         Write(L"Failures", "0");
     }
-    else
+    else if (!stop_requested.load())
         Write(L"Failures", std::to_string(failures + 1));
     if (auto best = Newest(feeds); best && *ParseVersion(best->version) > *ParseVersion(kVersion) &&
                                    (!latest || *ParseVersion(best->version) >= *ParseVersion(latest->version)))
@@ -239,6 +369,8 @@ void StartMonitor()
 {
     if (monitor.joinable())
         return;
+    stop_requested.store(false);
+    check_in_flight.store(false);
     std::promise<HWND> ready;
     auto future = ready.get_future();
     monitor = std::thread([ready = std::move(ready)]() mutable {
@@ -264,6 +396,8 @@ void StartMonitor()
 }
 void StopMonitor()
 {
+    stop_requested.store(true);
+    AbortActiveRequests();
     if (monitor_window)
         PostMessageW(monitor_window, WM_CLOSE, 0, 0);
     if (monitor.joinable())

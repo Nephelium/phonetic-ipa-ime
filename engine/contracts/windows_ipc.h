@@ -479,7 +479,9 @@ constexpr std::uint32_t EnumerationCommaKeysChanged = 38;
 // FanyImePipeFlags::HorizontalArrowSelection and applies the Server's answer instead of moving the caret itself.
 // Older DLLs ignore the opcode and keep moving the caret.
 constexpr std::uint32_t HorizontalArrowSelectionChanged = 39;
-constexpr std::uint32_t MaxKnown = HorizontalArrowSelectionChanged;
+// Whether the Server currently holds the IPA reading-choice subpage open. Payload "0" or "1".
+constexpr std::uint32_t IpaReadingPageChanged = 40;
+constexpr std::uint32_t MaxKnown = IpaReadingPageChanged;
 // Source compatibility for the Server's historical spellings.
 constexpr std::uint32_t SwitchToEn = SwitchToEnglish;
 constexpr std::uint32_t SwitchToCn = SwitchToChinese;

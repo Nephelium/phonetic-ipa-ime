@@ -142,60 +142,85 @@ bool ProcessIpaSelection(int index_in_page, uint64_t client_id, uint64_t activat
     if (HelpcodeUtils::count_han_chars(word) == 0)
         return false;
     const auto transcription = g_ipa_readings.Resolve(*PhoneticIpa::Hanzi(), word, item.canonical_pinyin);
-    if (transcription.ambiguous)
-    {
-        EnterIpaReadingPage(index_in_page);
-        return true;
-    }
     // No complete IPA (letters such as 卡拉OK, rare characters, a rule table that
     // failed to load). The candidate line already says so; commit the Hanzi
     // through the normal path instead of swallowing the key.
-    if (transcription.text.empty())
+    if (!transcription.ambiguous && transcription.text.empty())
         return false;
+    // Do not drop an in-progress creating-word Hanzi prefix by switching to IPA output.
+    if (GlobalIme::composition.creating_word.active)
+    {
+        ShowCandidateTransientHint(L"造词中请先完成或按退格取消，再选择音标");
+        return true;
+    }
+    if (transcription.ambiguous)
+    {
+        if (EnterIpaReadingPage(index_in_page) && IsUiLessMode())
+            PushUiLessCandidatesToOwner();
+        return true;
+    }
     const std::string raw = g_inputSession->get_pinyin_sequence_with_cases();
     const auto transition =
         g_inputSession->advance_composition_after_selection(item.pinyin, item.word, item.canonical_pinyin, item.scheme);
     const std::string rest = transition.continues_composition ? g_inputSession->get_pinyin_sequence_with_cases() : "";
     // The engine drops separators that lead the rest (wo'men -> consumed "wo",
-    // rest "men"), so the TSF must also trim those apostrophes: consumed covers
-    // everything before the rest, and the gap may only hold separators.
+    // rest "men"), and may strip trailing Quanpin/Shuangpin uppercase helpcodes
+    // from rest (wo'menH -> rest "men"). Match consumed prefix plus separators,
+    // and keep any remaining suffix in sync with TSF's CommitCandidateAndContinue trim.
     size_t consumed = raw.size();
     if (transition.continues_composition)
     {
         const auto &prefix = transition.consumed_raw_input_with_cases;
-        const bool rest_is_suffix =
-            rest.size() < raw.size() && raw.compare(raw.size() - rest.size(), rest.size(), rest) == 0;
-        consumed = rest_is_suffix ? raw.size() - rest.size() : 0;
-        if (consumed < prefix.size() || raw.compare(0, prefix.size(), prefix) != 0 ||
-            raw.find_first_not_of('\'', prefix.size()) < consumed)
+        if (!prefix.empty() && prefix.size() < raw.size() && raw.compare(0, prefix.size(), prefix) == 0)
+        {
+            size_t after_sep = prefix.size();
+            while (after_sep < raw.size() && raw[after_sep] == '\'')
+                ++after_sep;
+            const bool exact_rest =
+                after_sep + rest.size() == raw.size() && raw.compare(after_sep, rest.size(), rest) == 0;
+            const bool rest_with_stripped_helpcode =
+                !rest.empty() && after_sep + rest.size() < raw.size() && raw.compare(after_sep, rest.size(), rest) == 0;
+            consumed = (exact_rest || rest_with_stripped_helpcode) ? after_sep : 0;
+        }
+        else
+        {
             consumed = 0;
+        }
     }
-    const bool valid_transition = consumed > 0 && consumed <= raw.size() && raw.substr(consumed) == rest;
+    const std::string tsf_rest = consumed <= raw.size() ? raw.substr(consumed) : std::string{};
+    const bool valid_transition =
+        consumed > 0 && consumed <= raw.size() &&
+        (!transition.continues_composition ? rest.empty()
+                                           : (!tsf_rest.empty() && tsf_rest.compare(0, rest.size(), rest) == 0));
     if (!valid_transition)
     {
         ClearState();
         RestoreIpaComposition(raw);
         PrepareCandidateList(client_id, activation_epoch);
         RequestShowCandidateWindow();
+        if (IsUiLessMode())
+            PushUiLessCandidatesToOwner();
         return true;
     }
     const auto output = string_to_wstring(transcription.text);
-    const bool sent = rest.empty() ? SendToTsfWorkerThreadClientViaNamedpipe(
-                                         client_id, activation_epoch,
-                                         Global::DataFromServerMsgTypeToTsfWorkerThread::CommitCandidate, output)
-                                   : SendToTsfWorkerThreadClientViaNamedpipe(
-                                         client_id, activation_epoch,
-                                         Global::DataFromServerMsgTypeToTsfWorkerThread::CommitCandidateAndContinue,
-                                         std::to_wstring(consumed) + L"\t" + output);
+    const bool sent = tsf_rest.empty() ? SendToTsfWorkerThreadClientViaNamedpipe(
+                                             client_id, activation_epoch,
+                                             Global::DataFromServerMsgTypeToTsfWorkerThread::CommitCandidate, output)
+                                       : SendToTsfWorkerThreadClientViaNamedpipe(
+                                             client_id, activation_epoch,
+                                             Global::DataFromServerMsgTypeToTsfWorkerThread::CommitCandidateAndContinue,
+                                             std::to_wstring(consumed) + L"\t" + output);
     // Rebuild just the unconsumed spelling. IPA selections do not teach IPA
     // strings to the Hanzi dictionary or create a mixed Hanzi/IPA word.
     ClearState();
-    const std::string remaining = sent ? rest : raw;
+    const std::string remaining = sent ? tsf_rest : raw;
     if (!remaining.empty())
     {
         RestoreIpaComposition(remaining);
         PrepareCandidateList(client_id, activation_epoch);
         RequestShowCandidateWindow();
+        if (IsUiLessMode())
+            PushUiLessCandidatesToOwner();
     }
     if (sent)
         NoteTopCommitPushed(client_id, activation_epoch);

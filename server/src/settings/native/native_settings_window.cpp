@@ -259,11 +259,11 @@ class TitleBar : public msimeui::Visual
         switch (button)
         {
         case HTMINBUTTON:
-            return L"Minimize";
+            return L"最小化";
         case HTMAXBUTTON:
-            return window_ && IsZoomed(window_->GetHandle()) ? L"Restore" : L"Maximize";
+            return window_ && IsZoomed(window_->GetHandle()) ? L"还原" : L"最大化";
         default:
-            return L"Close";
+            return L"关闭";
         }
     }
 

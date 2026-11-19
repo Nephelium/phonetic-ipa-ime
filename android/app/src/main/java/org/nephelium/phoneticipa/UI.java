@@ -33,6 +33,12 @@ final class UI {
         StringJoiner result = new StringJoiner(" "); value.codePoints().forEach(code -> result.add(String.format(java.util.Locale.ROOT, "U+%04X", code))); return result.toString();
     }
     static GradientDrawable background(int color, float radius) { GradientDrawable b = new GradientDrawable(); b.setColor(color); b.setCornerRadius(radius); return b; }
+    static android.graphics.drawable.StateListDrawable keyBackground(Context c, int normalColor, int pressedColor, float radius) {
+        android.graphics.drawable.StateListDrawable states = new android.graphics.drawable.StateListDrawable();
+        states.addState(new int[]{android.R.attr.state_pressed}, background(pressedColor, radius));
+        states.addState(new int[0], background(normalColor, radius));
+        return states;
+    }
     static LinearLayout column(Context c) { LinearLayout v = new LinearLayout(c); v.setOrientation(LinearLayout.VERTICAL); return v; }
     static LinearLayout row(Context c) { LinearLayout v = new LinearLayout(c); v.setOrientation(LinearLayout.HORIZONTAL); v.setGravity(Gravity.CENTER_VERTICAL); return v; }
     static TextView text(Context c, String value, int size) { TextView v = new TextView(c); v.setText(value); v.setTextSize(size); v.setTextColor(INK); return v; }
@@ -45,7 +51,7 @@ final class UI {
     static Button styleButton(Button b, String label, Runnable action) {
         Context c = b.getContext(); b.setText(label); b.setAllCaps(false); b.setSingleLine(!label.contains("\n")); b.setTextColor(INK); b.setTextSize(14);
         b.setMinWidth(0); b.setMinimumWidth(0); b.setMinHeight(0); b.setMinimumHeight(0); b.setPadding(dp(c, 3), 0, dp(c, 3), 0);
-        b.setBackground(background(0xffffffff, dp(c, 7))); b.setElevation(dp(c, 1)); b.setStateListAnimator(null);
+        b.setBackground(keyBackground(c, 0xffffffff, 0xffdcebef, dp(c, 7))); b.setElevation(dp(c, 1)); b.setStateListAnimator(null);
         b.setOnClickListener(v -> action.run()); return b;
     }
     static int fontHeight(Context c, int sp, int minimum) {

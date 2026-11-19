@@ -16,10 +16,10 @@ constexpr wchar_t kClearSwitch[] = L"--clear-game-compat-name";
 constexpr wchar_t kRecordKey[] = L"Software\\PhoneticIpa\\Prototype";
 constexpr wchar_t kRecordValue[] = L"GameCompatProfileName";
 // Same profile as default_input_method.cpp and windows/src/Global/Globals.cpp.
-constexpr wchar_t kTipProfileKey[] = L"SOFTWARE\\Microsoft\\CTF\\TIP\\{E3062E9A-D834-4637-8958-ED8CFA427D01}"
-                                     L"\\LanguageProfile\\0x00000804\\{4D59B1B4-D503-44AE-9259-BAD9BB2778AB}";
+constexpr wchar_t kTipProfileKey[] = L"SOFTWARE\\Microsoft\\CTF\\TIP\\{D95EFABF-8AEC-5396-AEA4-A4E47D5F21BF}"
+                                     L"\\LanguageProfile\\0x00000804\\{881BB948-8042-590E-AAC7-77D38BAFB1E6}";
 // TEXTSERVICE_DESC in windows/src/Register/Register.cpp: what the profile is called with the switch off.
-constexpr wchar_t kProductName[] = L"Metasequoia 水杉输入法";
+constexpr wchar_t kProductName[] = L"国际音标输入法原型";
 
 enum ExitCode : int
 {
@@ -99,7 +99,7 @@ std::string DescribeExitCode(DWORD code)
     case RecordFailed:
         return "无法写入设置，请确认在弹出的授权窗口中选择了「是」。";
     case NotRegistered:
-        return "水杉输入法没有在系统中注册，请重新安装输入法。";
+        return "国际音标输入法没有在系统中注册，请重新安装输入法。";
     case DescriptionFailed:
         return "无法修改输入法在系统中登记的名称。";
     default:

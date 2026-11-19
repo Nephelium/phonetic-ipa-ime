@@ -433,7 +433,7 @@ void SkinPage::Sync()
         RebuildExternal();
     }
     const std::string directory = model_->GetString("appearance.candidate_skin_directory");
-    directory_->SetText(directory.empty() ? L"%LOCALAPPDATA%\\metasequoiaime\\skins" : Widen(directory));
+    directory_->SetText(directory.empty() ? L"%LOCALAPPDATA%\\phonetic-ipa-prototype\\skins" : Widen(directory));
 
     // theme.ts updateSkinThemeCard(): a new candidate theme drops the preview overrides.
     candLight_ = skinpreview::ResolveSurfaceLight(*model_, "appearance.theme_cand");

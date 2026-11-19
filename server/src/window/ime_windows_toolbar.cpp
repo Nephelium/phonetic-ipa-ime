@@ -27,12 +27,13 @@ int ConfiguredFloatingToolbarWidth()
     const int optional_item_count = static_cast<int>(items.fullwidth) + static_cast<int>(items.punctuation) +
                                     static_cast<int>(items.character_set) + static_cast<int>(items.emoji) +
                                     static_cast<int>(items.screen_keyboard) + static_cast<int>(items.settings);
-    // 59 DIPs covers the drag handle, divider, borders, mandatory CN/EN button and
-    // container padding. Each optional button adds 24 DIPs plus the 6-DIP gap.
+    // 285 DIPs covers the drag handle, divider, borders, mandatory IPA mode pill (84 + 5),
+    // default transcription rule button (~156 + 5), and container padding.
+    // Each optional button adds 24 DIPs plus the 6-DIP gap.
     // User scale/font_size multiply the design size independently of system DPI.
     const double userScale = GetConfiguredFloatingToolbarScale();
     const double fontFactor = static_cast<double>(GetConfiguredFloatingToolbarFontSize()) / 24.0;
-    return static_cast<int>(std::lround((59 + optional_item_count * 30) * userScale * fontFactor));
+    return static_cast<int>(std::lround((285 + optional_item_count * 30) * userScale * fontFactor));
 }
 
 int ConfiguredFloatingToolbarHeight()
@@ -131,25 +132,21 @@ void LayoutFloatingToolbar(HWND hwnd, bool reset_to_default_corner, FLOAT scaleO
     {
         scale = 1.0f;
     }
-    // Half-screen cap so content layout and HWND agree before show.
+    // Match RelayoutHost: cap against the full monitor work area so wide IPA rule
+    // labels are not sliced in half on first layout.
     HalfScreenDipLimits limits = QueryHalfScreenDipLimitsForHwnd(hwnd);
-    if (scaleOverride > 0.0f)
+    if (scaleOverride > 0.0f && suggestedRect)
     {
-        if (suggestedRect)
-        {
-            // The host is about to land on the suggested rect's monitor.
-            limits.monitor = QueryHalfScreenDipLimitsForPoint({suggestedRect->left, suggestedRect->top}).monitor;
-        }
-        const double monitorWidthPx = static_cast<double>((std::max)(1, limits.monitor.right - limits.monitor.left));
-        const double monitorHeightPx = static_cast<double>((std::max)(1, limits.monitor.bottom - limits.monitor.top));
-        limits.scale = scale;
-        limits.maxWidthDip = (monitorWidthPx * 0.5) / static_cast<double>(scale);
-        limits.maxHeightDip = (monitorHeightPx * 0.5) / static_cast<double>(scale);
+        limits.monitor = QueryHalfScreenDipLimitsForPoint({suggestedRect->left, suggestedRect->top}).monitor;
     }
-    ::FTB_WND_WIDTH =
-        static_cast<int>(std::ceil(ClampWidthDipToHalfScreen(static_cast<double>(::FTB_WND_WIDTH), limits)));
-    ::FTB_WND_HEIGHT =
-        static_cast<int>(std::ceil(ClampHeightDipToHalfScreen(static_cast<double>(::FTB_WND_HEIGHT), limits)));
+    const double monitorWidthPx =
+        static_cast<double>((std::max)(1, static_cast<int>(limits.monitor.right - limits.monitor.left)));
+    const double monitorHeightPx =
+        static_cast<double>((std::max)(1, static_cast<int>(limits.monitor.bottom - limits.monitor.top)));
+    const double maxWorkWidthDip = monitorWidthPx / static_cast<double>(scale);
+    const double maxWorkHeightDip = monitorHeightPx / static_cast<double>(scale);
+    ::FTB_WND_WIDTH = static_cast<int>(std::ceil((std::min)(static_cast<double>(::FTB_WND_WIDTH), maxWorkWidthDip)));
+    ::FTB_WND_HEIGHT = static_cast<int>(std::ceil((std::min)(static_cast<double>(::FTB_WND_HEIGHT), maxWorkHeightDip)));
     // The presenter measures its shadow margin into the scene.
     const int width = static_cast<int>(std::ceil(::FTB_WND_WIDTH * static_cast<double>(scale)));
     const int height = static_cast<int>(std::ceil(::FTB_WND_HEIGHT * static_cast<double>(scale)));

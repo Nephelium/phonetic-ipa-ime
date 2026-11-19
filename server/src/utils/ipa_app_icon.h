@@ -137,7 +137,11 @@ inline void Import(const std::filesystem::path &source, const std::filesystem::p
     WriteProfileFile(destination, ico);
     HICON decoded = static_cast<HICON>(LoadImageW(nullptr, destination.c_str(), IMAGE_ICON, 32, 32, LR_LOADFROMFILE));
     if (!decoded)
+    {
+        std::error_code ignored;
+        std::filesystem::remove(destination, ignored);
         throw std::runtime_error("图片转换失败，请选择另一张图片。");
+    }
     DestroyIcon(decoded);
     WriteProfileFile(root / "custom-icon-name.txt", name);
     Generation().fetch_add(1, std::memory_order_acq_rel);
@@ -175,7 +179,10 @@ inline void Refresh(HWND hwnd, int defaultResource)
     const auto load = [&](int size) {
         HICON icon = static_cast<HICON>(
             path.empty() ? nullptr : LoadImageW(nullptr, path.c_str(), IMAGE_ICON, size, size, LR_LOADFROMFILE));
-        return icon ? icon : CopyIcon(LoadIconW(GetModuleHandleW(nullptr), MAKEINTRESOURCEW(defaultResource)));
+        if (icon)
+            return icon;
+        return static_cast<HICON>(LoadImageW(GetModuleHandleW(nullptr), MAKEINTRESOURCEW(defaultResource), IMAGE_ICON,
+                                             size, size, LR_DEFAULTCOLOR));
     };
     HICON nextBig = load(GetSystemMetricsForDpi(SM_CXICON, dpi));
     HICON nextSmall = load(GetSystemMetricsForDpi(SM_CXSMICON, dpi));

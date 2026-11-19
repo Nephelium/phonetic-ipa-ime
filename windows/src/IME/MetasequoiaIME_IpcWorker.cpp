@@ -263,6 +263,7 @@ void CMetasequoiaIME::IpcWorkerThread(CMetasequoiaIME *pIME)
         // Close the first-key window immediately on the reader thread.  The UI
         // message may be delayed, fail to post, or race a replacement handle.
         pIME->_temporaryJapanesePolicy.store(0, std::memory_order_relaxed);
+        Global::IpaReadingPageActive.store(false, std::memory_order_relaxed);
         pIME->_workerCommitReady.store(false, std::memory_order_release);
         pIME->_acknowledgedWorkerFocusToken.store(0, std::memory_order_release);
         pIME->_ResetVoiceCompositionAssemble();
@@ -416,7 +417,8 @@ void CMetasequoiaIME::IpcWorkerThread(CMetasequoiaIME *pIME)
              buf.msg_type == Global::DataToTsfWorkerThreadMsgType::TsfDiagnosticLogChanged ||
              buf.msg_type == Global::DataToTsfWorkerThreadMsgType::StatisticsEnabledChanged ||
              buf.msg_type == Global::DataToTsfWorkerThreadMsgType::AiContextUploadChanged ||
-             buf.msg_type == Global::DataToTsfWorkerThreadMsgType::HorizontalArrowSelectionChanged))
+             buf.msg_type == Global::DataToTsfWorkerThreadMsgType::HorizontalArrowSelectionChanged ||
+             buf.msg_type == Global::DataToTsfWorkerThreadMsgType::IpaReadingPageChanged))
         {
             bool hasTerminator = false;
             for (const wchar_t ch : buf.data)
@@ -519,6 +521,7 @@ void CMetasequoiaIME::IpcWorkerThread(CMetasequoiaIME *pIME)
                 buf.msg_type == Global::DataToTsfWorkerThreadMsgType::EndHelpcodeTriggersChanged ||
                 buf.msg_type == Global::DataToTsfWorkerThreadMsgType::EnumerationCommaKeysChanged ||
                 buf.msg_type == Global::DataToTsfWorkerThreadMsgType::HorizontalArrowSelectionChanged ||
+                buf.msg_type == Global::DataToTsfWorkerThreadMsgType::IpaReadingPageChanged ||
                 buf.msg_type == Global::DataToTsfWorkerThreadMsgType::InputModeChanged ||
                 buf.msg_type == Global::DataToTsfWorkerThreadMsgType::TrilingualCycleChanged ||
                 buf.msg_type == Global::DataToTsfWorkerThreadMsgType::CapsLockChanged ||
@@ -646,6 +649,10 @@ void CMetasequoiaIME::IpcWorkerThread(CMetasequoiaIME *pIME)
         else if (buf.msg_type == Global::DataToTsfWorkerThreadMsgType::HorizontalArrowSelectionChanged)
         {
             Global::HorizontalArrowSelectionEnabled.store(buf.data[0] == L'1', std::memory_order_relaxed);
+        }
+        else if (buf.msg_type == Global::DataToTsfWorkerThreadMsgType::IpaReadingPageChanged)
+        {
+            Global::IpaReadingPageActive.store(buf.data[0] == L'1', std::memory_order_release);
         }
         else if (buf.msg_type == Global::DataToTsfWorkerThreadMsgType::MicrosoftShuangpinChanged)
         {

@@ -85,29 +85,35 @@ final class Updates {
         } catch (Exception e) { return null; } finally { if (connection != null) connection.disconnect(); }
     }
     static synchronized void check(Context context, boolean manual, Consumer<String> callback) {
-        SharedPreferences p = preferences(context.getApplicationContext()); long now = System.currentTimeMillis();
+        Context app = context.getApplicationContext();
+        SharedPreferences p = preferences(app); long now = System.currentTimeMillis();
         if (checking) { callback.accept("正在检查官网与 GitHub…"); return; }
+        long lastSuccess = p.getLong("success", 0), lastAttempt = p.getLong("attempt", 0);
+        boolean cooldown = now >= lastSuccess && now - lastSuccess < 86400000L;
+        boolean backoff = now >= lastAttempt && now - lastAttempt < retryDelay(p.getInt("failures", 0));
         // Either source answering counts as a check; total failures back off from 10 minutes to a day.
-        if (!manual && (!p.getBoolean("automatic", true) || now - p.getLong("success", 0) < 86400000L || now - p.getLong("attempt", 0) < retryDelay(p.getInt("failures", 0)))) { callback.accept(status(context)); return; }
+        if (!manual && (!p.getBoolean("automatic", true) || cooldown || backoff)) { callback.accept(status(app)); return; }
         checking = true; p.edit().putLong("attempt", now).apply(); callback.accept("正在检查官网与 GitHub…");
         workers.execute(() -> {
             List<Feed> feeds = new ArrayList<>(); List<Future<Feed>> requests = new ArrayList<>();
             for (String endpoint : SOURCES) requests.add(workers.submit(() -> fetch(endpoint)));
             for (Future<Feed> request : requests) { try { Feed feed = request.get(20, TimeUnit.SECONDS); if (feed != null) feeds.add(feed); } catch (Exception e) { request.cancel(true); } }
             main.post(() -> {
-                checking = false; Feed best = newest(feeds), cached = parse(p.getString("latest", ""));
+                synchronized (Updates.class) { checking = false; }
+                Feed best = newest(feeds), cached = parse(p.getString("latest", ""));
                 if (!feeds.isEmpty()) p.edit().putLong("success", now).putInt("failures", 0).apply();
                 else p.edit().putInt("failures", Math.min(p.getInt("failures", 0) + 1, 16)).apply();
                 if (best != null && compare(best.version, VERSION) > 0 && (cached == null || compare(best.version, cached.version) >= 0)) p.edit().putString("latest", best.json).apply();
-                Feed current = available(context);
+                Feed current = available(app);
                 String message = current != null ? "发现新版本 " + current.version : feeds.isEmpty() ? "暂时无法连接更新服务，请稍后重试" : feeds.size() == 2 ? "已是最新版本" : "已检查一个来源，另一来源暂时无法连接";
                 p.edit().putString("status", message).apply(); callback.accept(message);
             });
         });
     }
     static long retryDelay(int failures) {
+        if (failures <= 0) return 0L;
         long delay = 600000L;
-        for (int i = 0; i < failures && delay < 86400000L; i++) delay *= 2;
+        for (int i = 1; i < failures && delay < 86400000L; i++) delay *= 2;
         return Math.min(delay, 86400000L);
     }
     static String status(Context context) { Feed feed = available(context); return feed != null ? "发现新版本 " + feed.version : preferences(context).getString("status", "自动检查官网与 GitHub 的新版本"); }

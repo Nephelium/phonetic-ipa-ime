@@ -58,6 +58,29 @@ constexpr float kNoShadowPad = 1.0f;
 static_assert(kNoShadowPad >= kToolbarStrokeWidth * 0.5f);
 constexpr float kToolbarGlyphFontSizeFactor = 0.82f;
 constexpr float kToolbarUnderlinedTextFontSizeFactor = 0.58f;
+constexpr UINT_PTR kRulesPopupTimerId = 0x5401;
+
+float MeasureTextDip(msimeui::DeviceResources &dr, const std::wstring &text, float fontSize)
+{
+    if (text.empty())
+        return 0.0f;
+    IDWriteFactory *factory = dr.GetDWriteFactory();
+    IDWriteTextFormat *format =
+        dr.GetTextFormat(msimeui::UiFontFamily(), fontSize, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_TEXT_ALIGNMENT_LEADING,
+                         DWRITE_PARAGRAPH_ALIGNMENT_CENTER, DWRITE_WORD_WRAPPING_NO_WRAP);
+    if (factory && format)
+    {
+        Microsoft::WRL::ComPtr<IDWriteTextLayout> layout;
+        if (SUCCEEDED(factory->CreateTextLayout(text.c_str(), static_cast<UINT32>(text.size()), format, 2000.0f, 100.0f,
+                                                &layout)))
+        {
+            DWRITE_TEXT_METRICS metrics{};
+            if (SUCCEEDED(layout->GetMetrics(&metrics)))
+                return metrics.widthIncludingTrailingWhitespace;
+        }
+    }
+    return static_cast<float>(text.size()) * fontSize * 0.85f;
+}
 // Every toolbar icon carries a text fallback: "Segoe Fluent Icons" ships with
 // Windows 11 only, and the Windows 10 build of "Segoe MDL2 Assets" may predate
 // some of the IME-specific codepoints below. DirectWrite substitutes a font
@@ -128,6 +151,27 @@ class ToolbarIconButton : public msimeui::Visual
         SetWidth(width);
     }
 
+    void SetRestingFill(const D2D1_COLOR_F &fill)
+    {
+        restingFill_ = fill;
+        InvalidateVisual();
+    }
+
+    void SetTextAlignment(DWRITE_TEXT_ALIGNMENT alignment, float padLeft = 0.0f)
+    {
+        textAlignment_ = alignment;
+        textPadLeft_ = padLeft;
+        InvalidateVisual();
+    }
+
+    void SetCheckmark(bool showReserve, bool checked, float reserveWidth = 0.0f)
+    {
+        showCheckReserve_ = showReserve;
+        checked_ = checked;
+        checkReserveWidth_ = reserveWidth;
+        InvalidateVisual();
+    }
+
     SizeF Measure(const SizeF &availableSize) override
     {
         (void)availableSize;
@@ -146,15 +190,16 @@ class ToolbarIconButton : public msimeui::Visual
         {
             return;
         }
-        if (hovered_ || pressed_)
+        if (hovered_ || pressed_ || restingFill_.a > 0.001f)
         {
-            if (ID2D1SolidColorBrush *hover = deviceResources.GetSolidColorBrush(hoverFill_))
+            const D2D1_COLOR_F fill = (hovered_ || pressed_) ? hoverFill_ : restingFill_;
+            if (ID2D1SolidColorBrush *bg = deviceResources.GetSolidColorBrush(fill))
             {
                 const float radius = std::min(hoverRadius_, size_ * 0.5f);
                 const auto rounded = D2D1::RoundedRect(
                     D2D1::RectF(bounds_.x, bounds_.y, bounds_.x + bounds_.width, bounds_.y + bounds_.height), radius,
                     radius);
-                target->FillRoundedRectangle(rounded, hover);
+                target->FillRoundedRectangle(rounded, bg);
             }
         }
 
@@ -170,23 +215,39 @@ class ToolbarIconButton : public msimeui::Visual
         const float fontSize = textFontSize_ > 0 ? textFontSize_
                                                  : size_ * (underline_ ? kToolbarUnderlinedTextFontSizeFactor
                                                                        : kToolbarGlyphFontSizeFactor);
+        if (!useGlyph && showCheckReserve_ && checked_ && checkReserveWidth_ > 0.0f)
+        {
+            IDWriteTextFormat *checkFormat =
+                deviceResources.GetTextFormat(family, fontSize, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_TEXT_ALIGNMENT_CENTER,
+                                              DWRITE_PARAGRAPH_ALIGNMENT_CENTER, DWRITE_WORD_WRAPPING_NO_WRAP);
+            Microsoft::WRL::ComPtr<IDWriteTextLayout> checkLayout;
+            if (checkFormat && SUCCEEDED(factory->CreateTextLayout(L"✓", 1, checkFormat, checkReserveWidth_,
+                                                                   bounds_.height, &checkLayout)))
+            {
+                target->DrawTextLayout(D2D1::Point2F(bounds_.x + textPadLeft_, bounds_.y), checkLayout.Get(), brush,
+                                       D2D1_DRAW_TEXT_OPTIONS_CLIP);
+            }
+        }
         IDWriteTextFormat *format =
-            deviceResources.GetTextFormat(family, fontSize, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_TEXT_ALIGNMENT_CENTER,
+            deviceResources.GetTextFormat(family, fontSize, DWRITE_FONT_WEIGHT_NORMAL, textAlignment_,
                                           DWRITE_PARAGRAPH_ALIGNMENT_CENTER, DWRITE_WORD_WRAPPING_NO_WRAP);
         if (!format)
         {
             return;
         }
 
+        const float textLeft =
+            bounds_.x + (useGlyph ? 0.0f : textPadLeft_ + (showCheckReserve_ ? checkReserveWidth_ : 0.0f));
+        const float layoutWidth = (std::max)(1.0f, bounds_.x + bounds_.width - textLeft);
         wchar_t glyphText[2] = {glyph_, L'\0'};
         const wchar_t *drawText = useGlyph ? glyphText : text_.c_str();
         const UINT32 length = useGlyph ? 1u : static_cast<UINT32>(text_.size());
         Microsoft::WRL::ComPtr<IDWriteTextLayout> layout;
-        if (FAILED(factory->CreateTextLayout(drawText, length, format, bounds_.width, bounds_.height, &layout)))
+        if (FAILED(factory->CreateTextLayout(drawText, length, format, layoutWidth, bounds_.height, &layout)))
         {
             return;
         }
-        target->DrawTextLayout(D2D1::Point2F(bounds_.x, bounds_.y), layout.Get(), brush, D2D1_DRAW_TEXT_OPTIONS_CLIP);
+        target->DrawTextLayout(D2D1::Point2F(textLeft, bounds_.y), layout.Get(), brush, D2D1_DRAW_TEXT_OPTIONS_CLIP);
 
         if (underline_ && bounds_.width > 4.0f)
         {
@@ -256,6 +317,12 @@ class ToolbarIconButton : public msimeui::Visual
     bool pressed_ = false;
     D2D1_COLOR_F glyphColor_ = D2D1::ColorF(0xFFFFFF);
     D2D1_COLOR_F hoverFill_ = D2D1::ColorF(1.0f, 1.0f, 1.0f, 0.10f);
+    D2D1_COLOR_F restingFill_ = D2D1::ColorF(0, 0.0f);
+    DWRITE_TEXT_ALIGNMENT textAlignment_ = DWRITE_TEXT_ALIGNMENT_CENTER;
+    float textPadLeft_ = 0.0f;
+    bool showCheckReserve_ = false;
+    bool checked_ = false;
+    float checkReserveWidth_ = 0.0f;
     float hoverRadius_ = 6.0f;
     ClickHandler onClick_;
 };
@@ -389,6 +456,10 @@ struct FloatingToolbarPresenter::Impl
     int capsLock = 0;
     int japaneseInputMode = 0;
     bool rulesOpen = false;
+    std::vector<phonetic_ipa::TranscriptionRule> cachedRules;
+    std::filesystem::file_time_type cachedRulesMtime{};
+    bool hasCachedRulesMtime = false;
+    bool rulesLoaded = false;
 };
 
 FloatingToolbarPresenter::FloatingToolbarPresenter() = default;
@@ -406,6 +477,10 @@ bool FloatingToolbarPresenter::IsBound() const
 
 bool FloatingToolbarPresenter::Bind(HWND hwnd)
 {
+    if (hwnd_ && hwnd_ != hwnd && IsWindow(hwnd_))
+    {
+        KillTimer(hwnd_, kRulesPopupTimerId);
+    }
     hwnd_ = hwnd;
     if (!hwnd)
     {
@@ -483,11 +558,27 @@ void FloatingToolbarPresenter::RebuildScene()
         addText(impl_->englishInputMode == 1 ? L"IPA 键盘" : (impl_->capsLock == 1 ? L"拼音→汉字" : L"拼音→IPA"), false,
                 [this]() { FanyNamedPipe::EnqueueToolbarLanguageToggleTask(impl_->cnEn == 1); });
     mode->SetTextLayout(84.0f * s, 14.0f * s);
+    mode->SetRestingFill(
+        {impl_->hover.r, impl_->hover.g, impl_->hover.b, (std::clamp)(impl_->hover.a * 0.55f, 0.06f, 0.14f)});
     std::vector<phonetic_ipa::TranscriptionRule> rules;
     std::string currentRule;
     try
     {
-        rules = phonetic_ipa::LoadTranscriptionRules(PhoneticIpa::ResourceRoot());
+        const std::filesystem::path root = PhoneticIpa::ResourceRoot();
+        const std::filesystem::path catalog = root / "hanzi-rules.tsv";
+        std::error_code ec;
+        const bool hasMtime = std::filesystem::exists(catalog, ec);
+        const auto mtime = hasMtime ? std::filesystem::last_write_time(catalog, ec) : std::filesystem::file_time_type{};
+        const bool mtimeOk = hasMtime && !ec;
+        if (!impl_->rulesLoaded || mtimeOk != impl_->hasCachedRulesMtime ||
+            (mtimeOk && mtime != impl_->cachedRulesMtime))
+        {
+            impl_->cachedRules = phonetic_ipa::LoadTranscriptionRules(root);
+            impl_->cachedRulesMtime = mtime;
+            impl_->hasCachedRulesMtime = mtimeOk;
+            impl_->rulesLoaded = true;
+        }
+        rules = impl_->cachedRules;
         currentRule = PhoneticIpa::RuleId();
     }
     catch (const std::exception &)
@@ -497,11 +588,21 @@ void FloatingToolbarPresenter::RebuildScene()
     for (const auto &rule : rules)
         if (rule.id == currentRule)
             ruleLabel = string_to_wstring(rule.short_name);
-    auto ruleButton = addText(ruleLabel + (impl_->rulesOpen ? L" ▾" : L" ▴"), false, [this]() {
+    const std::wstring ruleText = ruleLabel + (impl_->rulesOpen ? L" ▾" : L" ▴");
+    const float ruleWidth =
+        (std::clamp)(MeasureTextDip(impl_->resources, ruleText, 14.0f * s) + 20.0f * s, 108.0f * s, 236.0f * s);
+    auto ruleButton = addText(ruleText, false, [this]() {
         impl_->rulesOpen = !impl_->rulesOpen;
+        if (hwnd_)
+        {
+            if (impl_->rulesOpen)
+                SetTimer(hwnd_, kRulesPopupTimerId, 120, nullptr);
+            else
+                KillTimer(hwnd_, kRulesPopupTimerId);
+        }
         PostMessage(hwnd_, UPDATE_FTB_IPA_RULE, 0, 0);
     });
-    ruleButton->SetTextLayout(232.0f * s, 14.0f * s);
+    ruleButton->SetTextLayout(ruleWidth, 14.0f * s);
 
     const FloatingToolbarItemsConfig &items = GetConfiguredFloatingToolbarItems();
     if (items.fullwidth)
@@ -576,18 +677,31 @@ void FloatingToolbarPresenter::RebuildScene()
     impl_->rowOffsetDip = 0.0f;
     if (impl_->rulesOpen)
     {
+        const float menuPadLeft = 8.0f * s;
+        const float checkReserve = 18.0f * s;
+        float colWidth = 170.0f * s;
+        for (const auto &rule : rules)
+        {
+            const float measured = MeasureTextDip(impl_->resources, string_to_wstring(rule.name), 14.0f * s) +
+                                   menuPadLeft + checkReserve + 14.0f * s;
+            colWidth = (std::max)(colWidth, measured);
+        }
+        colWidth = (std::min)(colWidth, 292.0f * s);
         for (size_t offset = 0; offset < rules.size(); offset += 2)
         {
             auto choices = std::make_shared<msimeui::HorizontalStackPanel>(4.0f * s);
             for (size_t i = offset; i < std::min(offset + 2, rules.size()); ++i)
             {
                 const auto &rule = rules[i];
-                auto choice = std::make_shared<ToolbarIconButton>(
-                    0, L"", (rule.id == currentRule ? L"✓ " : L"  ") + string_to_wstring(rule.name), 28.0f * s);
-                choice->SetTextLayout(292.0f * s, 14.0f * s);
+                auto choice = std::make_shared<ToolbarIconButton>(0, L"", string_to_wstring(rule.name), 28.0f * s);
+                choice->SetTextLayout(colWidth, 14.0f * s);
+                choice->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_LEADING, menuPadLeft);
+                choice->SetCheckmark(true, rule.id == currentRule, checkReserve);
                 choice->SetColors(impl_->glyph, impl_->hover, iconRadius);
                 choice->SetOnClick([this, id = rule.id]() {
                     impl_->rulesOpen = false;
+                    if (hwnd_)
+                        KillTimer(hwnd_, kRulesPopupTimerId);
                     FanyNamedPipe::EnqueueIpaRuleTask(id);
                     PostMessage(hwnd_, UPDATE_FTB_IPA_RULE, 0, 0);
                 });
@@ -596,6 +710,13 @@ void FloatingToolbarPresenter::RebuildScene()
             content->AddChild(choices);
             impl_->rowOffsetDip += 30.0f * s;
         }
+    }
+    if (hwnd_)
+    {
+        if (impl_->rulesOpen)
+            SetTimer(hwnd_, kRulesPopupTimerId, 120, nullptr);
+        else
+            KillTimer(hwnd_, kRulesPopupTimerId);
     }
     // The toolbar row stays at the bottom. Opening the rule list grows upward.
     content->AddChild(row);
@@ -881,9 +1002,49 @@ bool FloatingToolbarPresenter::HandleMessage(UINT message, WPARAM wParam, LPARAM
         impl_->window->DispatchImportedMessage(message, wParam, lParam);
         Present();
         return true;
+    case WM_TIMER:
+        if (wParam == kRulesPopupTimerId)
+        {
+            if (!impl_->rulesOpen)
+            {
+                KillTimer(hwnd_, kRulesPopupTimerId);
+                return true;
+            }
+            bool dismiss = !IsWindowVisible(hwnd_) || (GetAsyncKeyState(VK_ESCAPE) & 0x8000) != 0;
+            if (!dismiss && ((GetAsyncKeyState(VK_LBUTTON) | GetAsyncKeyState(VK_RBUTTON)) & 0x8000) != 0)
+            {
+                POINT cursor{};
+                RECT rect{};
+                if (GetCursorPos(&cursor) && GetWindowRect(hwnd_, &rect) && !PtInRect(&rect, cursor))
+                    dismiss = true;
+            }
+            if (dismiss)
+            {
+                impl_->rulesOpen = false;
+                KillTimer(hwnd_, kRulesPopupTimerId);
+                PostMessage(hwnd_, UPDATE_FTB_IPA_RULE, 0, 0);
+            }
+            return true;
+        }
+        return false;
+    case WM_CANCELMODE:
+    case WM_SHOWWINDOW:
+        if (impl_->rulesOpen && (message == WM_CANCELMODE || wParam == FALSE))
+        {
+            impl_->rulesOpen = false;
+            KillTimer(hwnd_, kRulesPopupTimerId);
+            PostMessage(hwnd_, UPDATE_FTB_IPA_RULE, 0, 0);
+        }
+        return false;
     default:
         return false;
     }
 }
 
-FloatingToolbarPresenter::~FloatingToolbarPresenter() = default;
+FloatingToolbarPresenter::~FloatingToolbarPresenter()
+{
+    if (hwnd_ && IsWindow(hwnd_))
+    {
+        KillTimer(hwnd_, kRulesPopupTimerId);
+    }
+}

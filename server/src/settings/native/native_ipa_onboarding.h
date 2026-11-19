@@ -15,7 +15,7 @@ class IpaFirstUseFigure : public msimeui::Visual
     int page = 0;
     SizeF Measure(const SizeF &available) override
     {
-        return {available.width, 160.0f};
+        return {available.width, 136.0f};
     }
     void Arrange(const RectF &rect) override
     {
@@ -25,22 +25,40 @@ class IpaFirstUseFigure : public msimeui::Visual
     {
         FillRounded(dr, bounds_, 12.0f, Hex(0x141B33));
         auto target = dr.GetRenderTarget();
+        Microsoft::WRL::ComPtr<ID2D1Factory> factory;
+        Microsoft::WRL::ComPtr<ID2D1RoundedRectangleGeometry> geometry;
+        Microsoft::WRL::ComPtr<ID2D1Layer> layer;
+        if (target)
+            target->GetFactory(factory.GetAddressOf());
+        const bool clipped = target && factory &&
+                             SUCCEEDED(factory->CreateRoundedRectangleGeometry(
+                                 D2D1::RoundedRect(ToD2D(bounds_), 12.0f, 12.0f), geometry.GetAddressOf())) &&
+                             SUCCEEDED(target->CreateLayer(nullptr, layer.GetAddressOf()));
+        if (clipped)
+        {
+            target->PushLayer(D2D1::LayerParameters(D2D1::InfiniteRect(), geometry.Get(),
+                                                    D2D1_ANTIALIAS_MODE_PER_PRIMITIVE, D2D1::IdentityMatrix(), 1.0f,
+                                                    nullptr, D2D1_LAYER_OPTIONS_INITIALIZE_FOR_CLEARTYPE),
+                              layer.Get());
+        }
         const auto skin = PhoneticIpa::ResourceRoot().parent_path() / "skins" / "bigfish" / "assets";
         if (auto background = dr.GetBitmapFromFile((skin / "background.png").wstring()))
             target->DrawBitmap(background, ToD2D(bounds_), 0.22f);
         if (auto character = dr.GetBitmapFromFile((skin / "character.png").wstring()))
-            target->DrawBitmap(character, D2D1::RectF(bounds_.x + bounds_.width - 86.0f, bounds_.y + 12.0f,
-                                                      bounds_.x + bounds_.width - 10.0f, bounds_.y + 94.0f));
+            target->DrawBitmap(character, D2D1::RectF(bounds_.x + bounds_.width - 82.0f, bounds_.y + 10.0f,
+                                                      bounds_.x + bounds_.width - 10.0f, bounds_.y + 82.0f));
         const std::array<const wchar_t *, 4> top = {L"拼音 ⇄ IPA · Caps Lock 切换输出", L"hao → 选好 → 选 hao4",
                                                     L"单按 Shift → IPA · a → 1", L"按住 Shift + 2、1、4 → ˨˩˦"};
         const std::array<const wchar_t *, 4> ipa = {L"拼音查字     直接音标", L"xau˥˩     /     好", L"a",
                                                     L"˨˩˦    ²¹⁴    214"};
         TextStyle style = BodyStyle();
-        style.size = 17.0f;
-        DrawTextInRect(dr, top[page], style, {bounds_.x + 16, bounds_.y + 20, bounds_.width - 104, 44}, Hex(0xE3EAFF));
+        style.size = 16.5f;
+        DrawTextInRect(dr, top[page], style, {bounds_.x + 16, bounds_.y + 14, bounds_.width - 100, 42}, Hex(0xE3EAFF));
         style.family = L"PTB IPA Plus";
-        style.size = 27.0f;
-        DrawTextInRect(dr, ipa[page], style, {bounds_.x + 16, bounds_.y + 80, bounds_.width - 32, 56}, Hex(0x5B9BFF));
+        style.size = 26.0f;
+        DrawTextInRect(dr, ipa[page], style, {bounds_.x + 16, bounds_.y + 64, bounds_.width - 32, 54}, Hex(0x5B9BFF));
+        if (clipped)
+            target->PopLayer();
     }
 };
 
@@ -67,7 +85,8 @@ inline const std::array<const wchar_t *, 4> &IpaGuideDetails()
         L"Lock，让工具栏显示“拼音→汉字”，输入 hao，再选“好”，结果就是“好”。再按 Caps Lock 返回 IPA。\n\n④ "
         L"点上行汉字或下行音标也能分别输入。空格选当前高亮项，上下键移动，Page Up／Page Down 翻页，Esc "
         L"取消当前组合。读音页用 Ctrl＋Shift＋Enter 返回选字。完整词语 yanwu 可直接选择厌恶的词语读音。",
-        L"① 轻按并松开 Shift，直到工具栏显示“IPA 键盘”，即直接音标键盘。此时字母用作音标编码。按 a 会出现 a 的音标候选，再按 "
+        L"① 轻按并松开 Shift，直到工具栏显示“IPA 键盘”，即直接音标键盘。此时字母用作音标编码。按 a 会出现 a "
+        L"的音标候选，再按 "
         L"1 或空格确认首项 a。\n\n② "
         L"候选窗口还在、编码仍在组合时，表示尚未完成输入。按数字选所需音标后才确认上屏。每个键的备选可以在设置的“音标键"
         L"盘”页查看和修改。\n\n③ 再单按 Shift，返回拼音查字。随后用 Caps Lock 选择默认输出 IPA 或汉字。单按 Shift "
@@ -101,7 +120,7 @@ inline void ShowIpaFirstUse(HostServices &host)
     content->Add(figure);
     content->Add(detail);
     auto scroll = std::make_shared<msimeui::ScrollViewer>(content);
-    scroll->SetHeight(280.0f);
+    scroll->SetHeight(270.0f);
     column->Add(scroll);
     auto actions = std::make_shared<Row>(10.0f);
     auto back = std::make_shared<Button>(L"上一步");

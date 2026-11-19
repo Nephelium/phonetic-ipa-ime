@@ -28,6 +28,7 @@ final class RepeatKey extends IpaKey {
         if (!isEnabled()) { cancelRepeat(); return false; }
         switch (event.getActionMasked()) {
             case MotionEvent.ACTION_DOWN:
+                if (!isAttachedToWindow()) { cancelRepeat(); return false; }
                 cancelRepeat(); touching = true; repeated = false; pointer = event.getPointerId(0); setPressed(true);
                 timer.postDelayed(repeat, ViewConfiguration.getLongPressTimeout()); return true;
             case MotionEvent.ACTION_MOVE:

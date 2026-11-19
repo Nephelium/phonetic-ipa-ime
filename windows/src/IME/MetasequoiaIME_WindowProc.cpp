@@ -938,6 +938,10 @@ LRESULT CALLBACK CMetasequoiaIME_WindowProc(HWND hWnd, UINT message, WPARAM wPar
         }
         else
         {
+            if (code == VK_BACK && receivedData->msg_type == Global::DataFromServerMsgType::NavigationIgnored)
+            {
+                Global::IpaReadingPageActive.store(false, std::memory_order_release);
+            }
             pIME->_CompleteDeferredKeyReplay(request.deferredReplayToken);
         }
         // Navigation responses are acknowledgements only. The Server owns and

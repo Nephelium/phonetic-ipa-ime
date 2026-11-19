@@ -141,6 +141,7 @@ VOID CMetasequoiaIME::_DeleteCandidateList(BOOL isForce, _In_opt_ ITfContext *pC
 HRESULT CMetasequoiaIME::_HandleComplete(TfEditCookie ec, _In_ ITfContext *pContext)
 {
     g_toggleImeFallbackBuffer.clear();
+    Global::IpaReadingPageActive.store(false, std::memory_order_relaxed);
     // The composition ends here, so the creating-word prefix must not survive
     // into the next one: a leftover word would be prepended to its preedit.
     GlobalIme::word_for_creating_word.clear();
@@ -157,6 +158,7 @@ HRESULT CMetasequoiaIME::_HandleCompleteCommitFirst(TfEditCookie ec, _In_ ITfCon
                                                     bool requireSuccessfulEnd)
 {
     g_toggleImeFallbackBuffer.clear();
+    Global::IpaReadingPageActive.store(false, std::memory_order_relaxed);
     // Same terminal cleanup as _HandleComplete: the accumulated word belongs to
     // the composition being finished, never to the next one.
     GlobalIme::word_for_creating_word.clear();
@@ -179,6 +181,7 @@ HRESULT CMetasequoiaIME::_HandleCompleteCommitFirst(TfEditCookie ec, _In_ ITfCon
 HRESULT CMetasequoiaIME::_HandleCancel(TfEditCookie ec, _In_ ITfContext *pContext)
 {
     g_toggleImeFallbackBuffer.clear();
+    Global::IpaReadingPageActive.store(false, std::memory_order_relaxed);
     GlobalIme::word_for_creating_word = L"";
     GlobalIme::pending_create_word_preedit.clear();
     _RemoveDummyCompositionForComposing(ec, _pComposition);

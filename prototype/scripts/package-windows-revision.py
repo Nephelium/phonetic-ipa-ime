@@ -47,7 +47,9 @@ if args.third_party:
     replacements['THIRD_PARTY.md'] = args.third_party.read_bytes()
 for name in ['Install-Windows.ps1', 'Start-Settings.ps1', 'Register-Prototype.ps1', 'Windows-Installation.ps1', 'Uninstall-Windows.ps1']:
     replacements['scripts/' + name] = (args.scripts / name).read_bytes()
-for skin in ['bigfish', 'bigfish-peek', 'bigfish-national-day']:
+for skin in ['bigfish', 'bigfish-peek', 'bigfish-national-day', 'ipa-celadon', 'ipa-night', 'ipa-paper']:
+    if not (args.skins / skin).is_dir():
+        continue
     for path in (args.skins / skin).rglob('*'):
         if path.is_file():
             replacements['output/runtime/data/skins/' + skin + '/' + path.relative_to(args.skins / skin).as_posix()] = path.read_bytes()
@@ -64,9 +66,9 @@ with zipfile.ZipFile(args.base) as source:
     for name, data in replacements.items():
         if name.startswith('output/runtime/') and name.endswith(('.exe', '.dll')):
             binaries[name.removeprefix('output/runtime/').replace('/', '\\')] = sha(data)
-    replacements['output/runtime/build-manifest.json'] = json.dumps(binaries, indent=2).encode()
+    replacements['output/runtime/build-manifest.json'] = json.dumps(binaries, indent=2, sort_keys=True).encode('utf-8')
     config = source.read('output/runtime/data/config.toml').decode('utf-8-sig')
-    replacements['output/runtime/data/config.toml'] = config.replace('candidate_skin = "fluent"', 'candidate_skin = "bigfish"').encode()
+    replacements['output/runtime/data/config.toml'] = config.replace('candidate_skin = "fluent"', 'candidate_skin = "bigfish"').encode('utf-8')
     require(sha(source.read('output/runtime/data/msime.db')) == '9e68e88be036206fc14d44db7111376b1d92f9173b04d623e601e31edd664c2f',
             'factory dictionary msime.db changed')
     hashes = {}
@@ -80,9 +82,9 @@ with zipfile.ZipFile(args.base) as source:
                 data = source.read(name)
             hashes[name] = sha(data)
             target.writestr(copy.copy(info), data)
-        for name, data in replacements.items():
+        for name, data in sorted(replacements.items()):
             hashes[name] = sha(data)
             target.writestr(name, data)
-        target.writestr('SHA256.json', json.dumps(hashes, ensure_ascii=False, indent=2).encode())
+        target.writestr('SHA256.json', json.dumps(hashes, ensure_ascii=False, indent=2, sort_keys=True).encode('utf-8'))
 subprocess.run([sys.executable, str(Path(__file__).with_name('verify-windows-package.py')), str(args.output)], check=True)
 print(json.dumps({'package': str(args.output), 'bytes': args.output.stat().st_size, 'sha256': sha(args.output.read_bytes())}, ensure_ascii=False, indent=2))

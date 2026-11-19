@@ -71,6 +71,7 @@ extern std::string g_candidate_translation_signature;
 extern bool g_translation_candidates_active;
 extern PhoneticIpa::ReadingSession g_ipa_readings;
 extern bool g_ipa_reading_page_active;
+void SetIpaReadingPageActive(bool active);
 bool EnterIpaReadingPage(int index_in_page);
 bool SelectIpaReading(int index_in_page);
 void PopulateIpaReadingPage();

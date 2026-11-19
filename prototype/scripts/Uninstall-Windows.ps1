@@ -13,7 +13,7 @@ try {
     $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
     if (!([Security.Principal.WindowsPrincipal]::new($identity)).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
         $child = Start-Process -FilePath (Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe') -Verb RunAs -ArgumentList ('-NoProfile -ExecutionPolicy Bypass -File "' + $PSCommandPath + '"') -Wait -PassThru
-        exit $child.ExitCode
+        exit $(if ($child) { $child.ExitCode } else { 1 })
     }
     Uninstall-IpaRuntime $(if (Test-Path -LiteralPath $extracted) { $extracted } else { '' })
     exit 0

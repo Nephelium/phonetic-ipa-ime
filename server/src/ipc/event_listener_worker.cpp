@@ -44,6 +44,38 @@ constexpr ULONGLONG kCandidateHideBacklogMs = 24;
 
 uint64_t g_last_status_snapshot_client_id = 0;
 
+void CommitCandidateFromUi(uint64_t client_id, uint64_t activation_epoch, int index_in_page)
+{
+    const bool was_reading_page = g_ipa_reading_page_active;
+    FanyNamedPipe::ProcessSelectionKey(0, client_id, activation_epoch, index_in_page);
+    if (was_reading_page)
+    {
+        if (IsUiLessMode())
+            FanyNamedPipe::PushUiLessCandidatesToOwner();
+        return;
+    }
+    if (Global::MsgTypeToTsf == Global::DataFromServerMsgType::Normal)
+    {
+        // The worker packet is the complete edit-session-owned commit
+        // for a normal UI click. Do not also leave an unsolicited
+        // request-id-0 reply on the normal reverse pipe.
+        if (SendToTsfWorkerThreadClientViaNamedpipe(client_id, activation_epoch,
+                                                    Global::DataFromServerMsgTypeToTsfWorkerThread::CommitCandidate,
+                                                    Global::candidate_ui.selected_text))
+        {
+            FanyNamedPipe::ClearState();
+        }
+    }
+    else if (FanyNamedPipe::SendCurrentDataToClient(client_id, activation_epoch, 0))
+    {
+        // NeedToCreateWord/OutOfRange require the normal reply's
+        // subtype. An empty worker packet is only the ordered trigger;
+        // TSF consumes (rather than discards) the id-0 reply.
+        SendToTsfWorkerThreadClientViaNamedpipe(client_id, activation_epoch,
+                                                Global::DataFromServerMsgTypeToTsfWorkerThread::CommitCandidate, L"");
+    }
+}
+
 // After switching away from this IME, the next StatusSnapshot must restore the
 // configured default mode even when the same process/thread client_id reconnects.
 bool g_force_global_ime_sync = false;
@@ -387,7 +419,12 @@ void WorkerThread()
             const bool capsLockEnabled =
                 capsLockSnapshot.has_value() ? *capsLockSnapshot : GetServerCapsLockState() != 0;
             const bool japaneseMode = GetActiveInputMode() == "japanese";
-            if (FanyImeUi::ShouldShowInputModeEvent(trigger, GetConfiguredCaretStateIndicatorOnFocus(), capsLockEnabled,
+            // PhoneticIPA has no native Caps-Lock English mode (Caps Lock selects Hanzi output),
+            // so suppress the misleading upstream '英' caret badge on Caps Lock edges in CN mode.
+            const bool suppressPhoneticIpaCapsBadge =
+                trigger == FanyImeUi::InputModeTrigger::CapsLockEdge && imeEnabled && !japaneseMode;
+            if (!suppressPhoneticIpaCapsBadge &&
+                FanyImeUi::ShouldShowInputModeEvent(trigger, GetConfiguredCaretStateIndicatorOnFocus(), capsLockEnabled,
                                                     imeEnabled, japaneseMode))
             {
                 PostCaretStateBadge(FanyImeUi::InputModeBadge(imeEnabled, japaneseMode, capsLockEnabled),
@@ -578,6 +615,7 @@ void WorkerThread()
                 g_last_status_snapshot_client_id = task.client_id;
             }
 
+            SyncServerCapsLockState(task.pipe_data.wch != 0);
             const int caps_state = GetServerCapsLockState();
             const int packed_state =
                 (caps_state << 3) | (effective_cn << 2) | (fullwidth_state << 1) | punctuation_state;
@@ -639,9 +677,16 @@ void WorkerThread()
                 index < 0 || static_cast<size_t>(index) >= ui.page_views.size())
                 break;
             if (task.type == TaskType::UiChooseIpaReading && !g_ipa_reading_page_active)
-                EnterIpaReadingPage(index);
-            else
-                ProcessIpaSelection(index, task.client_id, task.activation_epoch);
+            {
+                if (EnterIpaReadingPage(index) && IsUiLessMode())
+                    PushUiLessCandidatesToOwner();
+                break;
+            }
+            if (ProcessIpaSelection(index, task.client_id, task.activation_epoch))
+                break;
+            // Fallback to normal Hanzi commit when the candidate has no complete IPA
+            // (e.g. clicking "暂无音标 · 选择输入汉字" or non-Hanzi items).
+            CommitCandidateFromUi(task.client_id, task.activation_epoch, index);
             break;
         }
         case TaskType::UiCommitCandidate:
@@ -658,29 +703,7 @@ void WorkerThread()
                     break;
                 }
             }
-            ProcessSelectionKey(0, task.client_id, task.activation_epoch, index_in_page);
-            if (Global::MsgTypeToTsf == Global::DataFromServerMsgType::Normal)
-            {
-                // The worker packet is the complete edit-session-owned commit
-                // for a normal UI click. Do not also leave an unsolicited
-                // request-id-0 reply on the normal reverse pipe.
-                if (SendToTsfWorkerThreadClientViaNamedpipe(
-                        task.client_id, task.activation_epoch,
-                        Global::DataFromServerMsgTypeToTsfWorkerThread::CommitCandidate,
-                        Global::candidate_ui.selected_text))
-                {
-                    ClearState();
-                }
-            }
-            else if (SendCurrentDataToClient(task.client_id, task.activation_epoch, 0))
-            {
-                // NeedToCreateWord/OutOfRange require the normal reply's
-                // subtype. An empty worker packet is only the ordered trigger;
-                // TSF consumes (rather than discards) the id-0 reply.
-                SendToTsfWorkerThreadClientViaNamedpipe(task.client_id, task.activation_epoch,
-                                                        Global::DataFromServerMsgTypeToTsfWorkerThread::CommitCandidate,
-                                                        L"");
-            }
+            CommitCandidateFromUi(task.client_id, task.activation_epoch, index_in_page);
             break;
         }
 

@@ -15,10 +15,10 @@ corner_radius_dip = 16
 border_width_dip = 1
 item_corner_radius_dip = 11
 padding = 12
-item_gap = 7
-item_extra_height = 14
+item_gap = 5
+item_extra_height = 8
 number_inset = 12
-number_scale = 0.62
+number_scale = 0.75
 number_gap = 10
 item_padding_right = 16
 selected_bar_width = 3
@@ -51,12 +51,16 @@ border = "#BAD2C7"
 text = "#183C32"
 hover = "#E8F5EF"
 
+[toolbar]
+corner_radius_dip = 10
+
 [toolbar.light]
 background = "#F4FAF6"
 border = "#BAD2C7"
 icon = "#183C32"
 hover = "#E8F5EF"
 handle = "#2B7865"
+divider = "rgba(43, 120, 101, 0.22)"
 
 [candidate.dark]
 surface = "#172D29"
@@ -87,3 +91,4 @@ border = "#375A50"
 icon = "#DFEFE8"
 hover = "#203A32"
 handle = "#8BD1B3"
+divider = "rgba(139, 209, 179, 0.24)"

@@ -60,12 +60,12 @@ final class Session {
     void clear() { raw = ""; page = 0; candidates = new ArrayList<>(); pending = null; status = ""; changed.run(); }
     void backspace() {
         if (pending != null) { pending = null; changed.run(); return; }
-        if (!raw.isEmpty()) { raw = raw.substring(0, raw.offsetByCodePoints(raw.length(), -1)); refresh(); }
+        if (!raw.isEmpty()) { raw = raw.substring(0, raw.offsetByCodePoints(raw.length(), -1)); if (raw.isEmpty()) status = ""; refresh(); }
     }
     void toggle() { pinyin = !pinyin; clear(); }
-    void page(int delta) { page = Math.max(0, Math.min(page + delta, Math.max(0, (candidates.size() - 1) / pageSize))); changed.run(); }
+    void page(int delta) { int size = Math.max(1, pageSize); page = Math.max(0, Math.min(page + delta, Math.max(0, (candidates.size() - 1) / size))); changed.run(); }
     JSONArray options() throws JSONException {
-        if (pending == null) return new JSONArray();
+        if (pending == null || pending.reading == null) return new JSONArray();
         JSONArray parts = pending.reading.getJSONArray("parts");
         for (int i = 0; i < parts.length(); i++) { JSONObject part = parts.getJSONObject(i); if (part.getInt("selected") < 0) return part.getJSONArray("options"); }
         return new JSONArray();
@@ -83,6 +83,7 @@ final class Session {
         commit.accept(ipa && !item.symbol() ? item.ipa() : item.word); clear();
     }
     void chooseReading(int index) {
+        if (pending == null || pending.reading == null) return;
         try {
             if (index < 0 || index >= options().length()) return;
             JSONArray parts = pending.reading.getJSONArray("parts");

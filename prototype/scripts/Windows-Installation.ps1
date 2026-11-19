@@ -6,22 +6,47 @@ $script:IpaClsid = '{D95EFABF-8AEC-5396-AEA4-A4E47D5F21BF}'
 # %LOCALAPPDATA%\phonetic-ipa-prototype (H2); the Server seeds it from the factory directory.
 $script:IpaProgramRoot = Join-Path $env:ProgramFiles 'PhoneticIPA'
 $script:IpaUserDataName = 'phonetic-ipa-prototype'
-$script:IpaVersion = '0.1.8' # kept in step with msime-windows/version.txt by scripts/sync-version.py
+$script:IpaVersion = '0.1.9' # kept in step with msime-windows/version.txt by scripts/sync-version.py
 $script:IpaAppMarker = '.phonetic-ipa-app'
 $script:IpaPersonalFiles = @('config.toml', 'msime_user.db', 'msime_user.db-wal', 'msime_user.db-shm', 'user_dict.dat', 'ipa\active.cin', 'ipa\rule-selection.txt', 'ipa\custom-icon-name.txt')
 
 function Get-IpaInstallation {
     Get-ItemProperty -LiteralPath $script:IpaRegistry -ErrorAction SilentlyContinue
 }
+function Assert-IpaNoReparseInside([string]$Root, [string]$Target) {
+    $rootFull = [IO.Path]::GetFullPath($Root).TrimEnd('\')
+    $cursor = [IO.Path]::GetFullPath($Target).TrimEnd('\')
+    while ($cursor.Length -gt $rootFull.Length -and $cursor.StartsWith($rootFull + '\', [StringComparison]::OrdinalIgnoreCase)) {
+        $item = Get-Item -LiteralPath $cursor -Force -ErrorAction SilentlyContinue
+        if ($item -and ($item.Attributes -band [IO.FileAttributes]::ReparsePoint)) {
+            throw "安装目录包含无效链接：$cursor"
+        }
+        $cursor = Split-Path -Parent $cursor
+    }
+}
 function Assert-IpaRuntime([string]$Runtime) {
-    foreach ($relative in @('PhoneticIpaServer.exe', 'PhoneticIpaSettings.exe', 'PhoneticIpaWatchdog.exe', 'tsf-x64\PhoneticIpaTsf.dll', 'tsf-x86\PhoneticIpaTsf.dll')) {
+    $required = @('PhoneticIpaServer.exe', 'PhoneticIpaSettings.exe', 'PhoneticIpaWatchdog.exe', 'tsf-x64\PhoneticIpaTsf.dll', 'tsf-x86\PhoneticIpaTsf.dll')
+    foreach ($relative in $required) {
         if (!(Test-Path -LiteralPath (Join-Path $Runtime $relative) -PathType Leaf)) { throw "安装文件不完整：$relative" }
     }
-    $manifest = Get-Content -LiteralPath (Join-Path $Runtime 'build-manifest.json') -Raw -Encoding UTF8 | ConvertFrom-Json
-    foreach ($entry in $manifest.PSObject.Properties) {
-        $file = [IO.Path]::GetFullPath((Join-Path $Runtime $entry.Name))
-        if (!$file.StartsWith([IO.Path]::GetFullPath($Runtime).TrimEnd('\') + '\', [StringComparison]::OrdinalIgnoreCase)) { throw 'Invalid runtime manifest path.' }
+    $manifestPath = Join-Path $Runtime 'build-manifest.json'
+    if (!(Test-Path -LiteralPath $manifestPath -PathType Leaf)) { throw '缺少安装校验清单 build-manifest.json' }
+    $manifest = Get-Content -LiteralPath $manifestPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $entries = @($manifest.PSObject.Properties)
+    if (!$entries.Count) { throw '安装校验清单为空。' }
+    $manifestKeys = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
+    $rootFull = [IO.Path]::GetFullPath($Runtime).TrimEnd('\') + '\'
+    foreach ($entry in $entries) {
+        $normalizedName = ([string]$entry.Name).Replace('/', '\')
+        [void]$manifestKeys.Add($normalizedName)
+        $file = [IO.Path]::GetFullPath((Join-Path $Runtime $normalizedName))
+        if (!$file.StartsWith($rootFull, [StringComparison]::OrdinalIgnoreCase)) { throw 'Invalid runtime manifest path.' }
+        Assert-IpaNoReparseInside $Runtime $file
+        if (!(Test-Path -LiteralPath $file -PathType Leaf)) { throw "安装文件缺失：$($entry.Name)" }
         if ((Get-FileHash -LiteralPath $file -Algorithm SHA256).Hash -ne $entry.Value) { throw "安装文件校验失败：$($entry.Name)" }
+    }
+    foreach ($relative in $required) {
+        if (!$manifestKeys.Contains($relative)) { throw "安装校验清单缺少核心文件：$relative" }
     }
 }
 function Test-IpaRuntime([string]$Runtime) {
@@ -119,6 +144,45 @@ function Copy-IpaPreferences([string[]]$Sources, [string]$Destination, [switch]$
         }
     }
     foreach ($relative in $files | Select-Object -Unique) {
+        if ($relative -in @('msime_user.db-wal', 'msime_user.db-shm')) { continue }
+        if ($relative -eq 'msime_user.db') {
+            $dbCandidates = @($Sources | ForEach-Object {
+                $db = Get-Item -LiteralPath (Join-Path $_ 'msime_user.db') -ErrorAction SilentlyContinue
+                if ($db -and !$db.PSIsContainer) {
+                    $latest = $db.LastWriteTimeUtc
+                    foreach ($suffix in @('-wal', '-shm')) {
+                        $side = Get-Item -LiteralPath (Join-Path $_ ('msime_user.db' + $suffix)) -ErrorAction SilentlyContinue
+                        if ($side -and !$side.PSIsContainer -and $side.LastWriteTimeUtc -gt $latest) { $latest = $side.LastWriteTimeUtc }
+                    }
+                    [pscustomobject]@{ Root = $_; LatestUtc = $latest }
+                }
+            } | Sort-Object LatestUtc -Descending)
+            if (!$dbCandidates.Count) { continue }
+            $winnerRoot = $dbCandidates[0].Root
+            $toDb = Join-Path $Destination 'msime_user.db'
+            if ($KeepNewerDestination) {
+                $destLatest = $null
+                foreach ($suffix in @('', '-wal', '-shm')) {
+                    $cur = Get-Item -LiteralPath ($toDb + $suffix) -ErrorAction SilentlyContinue
+                    if ($cur -and !$cur.PSIsContainer -and ($null -eq $destLatest -or $cur.LastWriteTimeUtc -gt $destLatest)) { $destLatest = $cur.LastWriteTimeUtc }
+                }
+                if ($null -ne $destLatest -and $destLatest -ge $dbCandidates[0].LatestUtc) { continue }
+            }
+            New-Item -ItemType Directory -Path $Destination -Force | Out-Null
+            $stamp = Get-Date -Format 'yyyyMMddHHmmssfff'
+            foreach ($suffix in @('', '-wal', '-shm')) {
+                $destPart = $toDb + $suffix
+                if (Test-Path -LiteralPath $destPart) {
+                    Copy-Item -LiteralPath $destPart -Destination ($destPart + '.before-upgrade-' + $stamp) -Force
+                    if ($suffix) { Remove-Item -LiteralPath $destPart -Force }
+                }
+                $srcPart = Join-Path $winnerRoot ('msime_user.db' + $suffix)
+                if (Test-Path -LiteralPath $srcPart -PathType Leaf) {
+                    Copy-Item -LiteralPath $srcPart -Destination $destPart -Force
+                }
+            }
+            continue
+        }
         $candidates = @($Sources | ForEach-Object { Get-Item -LiteralPath (Join-Path $_ $relative) -ErrorAction SilentlyContinue } | Where-Object { !$_.PSIsContainer } | Sort-Object LastWriteTimeUtc -Descending)
         $to = Join-Path $Destination $relative
         if ($candidates.Count) {
@@ -149,19 +213,48 @@ function Add-IpaNativeMethods {
 }
 # Removes a program folder under Program Files. Files still loaded by running applications
 # (the TSF DLL inside open programs) are deleted at the next restart instead.
+# Never traverses or deletes reparse points (junctions/symlinks).
+function Get-IpaTreeSafe([string]$RootPath) {
+    $rootItem = Get-Item -LiteralPath $RootPath -Force -ErrorAction Stop
+    if ($rootItem.Attributes -band [IO.FileAttributes]::ReparsePoint) {
+        throw "拒绝删除或进入符号链接目录：$RootPath"
+    }
+    $collected = [System.Collections.Generic.List[IO.FileSystemInfo]]::new()
+    $queue = [System.Collections.Generic.Queue[string]]::new()
+    $queue.Enqueue($rootItem.FullName)
+    while ($queue.Count -gt 0) {
+        $dir = $queue.Dequeue()
+        foreach ($child in @(Get-ChildItem -LiteralPath $dir -Force)) {
+            if ($child.Attributes -band [IO.FileAttributes]::ReparsePoint) {
+                throw "拒绝遍历或删除重解析点：$($child.FullName)"
+            }
+            $collected.Add($child)
+            if ($child.PSIsContainer) { $queue.Enqueue($child.FullName) }
+        }
+    }
+    $collected
+}
 function Remove-IpaPath([string]$Path) {
     if (!(Test-IpaUnderProgramRoot $Path) -or !(Test-Path -LiteralPath $Path)) { return }
+    $items = Get-IpaTreeSafe $Path
     # The marker goes last, so a folder that cannot be emptied stays recognizable.
     $marker = Join-Path $Path $script:IpaAppMarker
-    Get-ChildItem -LiteralPath $Path -Force | Where-Object { $_.FullName -ne $marker } | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
-    if (@(Get-ChildItem -LiteralPath $Path -Force | Where-Object { $_.FullName -ne $marker }).Count -eq 0) {
-        Remove-Item -LiteralPath $Path -Recurse -Force -ErrorAction SilentlyContinue
-        return
+    foreach ($item in ($items | Where-Object { !$_.PSIsContainer -and $_.FullName -ne $marker })) {
+        Remove-Item -LiteralPath $item.FullName -Force -ErrorAction SilentlyContinue
+    }
+    foreach ($dir in ($items | Where-Object { $_.PSIsContainer } | Sort-Object { $_.FullName.Length } -Descending)) {
+        Remove-Item -LiteralPath $dir.FullName -Force -ErrorAction SilentlyContinue
+    }
+    $remaining = @(Get-ChildItem -LiteralPath $Path -Force | Where-Object { $_.FullName -ne $marker })
+    if ($remaining.Count -eq 0) {
+        if (Test-Path -LiteralPath $marker) { Remove-Item -LiteralPath $marker -Force -ErrorAction SilentlyContinue }
+        Remove-Item -LiteralPath $Path -Force -ErrorAction SilentlyContinue
+        if (!(Test-Path -LiteralPath $Path)) { return }
     }
     Add-IpaNativeMethods
-    $items = @(Get-ChildItem -LiteralPath $Path -Recurse -Force | Sort-Object { $_.FullName.Length } -Descending) + @(Get-Item -LiteralPath $Path -Force)
+    $left = @((Get-IpaTreeSafe $Path) | Sort-Object { $_.FullName.Length } -Descending) + @(Get-Item -LiteralPath $Path -Force)
     # [NullString]::Value: PowerShell would pass $null as an empty string, which MoveFileEx rejects.
-    foreach ($item in $items) { [void][PhoneticIpa.NativeMethods]::MoveFileEx($item.FullName, [NullString]::Value, 4) } # MOVEFILE_DELAY_UNTIL_REBOOT
+    foreach ($item in $left) { [void][PhoneticIpa.NativeMethods]::MoveFileEx($item.FullName, [NullString]::Value, 4) } # MOVEFILE_DELAY_UNTIL_REBOOT
 }
 # Deletes earlier program folders this installer created (marked app-* folders). Personal data
 # and extraction folders are never touched.
@@ -180,7 +273,8 @@ function Copy-IpaProgram([string]$Source, [string]$ScriptDirectory, [switch]$Sou
     $target = Join-Path $script:IpaProgramRoot ('app-' + $script:IpaVersion + '-' + (Get-Date -Format 'yyyyMMddHHmmss'))
     New-Item -ItemType Directory -Path $target -Force | Out-Null
     $sourceRoot = [IO.Path]::GetFullPath($Source).TrimEnd('\')
-    foreach ($item in @(Get-ChildItem -LiteralPath $Source -Recurse -File -Force)) {
+    $sourceItems = Get-IpaTreeSafe $Source
+    foreach ($item in ($sourceItems | Where-Object { !$_.PSIsContainer })) {
         $relative = $item.FullName.Substring($sourceRoot.Length + 1)
         if ($relative -like 'data\*') {
             $dataRelative = $relative.Substring(5)
@@ -195,13 +289,25 @@ function Copy-IpaProgram([string]$Source, [string]$ScriptDirectory, [switch]$Sou
     New-Item -ItemType Directory -Path (Join-Path $target 'data') -Force | Out-Null
     Set-Content -LiteralPath (Join-Path $target 'data\factory-stamp.txt') -Value (Split-Path -Leaf $target) -Encoding ASCII
     Set-Content -LiteralPath (Join-Path $target $script:IpaAppMarker) -Value $script:IpaVersion -Encoding ASCII
-    $scripts = Join-Path $script:IpaProgramRoot 'scripts'
+    $scripts = Join-Path $target 'scripts'
     New-Item -ItemType Directory -Path $scripts -Force | Out-Null
     foreach ($name in @('Windows-Installation.ps1', 'Uninstall-Windows.ps1')) {
         Copy-Item -LiteralPath (Join-Path $ScriptDirectory $name) -Destination (Join-Path $scripts $name) -Force
     }
     Assert-IpaRuntime $target
     $target
+}
+function Set-IpaUninstallEntry([string]$Runtime) {
+    New-Item -Path $script:IpaUninstallRegistry -Force | Out-Null
+    $powershell = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
+    $scopedUninstaller = Join-Path $Runtime 'scripts\Uninstall-Windows.ps1'
+    $legacyUninstaller = Join-Path $script:IpaProgramRoot 'scripts\Uninstall-Windows.ps1'
+    $uninstaller = if ((Test-Path -LiteralPath $scopedUninstaller -PathType Leaf) -or !(Test-Path -LiteralPath $legacyUninstaller -PathType Leaf)) { $scopedUninstaller } else { $legacyUninstaller }
+    $command = '"' + $powershell + '" -NoProfile -ExecutionPolicy Bypass -File "' + $uninstaller + '"'
+    foreach ($pair in @(@('DisplayName','国际音标输入法'), @('DisplayVersion',$script:IpaVersion), @('Publisher','Nephelium'), @('InstallLocation',$Runtime), @('UninstallString',$command), @('DisplayIcon',(Join-Path $Runtime 'PhoneticIpaSettings.exe')))) {
+        New-ItemProperty -LiteralPath $script:IpaUninstallRegistry -Name $pair[0] -Value $pair[1] -PropertyType String -Force | Out-Null
+    }
+    foreach ($name in @('NoModify','NoRepair')) { New-ItemProperty -LiteralPath $script:IpaUninstallRegistry -Name $name -Value 1 -PropertyType DWord -Force | Out-Null }
 }
 function Install-IpaRuntime([string]$Runtime, [string]$ScriptDirectory, [string]$UserDataDir = '') {
     Assert-IpaRuntime $Runtime
@@ -220,14 +326,7 @@ function Install-IpaRuntime([string]$Runtime, [string]$ScriptDirectory, [string]
         Invoke-IpaRegistration $target -Unregister
         Set-IpaInstallation $target
         Invoke-IpaRegistration $target
-        New-Item -Path $script:IpaUninstallRegistry -Force | Out-Null
-        $powershell = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
-        $uninstaller = Join-Path $script:IpaProgramRoot 'scripts\Uninstall-Windows.ps1'
-        $command = '"' + $powershell + '" -NoProfile -ExecutionPolicy Bypass -File "' + $uninstaller + '"'
-        foreach ($pair in @(@('DisplayName','国际音标输入法'), @('DisplayVersion',$script:IpaVersion), @('Publisher','Nephelium'), @('InstallLocation',$target), @('UninstallString',$command), @('DisplayIcon',(Join-Path $target 'PhoneticIpaSettings.exe')))) {
-            New-ItemProperty -LiteralPath $script:IpaUninstallRegistry -Name $pair[0] -Value $pair[1] -PropertyType String -Force | Out-Null
-        }
-        foreach ($name in @('NoModify','NoRepair')) { New-ItemProperty -LiteralPath $script:IpaUninstallRegistry -Name $name -Value 1 -PropertyType DWord -Force | Out-Null }
+        Set-IpaUninstallEntry $target
     } catch {
         $failure = $_
         if ($oldRuntime) {
@@ -235,9 +334,10 @@ function Install-IpaRuntime([string]$Runtime, [string]$ScriptDirectory, [string]
             New-ItemProperty -LiteralPath $script:IpaRegistry -Name ServerPath -Value (Join-Path $oldRuntime 'PhoneticIpaServer.exe') -PropertyType String -Force | Out-Null
             if ($previous.DataDir) { New-ItemProperty -LiteralPath $script:IpaRegistry -Name DataDir -Value $previous.DataDir -PropertyType String -Force | Out-Null }
             if ($previous.FactoryDataDir) { New-ItemProperty -LiteralPath $script:IpaRegistry -Name FactoryDataDir -Value $previous.FactoryDataDir -PropertyType String -Force | Out-Null }
-            Invoke-IpaRegistration $oldRuntime
+            try { Invoke-IpaRegistration $oldRuntime } catch {}
+            Set-IpaUninstallEntry $oldRuntime
         } else {
-            Invoke-IpaRegistration $target -Unregister
+            try { Invoke-IpaRegistration $target -Unregister } catch {}
             Remove-Item -LiteralPath $script:IpaRegistry -Recurse -ErrorAction SilentlyContinue
             Remove-Item -LiteralPath $script:IpaUninstallRegistry -Recurse -ErrorAction SilentlyContinue
         }
@@ -245,6 +345,7 @@ function Install-IpaRuntime([string]$Runtime, [string]$ScriptDirectory, [string]
         throw $failure
     }
     Remove-IpaOldPrograms $target
+    Remove-IpaPath (Join-Path $script:IpaProgramRoot 'scripts')
     $target
 }
 function Uninstall-IpaRuntime([string]$FallbackRuntime = '') {

@@ -9,6 +9,7 @@
 #include <string>
 #include <ctime>
 #include "FanyUtils.h"
+#include "../../../engine/contracts/ipa_product_guids.h"
 
 namespace Global
 {
@@ -22,13 +23,12 @@ HFONT defaultlFontHandle; // Global font object we use everywhere
 //---------------------------------------------------------------------
 // MetasequoiaIME CLSID
 //---------------------------------------------------------------------
-extern const CLSID MetasequoiaIMECLSID = {0xd95efabf, 0x8aec, 0x5396, {0xae, 0xa4, 0xa4, 0xe4, 0x7d, 0x5f, 0x21, 0xbf}};
+extern const CLSID MetasequoiaIMECLSID = PhoneticIpaProduct::kImeClsid;
 
 //---------------------------------------------------------------------
 // Profile GUID
 //---------------------------------------------------------------------
-extern const GUID MetasequoiaIMEGuidProfile = {
-    0x881bb948, 0x8042, 0x590e, {0xaa, 0xc7, 0x77, 0xd3, 0x8b, 0xaf, 0xb1, 0xe6}};
+extern const GUID MetasequoiaIMEGuidProfile = PhoneticIpaProduct::kImeProfileGuid;
 
 //---------------------------------------------------------------------
 // PreserveKey GUID

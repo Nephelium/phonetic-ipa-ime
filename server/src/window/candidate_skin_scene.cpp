@@ -646,9 +646,15 @@ CandidateSkinScene::Result CandidateSkinScene::Apply(const Settings &settings)
     appearance.textPadLeft = kCandidateNumberTextPad;
     appearance.labelGap = tokens.labelGap;
     appearance.minItemWidth = tokens.minItemWidth;
-    // 收紧宽度时右侧留白与序号左侧的留白相同，卡片两边对称。
+    // 收紧宽度时右侧留白与序号左侧的留白相同，卡片两边对称（皮肤显式写了 item_padding_right 时保留皮肤值）。
     appearance.fitContent = fitContent;
-    if (fitContent)
+    const auto hasExplicitPadRight = [horizontalLayout](const CandidateSkinCatalog::Package *pkg) {
+        if (!pkg)
+            return false;
+        const auto &oriented = horizontalLayout ? pkg->horizontalGeometry : pkg->verticalGeometry;
+        return pkg->geometry.itemPaddingRight.has_value() || oriented.itemPaddingRight.has_value();
+    };
+    if (fitContent && !hasExplicitPadRight(packagePtr) && !hasExplicitPadRight(&baseLook))
         appearance.contentPadRight = appearance.contentPadLeft + appearance.textPadLeft;
     appearance.selectedBarWidth = tokens.selectedBarWidth;
     appearance.selectedBarHeight = fontSize * tokens.selectedBarHeightEm;

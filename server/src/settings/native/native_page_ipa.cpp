@@ -145,6 +145,8 @@ struct Editor
         catch (const std::exception &e)
         {
             Status(Widen(e.what()));
+            if (host)
+                host->ShowToast(Widen(e.what()), false);
             return false;
         }
     }
@@ -317,10 +319,14 @@ struct Editor
             PhoneticIpa::WriteProfileFile(PhoneticIpa::ResourceRoot() / "active.cin", table.Serialize(),
                                           PhoneticIpa::ProfileBackup::Previous);
             Status(L"方案已应用。下一次输入会使用新键位；上一版方案保存为同一目录的 active.cin.previous。");
+            if (host)
+                host->ShowToast(L"方案已应用，下一次输入立即生效。", true);
         }
         catch (const std::exception &e)
         {
             Status(Widen(e.what()));
+            if (host)
+                host->ShowToast(Widen(e.what()), false);
         }
     }
 };
@@ -454,7 +460,10 @@ VisualPtr BuildIpaKeyboardPage(PageContext &context)
     edit->Add(detail);
     auto status = MakeDescription(L"尚未修改方案。");
     state->status = status.get();
-    code->SetOnChanged([state](const std::wstring &) { state->editing = true; });
+    code->SetOnChanged([state](const std::wstring &) {
+        state->editing = true;
+        state->UpdatePickerTarget();
+    });
     output->SetOnChanged([state](const std::wstring &) {
         state->editing = true;
         state->detail->SetText(CodePoints(Narrow(state->output->SelectedOutput())));
@@ -520,10 +529,13 @@ VisualPtr BuildIpaKeyboardPage(PageContext &context)
                 else
                     state->table.EntriesForEdit().erase(Narrow(state->code->GetText()));
                 state->output->SetText(L"");
+                state->detail->SetText(CodePoints(Narrow(state->output->SelectedOutput())));
+                state->UpdatePickerTarget();
                 state->editing = false;
                 state->RefreshCodes();
                 state->keyboard->Refresh();
                 state->Status(L"已移除，点击应用后生效。");
+                state->host->ShowToast(L"已从草稿方案移除映射，点击应用后保存。", true);
             },
             L"移除映射", L"移除", L"取消");
     });
@@ -545,10 +557,12 @@ VisualPtr BuildIpaKeyboardPage(PageContext &context)
             state->RefreshCodes();
             state->SelectKey(state->keyboard->selected);
             state->Status(L"已载入预览。数字 1–9 保留选候选，原有输出移到反斜杠键 \\；点击应用方案保存。");
+            state->host->ShowToast(L"已载入方案预览，点击应用方案保存。", true);
         }
         catch (const std::exception &e)
         {
             state->Status(Widen(e.what()));
+            state->host->ShowToast(Widen(e.what()), false);
         }
     });
     addAction(L"导出完整 JSON", [state] {
@@ -561,10 +575,12 @@ VisualPtr BuildIpaKeyboardPage(PageContext &context)
         {
             PhoneticIpa::WriteProfileFile(file, PhoneticIpa::ProfileJson(state->table));
             state->Status(L"完整方案已导出，含键盘尺寸与组合键。");
+            state->host->ShowToast(L"完整 JSON 方案已导出。", true);
         }
         catch (const std::exception &e)
         {
             state->Status(Widen(e.what()));
+            state->host->ShowToast(Widen(e.what()), false);
         }
     });
     addAction(L"导出 IPA", [state] {
@@ -577,10 +593,12 @@ VisualPtr BuildIpaKeyboardPage(PageContext &context)
         {
             PhoneticIpa::WriteProfileFile(file, state->table.Serialize(false));
             state->Status(L"IPA 已导出，包含连续编码与候选。组合键请使用 JSON 保存。");
+            state->host->ShowToast(L"IPA 码表已导出。", true);
         }
         catch (const std::exception &e)
         {
             state->Status(Widen(e.what()));
+            state->host->ShowToast(Widen(e.what()), false);
         }
     });
     edit->Add(actions);
@@ -591,7 +609,7 @@ VisualPtr BuildIpaKeyboardPage(PageContext &context)
     auto insertion = std::make_shared<Dropdown>(Options({{"replace", L"替换当前输出"}, {"append", L"追加到输出末尾"}}));
     insertion->SetValue("replace");
     TextField::Options searchField;
-    searchField.placeholder = L"搜索符号或中文名称";
+    searchField.placeholder = L"搜索符号、中文/英文名、别名或 U+ 码位";
     auto search = std::make_shared<TextField>(searchField);
     std::vector<std::pair<std::shared_ptr<Button>, std::string>> systemTabs;
     for (const auto &[value, title] :
@@ -617,7 +635,7 @@ VisualPtr BuildIpaKeyboardPage(PageContext &context)
     state->pickerTarget = targetPreview.get();
     picker->Add(targetPreview);
     auto openChart = std::make_shared<Button>(L"打开 IPA Plus 音标表");
-    openChart->SetOnClick([state, symbols] { state->host->ScrollIntoView(*symbols); });
+    openChart->SetOnClick([state, picker] { state->host->ScrollIntoView(*picker); });
     edit->Add(openChart);
     auto backToEditor = std::make_shared<Button>(L"返回按键编辑");
     backToEditor->SetOnClick([state] { state->host->ScrollIntoView(*state->output); });
